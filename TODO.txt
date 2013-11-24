@@ -1,0 +1,9 @@
+1.- Review that all c++ attributes are defined on C#, and working
+2.- Review initializations and ctrs. Most of them can be simplified. (default values at variable declarations)
+3.- MSIS is too complex. Study how we can test it
+4.- I still have some warnings concerning unused variables. See if in c++ occurs the same
+5.- Review all collections. I prefer to use generic collections. Make code clear and more efficient.
+6.- Review style and adapt member names to C#. For instance, use c# properties get/set instead of GetXXX() or SetXXX()
+7.- Implement sockets (inputs and outputs)
+8.- Test some typical constructions performance. For instance:
+	8.a) "foreach (Engine engine in engines) {....}"  instead of "for (int i =0; i < engines.Count; i++) {....}" 

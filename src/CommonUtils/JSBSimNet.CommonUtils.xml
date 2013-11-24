@@ -1,0 +1,1257 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>JSBSimNet.CommonUtils</name>
+    </assembly>
+    <members>
+        <member name="T:CommonUtils.IO.ReaderText">
+            <summary>
+            Summary description for ReaderText.
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.MomentType">
+            <summary>
+            Moments L, M, N
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.RateType">
+            <summary>
+            Rates P, Q, R
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.VelocityType">
+            <summary>
+            Velocities U, V, W
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.PositionType">
+            <summary>
+            Positions X, Y, Z
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.EulerAngleType">
+            <summary>
+            Euler angles Phi, Theta, Psi
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.StabilityAxisForces">
+            <summary>
+            Stability axis forces, Drag, Side force, Lift
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.LocalOrientation">
+            <summary>
+            Local frame orientation Roll, Pitch, Yaw
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.LocalPosition">
+            <summary>
+            Local frame position North, East, Down
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.LocationsType">
+            <summary>
+            Locations Radius, Latitude, Longitude
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.ConversionType">
+            <summary>
+            Conversion specifiers
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.MathExt">
+            <summary>
+            Various constant definitions and math functions.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.MathExt.EPSILON">
+            For divide by zero avoidance, this will be close enough to zero 
+        </member>
+        <member name="M:CommonUtils.MathLib.MathExt.EqualToRoundoff(System.Double,System.Double)">
+            <summary>
+            Finite precision comparison.
+            </summary>
+            <param name="a">first value to compare</param>
+            <param name="b">second value to compare</param>
+            <returns>if the two values can be considered equal up to roundoff</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.MathExt.EqualToRoundoff(System.Single,System.Single)">
+            <summary>
+            Finite precision comparison.
+            </summary>
+            <param name="a">first value to compare</param>
+            <param name="b">second value to compare</param>
+            <returns>if the two values can be considered equal up to roundoff</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.MathExt.EqualToRoundoff(System.Single,System.Double)">
+            <summary>
+            Finite precision comparison.
+            </summary>
+            <param name="a">first value to compare</param>
+            <param name="b">second value to compare</param>
+            <returns>if the two values can be considered equal up to roundoff</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.MathExt.EqualToRoundoff(System.Double,System.Single)">
+            <summary>
+            Finite precision comparison.
+            </summary>
+            <param name="a">first value to compare</param>
+            <param name="b">second value to compare</param>
+            <returns>if the two values can be considered equal up to roundoff</returns>
+        </member>
+        <member name="T:CommonUtils.MathLib.Constants">
+            <summary>
+            Summary description for Constants.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.ONE_SECOND">
+            pi/180/60/60, or about 100 feet at earths' equator 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.EARTH_RAD">
+            Radius of Earth in kilometers at the equator.  Another source had
+            6378.165 but this is probably close enough 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.EQUATORIAL_RADIUS_FT">
+            Value of earth radius from LaRCsim (ft) 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.EQUATORIAL_RADIUS_M">
+            Value of earth radius from LaRCsim (meter) 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.EQ_RAD_SQUARE_FT">
+            Radius squared (ft) 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.EQ_RAD_SQUARE_M">
+            Radius squared (meter) 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.ARCSEC_TO_RAD">
+            Arc seconds to radians.  (arcsec*pi)/(3600*180) = rad 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.RAD_TO_ARCSEC">
+            Radians to arc seconds.  (rad*3600*180)/pi = arcsec 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.FEET_TO_METER">
+            Feet to Meters 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.METER_TO_FEET">
+            Meters to Feet 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.METER_TO_NM">
+            Meters to Nautical Miles.  1 nm = 6076.11549 feet 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.NM_TO_METER">
+            Nautical Miles to Meters 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.METER_TO_SM">
+            Meters to Statute Miles. 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.SM_TO_METER">
+            Statute Miles to Meters. 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.NM_TO_RAD">
+            Radians to Nautical Miles.  1 nm = 1/60 of a degree 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.RAD_TO_NM">
+            Nautical Miles to Radians 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.MPS_TO_KT">
+            Miles per second to Knots 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.KT_TO_MPS">
+            Knots to Miles per second 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.MPS_TO_MPH">
+            Miles per second to Miles per hour 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.MPH_TO_MPS">
+            Miles per hour to Miles per second 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.MPS_TO_KMH">
+            Meters per second to Kilometers per hour 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.KMH_TO_MPS">
+            Kilometers per hour to Miles per second 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.PASCAL_TO_INHG">
+            Pascal to Inch Mercury 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.INHG_TO_PA">
+            Inch Mercury to Pascal 
+        </member>
+        <member name="T:CommonUtils.MathLib.Matrix3D">
+            <summary>
+            Matrix class for 3D.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Matrix3D.M11">
+            <summary>
+            First row.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Matrix3D.M12">
+            <summary>
+            First row.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Matrix3D.M13">
+            <summary>
+            First row.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Matrix3D.M21">
+            <summary>
+            Second row.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Matrix3D.M22">
+            <summary>
+            Second row.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Matrix3D.M23">
+            <summary>
+            Second row.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Matrix3D.M31">
+            <summary>
+            Third row.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Matrix3D.M32">
+            <summary>
+            Third row.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Matrix3D.M33">
+            <summary>
+            Third row.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.#ctor(System.Double,System.Double,System.Double,System.Double,System.Double,System.Double,System.Double,System.Double,System.Double)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Matrix3D"/> class using given values.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.#ctor(System.Double[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Matrix3D"/> class using values from a given array.
+            </summary>
+            <param name="elements">The matrix values.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.#ctor(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Matrix3D"/> class using given 3D vectors.
+            </summary>
+            <param name="column1">The vector to use as the first column.</param>
+            <param name="column2">The vector to use as the second column.</param>
+            <param name="column3">The vector to use as the third column.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.#ctor(CommonUtils.MathLib.Matrix3D)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Matrix3D"/> class using a given matrix.
+            </summary>
+            <param name="m">The matrix to copy values from.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Vector3D"/> class with serialized data.
+            </summary>
+            <param name="info">The object that holds the serialized object data.</param>
+            <param name="context">The contextual information about the source or destination.</param>
+        </member>
+        <member name="F:CommonUtils.MathLib.Matrix3D.Zero">
+            <summary>
+            Zero matrix.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Matrix3D.Identity">
+            <summary>
+            Identity matrix.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.GetObjectData(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Populates a <see cref="T:System.Runtime.Serialization.SerializationInfo"/> with the data needed to serialize the target object.
+            </summary>
+            <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> to populate with data. </param>
+            <param name="context">The destination (see <see cref="T:System.Runtime.Serialization.StreamingContext"/>) for this serialization.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.System#ICloneable#Clone">
+            <summary>
+            Creates a new object that is a copy of the current instance.
+            </summary>
+            <returns>A new object that is a copy of this instance.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.Clone">
+            <summary>
+            Creates a new object that is a copy of the current instance.
+            </summary>
+            <returns>A new object that is a copy of this instance.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.GetHashCode">
+            <summary>
+            Get the hashcode for this <see cref="T:CommonUtils.MathLib.Matrix3D"/> instance.
+            </summary>
+            <returns>Returns the hash code for this <see cref="T:CommonUtils.MathLib.Matrix3D"/> instance.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.Equals(System.Object)">
+            <summary>
+            Checks if a given matrix equals to self.
+            </summary>
+            <param name="o">Object to check if equal to.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.ToString">
+            <summary>
+            Convert Matrix3D to a string.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.Determinant">
+            <summary>
+            Calcluates the determinant of the matrix.
+            </summary>
+            <returns>The matrix determinant value.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.Trace">
+            <summary>
+            Gets the trace of the matrix which is the sum of the diagonal entries.
+            </summary>
+            <returns>Returns the trace of the matrix.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.Transpose">
+            <summary>
+            Transpose this matrix.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.GetTranspose">
+            <summary>
+            Gets the transpose of this matrix.
+            </summary>
+            <returns>Returns a trasposed matrix.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.Multiply(CommonUtils.MathLib.Matrix3D)">
+            <summary>
+            Multiplies self by a given matrix.
+            </summary>
+            <param name="m">The matrix to multiply with.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.Multiply(System.Double)">
+            <summary>
+            Multiply self by a scalar.
+            </summary>
+            <param name="scalar">The scalar to multiply with.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.Divide(System.Double)">
+            <summary>
+            Divides self by a scalar.
+            </summary>
+            <param name="scalar">The scalar to divide with.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.op_Equality(CommonUtils.MathLib.Matrix3D,CommonUtils.MathLib.Matrix3D)">
+            <summary>
+            Checks if the two given matrices are equal.
+            </summary>
+            <param name="a">The first of two 3D matrices to compare.</param>
+            <param name="b">The second of two 3D matrices to compare.</param>
+            <returns><b>true</b> if the matrices are equal; otherwise, <b>false</b>.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.op_Inequality(CommonUtils.MathLib.Matrix3D,CommonUtils.MathLib.Matrix3D)">
+            <summary>
+            Checks if the two given vectors are not equal.
+            </summary>
+            <param name="a">The first of two 3D vectors to compare.</param>
+            <param name="b">The second of two 3D vectors to compare.</param>
+            <returns><b>true</b> if the matrices are not equal; otherwise, <b>false</b>.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.op_Multiply(CommonUtils.MathLib.Matrix3D,CommonUtils.MathLib.Matrix3D)">
+            <summary>
+            Multiplies two matrices.
+            </summary>
+            <param name="a">First matrix.</param>
+            <param name="b">Second matrix.</param>
+            <returns>The result of the multiply operation.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.op_Multiply(CommonUtils.MathLib.Matrix3D,System.Double)">
+            <summary>
+            Multiplies a matrix with a scalar.
+            </summary>
+            <param name="source">The matrix.</param>
+            <param name="scalar">The scalar.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.op_Division(CommonUtils.MathLib.Matrix3D,System.Double)">
+            <summary>
+            Divides a matrix by a scalar.
+            </summary>
+            <param name="source">The matrix.</param>
+            <param name="scalar">The scalar.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.op_Addition(CommonUtils.MathLib.Matrix3D,CommonUtils.MathLib.Matrix3D)">
+            <summary>
+            Add two matrices.
+            </summary>
+            <param name="m1">The first matrix to add.</param>
+            <param name="m2">The second matrix to add.</param>
+            <returns>Result is ( m1.M11 + m2.M11, m1.M12 + m2.M12, ...)</returns>
+        </member>
+        <member name="P:CommonUtils.MathLib.Matrix3D.Item(System.Int32)">
+            <summary>
+            An index accessor.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Matrix3D.Item(System.Int32,System.Int32)">
+            <summary>
+            An index accessor.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:CommonUtils.MathLib.Quaternion" -->
+        <member name="F:CommonUtils.MathLib.Quaternion.W">
+            <summary>
+            W coordinate.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Quaternion.X">
+            <summary>
+            X coordinate.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Quaternion.Y">
+            <summary>
+            Y coordinate.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Quaternion.Z">
+            <summary>
+            Z coordinate.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Quaternion"/> class with the identity rotation.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.#ctor(System.Double,System.Double,System.Double,System.Double)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Quaternion"/> class using given values.
+            </summary>
+            <param name="w"></param>
+            <param name="x"></param>
+            <param name="y"></param>
+            <param name="z"></param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.#ctor(System.Double,System.Double,System.Double)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Quaternion"/> class using the three euler angles.
+            </summary>
+            <param name="phi">The euler X axis (roll) angle in radians</param>
+            <param name="tht">The euler Y axis (attitude) angle in radians</param>
+            <param name="psi">The euler Z axis (heading) angle in radians</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.#ctor(System.Double[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Quaternion"/> class using values from a given array of double.
+            </summary>
+            <param name="val">Quaternion parameters in order : W,X,Y,Z</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.#ctor(CommonUtils.MathLib.Quaternion)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Quaternion"/> class using values from a given quaternion.
+            </summary>
+            <param name="q">Quaternion to copy parameters from.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Quaternion"/> class with serialized data.
+            </summary>
+            <param name="info">The object that holds the serialized object data.</param>
+            <param name="context">The contextual information about the source or destination.</param>
+        </member>
+        <member name="F:CommonUtils.MathLib.Quaternion.Zero">
+            <summary>
+            The zero questernion.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Quaternion.Identity">
+            <summary>
+            The identity quaternion.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Quaternion.XAxis">
+            <summary>
+            X-Axis.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Quaternion.YAxis">
+            <summary>
+            Y-Axis.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Quaternion.ZAxis">
+            <summary>
+            Z-Axis.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Quaternion.WAxis">
+            <summary>
+            W-Axis.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.Clone">
+            <summary>
+            Creates a new object that is a copy of the current instance.
+            </summary>
+            <returns>A new object that is a copy of this instance.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetObjectData(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Populates a <see cref="T:System.Runtime.Serialization.SerializationInfo"/> with the data needed to serialize the target object.
+            </summary>
+            <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> to populate with data. </param>
+            <param name="context">The destination (see <see cref="T:System.Runtime.Serialization.StreamingContext"/>) for this serialization.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetHashCode">
+            <summary>
+            Get the hashcode for this quaternion instance.
+            </summary>
+            <returns>Returns the hash code for this vector instance.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.Equals(System.Object)">
+            <summary>
+            Checks if a given quaternion equals to self.
+            </summary>
+            <param name="o">Object to check if equal to.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetMagnitude">
+            <summary>
+            Get the magnitude of the Quaternion.
+            </summary>
+            <returns>The magnitude of the vector :  Sqrt(W*W + X*X + Y*Y + Z*Z).</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetMagnitudeSquared">
+            <summary>
+            Get the squared magnitude of the Quaternion.
+            </summary>
+            <returns>The squared magnitude of the vector : (W*W + X*X + Y*Y + Z*Z).</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetQDot(CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Returns the derivative of the quaternion coresponding to the
+            angular velocities PQR.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetTransformationMatrix">
+            <summary>
+            Transformation matrix
+            </summary>
+            <returns>
+            the transformation/rotation matrix
+            corresponding to this quaternion rotation
+            </returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetInverseTransformationMatrix">
+            <summary>
+            Inverse transformation matrix
+            </summary>
+            <returns>
+            the inverse transformation/rotation matrix
+            corresponding to this quaternion rotation
+            </returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetEulerAngles">
+            <summary>
+            Retrieves the Euler angles.
+            </summary>
+            <returns>
+            the triad of euler angles corresponding to this quaternion rotation.
+            units radians
+            </returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetSinEuler">
+            <summary>
+            Retrieves sine of the euler angles.
+            </summary>
+            <returns>
+            the sine of the Euler angle theta (pitch attitude) corresponding
+            to this quaternion rotation.
+            </returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetCosEuler">
+            <summary>
+            Retrieves cosine of the euler angles.
+            </summary>
+            <returns>
+            the sine of the Euler angle theta (pitch attitude) corresponding
+            to this quaternion rotation.
+            </returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.Inverse">
+            <summary>
+            Inverse self.
+            Applies to non-zero Quaternions.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.UnitInverse">
+            <summary>
+            Inverse self.
+            Apply to unit-length quaternion only.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetInverse">
+            <summary>
+            Create a new quaternion that is the transpose of self.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetUnitInverse">
+            <summary>
+            Create a new quaternion that is the transpose of self.
+            Note : Can be used only on unit quaternions.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.ToRotationMatrix">
+            <summary>
+            Gets a 3x3 rotation matrix from this Quaternion.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.ToAngleAxis(System.Double@,CommonUtils.MathLib.Vector3D@)">
+            <summary>
+               
+            </summary>
+            <param name="angle"></param>
+            <param name="axis"></param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.ComputeDerived">
+            <summary>
+            Computation of derived values.
+            This function checks if the derived values like euler angles and
+            transformation matrices are already computed. If so, it
+            returns. If they need to be computed the real worker routine
+            <code>ComputeDerivedUnconditional() </code>
+            is called.
+            This function is inlined to avoid function calls in the fast path.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.Add(CommonUtils.MathLib.Quaternion)">
+            <summary>
+            Add Quaternion to self.
+            </summary>
+            <param name="q"></param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.Subtract(CommonUtils.MathLib.Quaternion)">
+            <summary>
+            Subtract Quaternion from self.
+            </summary>
+            <param name="q"></param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.Multiply(CommonUtils.MathLib.Quaternion)">
+            <summary>
+            Multiply self by Quaternion.
+            Note that this operation is NOT commutative.
+            </summary>
+            <param name="q"></param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.Multiply(System.Double)">
+            <summary>
+            Multiply self by a scalar.
+            </summary>
+            <param name="f"></param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.Divide(System.Double)">
+            <summary>
+            Divide self by a scalar.
+            </summary>
+            <param name="f"></param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.Dot(CommonUtils.MathLib.Quaternion,CommonUtils.MathLib.Quaternion)">
+            <summary>
+            Calculate the dot product of two vectors.
+            </summary>
+            <param name="a">The first vector for the operation.</param>
+            <param name="b">The second vector for the operation.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.op_Equality(CommonUtils.MathLib.Quaternion,CommonUtils.MathLib.Quaternion)">
+            <summary>
+            Checks if the two quternions are equal.
+            </summary>
+            <param name="a">The first of two quaternions to compare.</param>
+            <param name="b">The second of two quaternions to compare.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.op_Inequality(CommonUtils.MathLib.Quaternion,CommonUtils.MathLib.Quaternion)">
+            <summary>
+            Checks if the two given quaternions are not equal.
+            </summary>
+            <param name="a">The first of two quaternions to compare.</param>
+            <param name="b">The second of two quaternions to compare.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.op_Multiply(System.Double,CommonUtils.MathLib.Quaternion)">
+            <summary>
+            Multiply a quaternion by a double value.
+            </summary>
+            <param name="f">The double value to use.</param>
+            <param name="q">The quaternion to multiply.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.op_Multiply(CommonUtils.MathLib.Quaternion,System.Double)">
+            <summary>
+            Multiply a quaternion by a double value.
+            </summary>
+            <param name="f">The double value to use.</param>
+            <param name="q">The quaternion to multiply.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.op_Division(CommonUtils.MathLib.Quaternion,System.Double)">
+            <summary>
+            Divides a quaternion by a double value.
+            </summary>
+            <param name="f">The double value to use.</param>
+            <param name="q">The quaternion to use.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.op_Addition(CommonUtils.MathLib.Quaternion,CommonUtils.MathLib.Quaternion)">
+            <summary>
+            Adds two quaternions.
+            </summary>
+            <param name="a">The first of two quaternions to add.</param>
+            <param name="b">The second of two quaternions to add.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.op_Multiply(CommonUtils.MathLib.Quaternion,CommonUtils.MathLib.Quaternion)">
+            <summary>
+            Multiplication of two quaternions is like performing successive rotations.
+            </summary>
+            <param name="a">The first of two quaternions to be multiplied.</param>
+            <param name="b">The second of two quaternions to be multiplied.</param>
+            <returns>a quaternion representing Q, where Q = a * b</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.op_Subtraction(CommonUtils.MathLib.Quaternion,CommonUtils.MathLib.Quaternion)">
+            <summary>
+            Substract two quaternions.
+            </summary>
+            <param name="a">The quaternions to substract from.</param>
+            <param name="b">The quaternions to substract.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.op_Explicit(CommonUtils.MathLib.Quaternion)~System.Double[]">
+            <summary>
+            Converts the vector to an array of double.
+            </summary>
+            <param name="q"></param>
+            <returns></returns>
+        </member>
+        <member name="F:CommonUtils.MathLib.Quaternion.mT">
+            This stores the transformation matrices.  
+        </member>
+        <member name="F:CommonUtils.MathLib.Quaternion.mEulerAngles">
+            The cached euler angles.  
+        </member>
+        <member name="F:CommonUtils.MathLib.Quaternion.mEulerSines">
+            The cached sines and cosines of the euler angles.  
+        </member>
+        <member name="P:CommonUtils.MathLib.Quaternion.Item(System.Int32)">
+            <summary>
+            An index accessor ( [w, x, y, z] ).
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.QuaternionNotInvertibleException">
+            <exception cref="T:System.ApplicationException">Thrown when trying to invert an uninvertible quaternion.</exception>
+        </member>
+        <member name="M:CommonUtils.MathLib.QuaternionNotInvertibleException.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.QuaternionNotInvertibleException"/> class.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.QuaternionNotInvertibleException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.QuaternionNotInvertibleException"/> class with a specified error message.
+            </summary>
+            <param name="message">A message that describes the error.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.QuaternionNotInvertibleException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.QuaternionNotInvertibleException"/> class 
+            with a specified error message and a reference to the inner exception that is 
+            the cause of this exception.
+            </summary>
+            <param name="message">A message that describes the error.</param>
+            <param name="inner">
+            The exception that is the cause of the current exception. 
+            If the innerException parameter is not a null reference, the current exception is raised 
+            in a catch block that handles the inner exception.
+            </param>
+        </member>
+        <member name="M:CommonUtils.MathLib.QuaternionNotInvertibleException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.QuaternionNotInvertibleException"/> class with serialized data.
+            </summary>
+            <param name="info">The object that holds the serialized object data.</param>
+            <param name="context">The contextual information about the source or destination.</param>
+        </member>
+        <member name="T:CommonUtils.MathLib.Vector3D">
+            <summary>
+            Vector class for 3D.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Vector3D.X">
+            <summary>
+            X coordinate.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Vector3D.Y">
+            <summary>
+            Y coordinate.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Vector3D.Z">
+            <summary>
+            Z coordinate.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.#ctor(System.Double,System.Double,System.Double)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Vector3D"/> class using given coordinates.
+            </summary>
+            <param name="x">The vector's X coordinate.</param>
+            <param name="y">The vector's Y coordinate.</param>
+            <param name="z">The vector's Z coordinate.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.#ctor(System.Double[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Vector3D"/> class using given coordinates array.
+            </summary>
+            <param name="coordinates">An array of coordinate parameters.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.#ctor(CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Vector3D"/> class using given coordinates from another vector.
+            </summary>
+            <param name="v">A 3D vector to assign values from.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Vector3D"/> class with serialized data.
+            </summary>
+            <param name="info">The object that holds the serialized object data.</param>
+            <param name="context">The contextual information about the source or destination.</param>
+        </member>
+        <member name="F:CommonUtils.MathLib.Vector3D.Zero">
+            <summary>
+            3D Zero vector.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Vector3D.XAxis">
+            <summary>
+            3D X Axis.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Vector3D.YAxis">
+            <summary>
+            3D Y Axis.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Vector3D.ZAxis">
+            <summary>
+            3D Z Axis.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.GetObjectData(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Populates a <see cref="T:System.Runtime.Serialization.SerializationInfo"/> with the data needed to serialize the target object.
+            </summary>
+            <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> to populate with data. </param>
+            <param name="context">The destination (see <see cref="T:System.Runtime.Serialization.StreamingContext"/>) for this serialization.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.System#ICloneable#Clone">
+            <summary>
+            Creates a new object that is a copy of the current instance.
+            </summary>
+            <returns>A new object that is a copy of this instance.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.Clone">
+            <summary>
+            Creates a new object that is a copy of the current instance.
+            </summary>
+            <returns>A new object that is a copy of this instance.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.GetHashCode">
+            <summary>
+            Get the hashcode for this vector instance.
+            </summary>
+            <returns>Returns the hash code for this vector instance.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.Equals(System.Object)">
+            <summary>
+            Checks if a given vector equals to self.
+            </summary>
+            <param name="o">Object to check if equal to.</param>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.ToString">
+            <summary>
+            Convert Vector3D to a string.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.Normalize">
+            <summary>
+            Scale the vector so that the magnitude is 1.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.GetMagnitude">
+            <summary>
+            Get the magnitude of the vector.
+            </summary>
+            <returns>The magnitude of the vector : Sqrt( X*X + Y*Y + Z*Z ).</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.GetMagnitude(System.Int32,System.Int32)">
+            <summary>
+            Length of the vector in a coordinate axis plane.
+            
+            </summary>
+            <returns>Compute and return the euclidean norm of this vector projected into
+            the coordinate axis plane idx1-idx2.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.GetMagnitudeSquared">
+            <summary>
+            Get the squared magnitude of the vector.
+            </summary>
+            <returns>The squared magnitude of the vector : ( X*X + Y*Y + Z*Z ).</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.GetUnit">
+            <summary>
+            Get a unit vector representation of the current vector.
+            </summary>
+            <returns>A unit representation of the current vector.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.Add(CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Add vector to self.
+            </summary>
+            <param name="value">The vector to add</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.Subtract(CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Subtract vector from self.
+            </summary>
+            <param name="value">The vector to substract.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.Multiply(System.Double)">
+            <summary>
+            Multiply self by a double value <paramref name="value"/>.
+            </summary>
+            <param name="value">The double value to use.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.Divide(System.Double)">
+            <summary>
+            Multiply self by a double value <paramref name="value"/>.
+            </summary>
+            <param name="value">The double value to use.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.Dot(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Calculate the dot product (i.e. inner product) of <paramref name="a"/> and <paramref name="b"/>.
+            </summary>
+            <param name="a">The first of two 3D vectors to dot.</param>
+            <param name="b">The second of two 3D vectors to dot.</param>
+            <returns>The dot product of <paramref name="v1"/> and <paramref name="v2"/>.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.Cross(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Calculate the cross product (i.e. outer product) of <paramref name="a"/> and <paramref name="b"/>.
+            The cross product is calculated using right-handed rule.
+            When using left-handed rule (which some graphics APIs like DirectX require) the
+            sign of the cross product should be changed.
+            </summary>
+            <param name="a">The first of two 3D vectors to cross.</param>
+            <param name="b">The second of two 3D vectors to cross.</param>
+            <returns>The cross product of the two given vectors.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.UnitCross(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Calculate the cross product (i.e. outer product) of <paramref name="a"/> and <paramref name="b"/>.
+            The cross product is calculated using right-handed rule.
+            When using left-handed rule (which some graphics APIs like DirectX require) the
+            sign of the cross operation result should be changed.
+            </summary>
+            <param name="a">The first of two 3D vectors to cross.</param>
+            <param name="b">The second of two 3D vectors to cross.</param>
+            <returns>The normalized cross product of the two given vectors.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.Lerp(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D,System.Double)">
+            <summary>
+            Linear interpolation between two vectors.
+            </summary>
+            <param name="a">First vector.</param>
+            <param name="b">Second vector.</param>
+            <param name="time">Interpolation time [0..1].</param>
+            <returns>Interpolated vector.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_Equality(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Checks if the two given vectors are equal.
+            </summary>
+            <param name="a">The first of two 3D vectors to compare.</param>
+            <param name="b">The second of two 3D vectors to compare.</param>
+            <returns><b>true</b> if the vectors are equal; otherwise, <b>false</b>.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_Inequality(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Checks if the two given vectors are not equal.
+            </summary>
+            <param name="a">The first of two 3D vectors to compare.</param>
+            <param name="b">The second of two 3D vectors to compare.</param>
+            <returns><b>true</b> if the vectors are not equal; otherwise, <b>false</b>.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_LessThan(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Checks if the vector on the left side of the operator is less than the vector on the right side.
+            </summary>
+            <param name="vec1">The first of two 3D vectors to check.</param>
+            <param name="vec2">The second of two 3D vectors to check.</param>
+            <returns><b>true</b> if <paramref name="vec1"/> is smaller than <paramref name="vec2"/>; otherwise, <b>false</b>.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_LessThanOrEqual(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Checks if the vector on the left side of the operator is less than or equal to the vector on the right side.
+            </summary>
+            <param name="vec1">The first of two 3D vectors to check.</param>
+            <param name="vec2">The second of two 3D vectors to check.</param>
+            <returns><b>true</b> if <paramref name="vec1"/> is smaller or equal to <paramref name="vec2"/>; otherwise, <b>false</b>.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_GreaterThan(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Checks if the vector on the left side of the operator is greater than the vector on the right side.
+            </summary>
+            <param name="vec1">The first of two 3D vectors to check.</param>
+            <param name="vec2">The second of two 3D vectors to check.</param>
+            <returns><b>true</b> if <paramref name="vec1"/> is larger than <paramref name="vec2"/>; otherwise, <b>false</b>.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_GreaterThanOrEqual(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Checks if the vector on the left side of the operator is  greater than or equal to the vector on the right side.
+            </summary>
+            <param name="vec1">The first of two 3D vectors to check.</param>
+            <param name="vec2">The second of two 3D vectors to check.</param>
+            <returns><b>true</b> if <paramref name="vec1"/> is larger or equal to <paramref name="vec2"/>; otherwise, <b>false</b>.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_UnaryNegation(CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Invert the direction of the vector.
+            </summary>
+            <param name="p">The vector to invert.</param>
+            <returns>Result is ( -vec.x, -vec.y, -vec.z ).</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_Multiply(System.Double,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Multiply vector <paramref name="vec"/> by a double value <paramref name="f"/>.
+            </summary>
+            <param name="f">The double value.</param>
+            <param name="vec">The vector.</param>
+            <returns>Result is ( vec.X*f, vec.Y*f, vec.Z*f ).</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_Multiply(CommonUtils.MathLib.Vector3D,System.Double)">
+            <summary>
+            Multiply vector <paramref name="vec"/> by a double value <paramref name="f"/>.
+            </summary>
+            <param name="f">The double value.</param>
+            <param name="vec">The vector.</param>
+            <returns>Result is ( vec.X*f, vec.Y*f, vec.Z*f ).</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_Division(CommonUtils.MathLib.Vector3D,System.Double)">
+            <summary>
+            Divide vector <paramref name="vec"/> by a double value <paramref name="f"/>.
+            </summary>
+            <param name="vec">The vector.</param>
+            <param name="f">The double value.</param>
+            <returns>Result is ( vec.X/f, vec.Y/f, vec.Z/f ).</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_Addition(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Add two vectors.
+            </summary>
+            <param name="vec1">The first vector to add.</param>
+            <param name="vec2">The second vector to add.</param>
+            <returns>Result is ( vec1.X + vec2.X, vec1.Y + vec2.Y, vec1.Z + vec2.Z )</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_Subtraction(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Subtract two vectors.
+            </summary>
+            <param name="vec1">The vector to substract from.</param>
+            <param name="vec2">The vector to substract.</param>
+            <returns>Result is ( vec1.X - vec2.X, vec1.Y - vec2.Y, vec1.Z - vec2.Z )</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_Explicit(CommonUtils.MathLib.Vector3D)~System.Double[]">
+            <summary>
+            Converts the vector to an array of doubles.
+            </summary>
+            <param name="value">The vector value to convert.</param>
+            <returns>Result is an array of double values containing the vector coordinates.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.ApproxEquals(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Checks if two given vectors are approximately equal.
+            </summary>
+            <param name="vec1">The first of two 3D vectors to compare.</param>
+            <param name="vec2">The second of two 3D vectors to compare.</param>
+            <returns><b>true</b> if the vectors are approximately equal; otherwise, <b>false</b>.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.ApproxEquals(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D,System.Double)">
+            <summary>
+            Checks if two given vectors are approximately equal.
+            </summary>
+            <param name="vec1">The first of two 3D vectors to compare.</param>
+            <param name="vec2">The second of two 3D vectors to compare.</param>
+            <param name="epsilon">The epsilon value to use.</param>
+            <returns><b>true</b> if the vectors are approximately equal; otherwise, <b>false</b>.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.Entry(System.Int32)">
+            TODO. Review this desing. 
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.Item(System.Int32)">
+            <summary>
+            An index accessor ( [X, Y, Z] ).
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.eX">
+            <summary>
+            X coordinate.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.eY">
+            <summary>
+            Y coordinate.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.eZ">
+            <summary>
+            Z coordinate.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.Item(CommonUtils.MathLib.PositionType)">
+            <summary>
+            An index accessor ( [X, Y, Z] ).
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.eP">
+            <summary>
+            P Rate.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.eQ">
+            <summary>
+            Q Rate.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.eR">
+            <summary>
+            R Rate.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.Item(CommonUtils.MathLib.RateType)">
+            <summary>
+            An Rate accessor ( [P, Q, R] ).
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.Roll">
+            <summary>
+            Local frame orientation Roll.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.Pitch">
+             <summary>
+            Local frame orientation Pitch.
+             </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.Yaw">
+            <summary>
+            Local frame orientation Yaw.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.Phi">
+            <summary>
+            Euler angles Phi
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.Theta">
+             <summary>
+            Euler angles Theta
+             </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.Psi">
+            <summary>
+            Euler angles Psi
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.U">
+            <summary>
+            Velocities U
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.V">
+             <summary>
+            Velocities V
+             </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.W">
+            <summary>
+            Velocities W
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.North">
+            <summary>
+            Local frame position North
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.East">
+            <summary>
+            Local frame position East
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.Down">
+            <summary>
+            Local frame position Down
+            </summary>
+        </member>
+        <member name="T:CommonUtils.MathLib.VectorAux">
+            <summary>
+            Additional vector routines.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.VectorAux.MapVectorOntoSurfacePlane(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Map a vector onto a plane.
+            </summary>
+            <param name="normal">normal vector for the plane</param>
+            <param name="v0">a point on the plane</param>
+            <param name="vec">the vector to map onto the plane</param>
+            <returns>the result vector</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.VectorAux.ClosestPointToLine(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Given a point p, and a line through p0 with direction vector d,
+            find the closest point (p1) on the line.
+            </summary>
+            <param name="p">original point</param>
+            <param name="p0">point on the line</param>
+            <param name="d">vector defining line direction</param>
+            <returns>closest point to p on the line</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.VectorAux.ClosestPointToLineDistSquared(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Given a point p, and a line through p0 with direction vector d,
+            find the shortest distance (squared) from the point to the line.
+            </summary>
+            <param name="p">original point</param>
+            <param name="p0">point on the line</param>
+            <param name="d">vector defining line direction</param>
+            <returns>shortest distance (squared) from p to line</returns>
+        </member>
+    </members>
+</doc>

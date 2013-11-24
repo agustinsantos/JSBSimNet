@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<runscript name="ball">
+  <!--
+    This run is for testing a null aircraft for taxiing behaviour
+  -->
+
+  <use aircraft="ball"/>
+  <use initialize="reset00"/>
+  <run start="0.0" end="540" dt="0.08333333333">
+  </run>
+</runscript>

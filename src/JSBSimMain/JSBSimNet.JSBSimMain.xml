@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>JSBSimNet</name>
+    </assembly>
+    <members>
+        <member name="F:JSBSimMain.JSBSimMainExec.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSimMain.JSBSimMainExec.CheckOptions(System.String[])">
+            <summary>
+            Loads all configuration values.
+            </summary>
+        </member>
+    </members>
+</doc>

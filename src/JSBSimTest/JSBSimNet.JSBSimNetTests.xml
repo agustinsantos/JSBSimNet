@@ -1,0 +1,149 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>JSBSimNet.JSBSimTests</name>
+    </assembly>
+    <members>
+        <member name="T:JSBSim.Tests.ConditionTests">
+            <summary>
+            Some table Tests: load and access.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.ClassWithPropertiesForConditions">
+            <summary>
+             A class with some properties to be tested within function.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.FunctionTests">
+            <summary>
+            Some Function Tests: load and access.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Tests.FunctionTests.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Tests.FunctionTests.Init">
+            <summary>
+            Configures log4Net at startup
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.ClassWithPropertiesForFunctions">
+            <summary>
+             A class with some properties to be tested within function.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.InitialConditionPropertiesTests">
+            <summary>
+            Some Initial Conditial Tests: InputOutput.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Tests.InitialConditionPropertiesTests.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Tests.InitialConditionPropertiesTests.Init">
+            <summary>
+            Configures log4Net at startup
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.InitialConditionTests">
+            <summary>
+            Some Initial Conditial Tests: load and access.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Tests.InitialConditionTests.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Tests.InitialConditionTests.Init">
+            <summary>
+            Configures log4Net at startup
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.LoadTests">
+            <summary>
+            Some JSBSim  models, engine and scripts file load Tests.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.PropertiesTests">
+            <summary>
+            Some JSBSim  properties, parameters, and functions Tests.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.ClassWithProperties">
+            <summary>
+            A class with some properties to be tested.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.ClassWithProperties2">
+            <summary>
+             A class derived from other class with some properties to be tested.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.ClassWithVirtualProperties">
+            <summary>
+            A class with some properties to be tested.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.ClassWithOverrideProperties">
+            <summary>
+             A class derived from other class with some overrided properties to be tested.
+             ScriptAttribute is defined with Inherited = true, so the overrided properties
+             must have the attributes defined.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.StaticClassWithProperties">
+            <summary>
+            A class with some static properties to be tested.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.RunTests">
+            <summary>
+            Some JSBSim models run Tests.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Tests.RunTests.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.TableTests">
+            <summary>
+            Some table Tests: load and access.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Tests.ClassWithPropertiesForTables">
+            <summary>
+             A class with some properties to be tested within table.
+            </summary>
+        </member>
+    </members>
+</doc>

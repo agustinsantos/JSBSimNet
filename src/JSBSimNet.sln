@@ -1,0 +1,54 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JSBSimNet.JSBSimMain", "JSBSimMain\JSBSimNet.JSBSimMain.csproj", "{ADDEA399-D3D0-4C1A-8667-B83EA45F2E58}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JSBSimNet.CommonUtils", "CommonUtils\JSBSimNet.CommonUtils.csproj", "{D677F99F-7C8B-4CC8-9227-615826E09B54}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JSBSimNet.JSBSimTests", "JSBSimTest\JSBSimNet.JSBSimTests.csproj", "{9B437240-15DD-44C9-9DBF-FC11D3FA0089}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JSBSimNet.CommonUtilsTests", "CommonUtilsTests\JSBSimNet.CommonUtilsTests.csproj", "{587ADA27-A101-422B-B003-D086D0803A9C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JSBSimNet.JSBSim", "JSBSim\JSBSimNet.JSBSim.csproj", "{A27CDBB3-C844-4C0E-B4C6-060CF1D910B0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		AutomatedDebug|Any CPU = AutomatedDebug|Any CPU
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ADDEA399-D3D0-4C1A-8667-B83EA45F2E58}.AutomatedDebug|Any CPU.ActiveCfg = AutomatedDebug|Any CPU
+		{ADDEA399-D3D0-4C1A-8667-B83EA45F2E58}.AutomatedDebug|Any CPU.Build.0 = AutomatedDebug|Any CPU
+		{ADDEA399-D3D0-4C1A-8667-B83EA45F2E58}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADDEA399-D3D0-4C1A-8667-B83EA45F2E58}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADDEA399-D3D0-4C1A-8667-B83EA45F2E58}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADDEA399-D3D0-4C1A-8667-B83EA45F2E58}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D677F99F-7C8B-4CC8-9227-615826E09B54}.AutomatedDebug|Any CPU.ActiveCfg = AutomatedDebug|Any CPU
+		{D677F99F-7C8B-4CC8-9227-615826E09B54}.AutomatedDebug|Any CPU.Build.0 = AutomatedDebug|Any CPU
+		{D677F99F-7C8B-4CC8-9227-615826E09B54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D677F99F-7C8B-4CC8-9227-615826E09B54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D677F99F-7C8B-4CC8-9227-615826E09B54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D677F99F-7C8B-4CC8-9227-615826E09B54}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B437240-15DD-44C9-9DBF-FC11D3FA0089}.AutomatedDebug|Any CPU.ActiveCfg = AutomatedDebug|Any CPU
+		{9B437240-15DD-44C9-9DBF-FC11D3FA0089}.AutomatedDebug|Any CPU.Build.0 = AutomatedDebug|Any CPU
+		{9B437240-15DD-44C9-9DBF-FC11D3FA0089}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B437240-15DD-44C9-9DBF-FC11D3FA0089}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B437240-15DD-44C9-9DBF-FC11D3FA0089}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B437240-15DD-44C9-9DBF-FC11D3FA0089}.Release|Any CPU.Build.0 = Release|Any CPU
+		{587ADA27-A101-422B-B003-D086D0803A9C}.AutomatedDebug|Any CPU.ActiveCfg = AutomatedDebug|Any CPU
+		{587ADA27-A101-422B-B003-D086D0803A9C}.AutomatedDebug|Any CPU.Build.0 = AutomatedDebug|Any CPU
+		{587ADA27-A101-422B-B003-D086D0803A9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{587ADA27-A101-422B-B003-D086D0803A9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{587ADA27-A101-422B-B003-D086D0803A9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{587ADA27-A101-422B-B003-D086D0803A9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A27CDBB3-C844-4C0E-B4C6-060CF1D910B0}.AutomatedDebug|Any CPU.ActiveCfg = AutomatedDebug|Any CPU
+		{A27CDBB3-C844-4C0E-B4C6-060CF1D910B0}.AutomatedDebug|Any CPU.Build.0 = AutomatedDebug|Any CPU
+		{A27CDBB3-C844-4C0E-B4C6-060CF1D910B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A27CDBB3-C844-4C0E-B4C6-060CF1D910B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A27CDBB3-C844-4C0E-B4C6-060CF1D910B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A27CDBB3-C844-4C0E-B4C6-060CF1D910B0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

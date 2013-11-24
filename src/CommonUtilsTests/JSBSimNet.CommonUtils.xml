@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>JSBSimNet.CommonUtilsTests</name>
+    </assembly>
+    <members>
+        <member name="T:CommonUtils.Tests.Vector3DTests">
+            <summary>
+            Summary description for Vector3DTests.
+            </summary>
+        </member>
+        <member name="T:CommonUtils.Tests.Matrix3DTests">
+            <summary>
+            Summary description for Matrix3DTests.
+            </summary>
+        </member>
+        <member name="T:CommonUtils.Tests.QuaternionTests">
+            <summary>
+            Summary description for QuaternionTests.
+            </summary>
+        </member>
+    </members>
+</doc>

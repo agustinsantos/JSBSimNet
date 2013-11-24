@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>Trove.Nini</id>
+    <version>1.1.0.0</version>
+    <title>Trove Unofficial Nini Configuration</title>
+    <authors>Alan Dean</authors>
+    <owners>Alan Dean</owners>
+    <licenseUrl>http://nini.svn.sourceforge.net/viewvc/nini/trunk/Nini/LICENSE.txt?revision=242&amp;view=markup</licenseUrl>
+    <projectUrl>http://nini.sourceforge.net/</projectUrl>
+    <iconUrl>http://www.alan-dean.com/sourceforge.png</iconUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <description>Nini is an uncommonly powerful .NET configuration library designed to help build highly configurable applications quickly.</description>
+    <summary>An unofficial package of the Nini Configuration library.</summary>
+    <releaseNotes />
+    <copyright>Copyright © 2006 Brent R. Matzelle</copyright>
+    <language />
+    <tags>INI Configuration</tags>
+  </metadata>
+</package>

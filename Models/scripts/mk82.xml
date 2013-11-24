@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<runscript name="mk82 test">
+  <!--
+    This run is for testing a MK82 behaviour
+  -->
+
+  <use aircraft="mk82"/>
+  <use initialize="reset00"/>
+  <run start="0.0" end="100" dt="0.00833333">
+  </run>
+</runscript>

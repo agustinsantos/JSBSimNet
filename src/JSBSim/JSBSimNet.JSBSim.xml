@@ -1,0 +1,3846 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>JSBSimNet.JSBSim</name>
+    </assembly>
+    <members>
+        <member name="T:JSBSim.FDMExecutive">
+            <summary>
+            Encapsulates the JSBSim simulation executive.
+            This class is the interface class through which all other simulation classes
+            are instantiated, initialized, and run. When integrated with FlightGear (or
+            other flight simulator) this class is typically instantiated by an interface
+            class on the simulator side.
+            
+            At the time of simulation initialization, the interface
+            class creates an instance of this executive class. The
+            executive is subsequently directed to load the chosen aircraft specification
+            file:
+            
+            <code>
+            fdmex = new FGFDMExec( … );
+            result = fdmex.LoadModel( … );
+            </code>
+            
+            When an aircraft model is loaded the config file is parsed and for each of the
+            sections of the config file (propulsion, flight control, etc.) the
+            corresponding "ReadXXX()" method is called. From within this method the
+            "Load()" method of that system is called (e.g. LoadFCS).
+            Subsequent to the creation of the executive and loading of the model,
+            initialization is performed. Initialization involves copying control inputs
+            into the appropriate JSBSim data storage locations, configuring it for the set
+            of user supplied initial conditions, and then copying state variables from
+            JSBSim. The state variables are used to drive the instrument displays and to
+            place the vehicle model in world space for visual rendering:
+            
+            <code>
+            copy_to_JSBsim(); // copy control inputs to JSBSim
+            fdmex.RunIC(); // loop JSBSim once w/o integrating
+            copy_from_JSBsim(); // update the bus
+            </code>
+            
+            Once initialization is complete, cyclic execution proceeds:
+            
+            <code>
+            copy_to_JSBsim(); // copy control inputs to JSBSim
+            fdmex.Run(); // execute JSBSim
+            copy_from_JSBsim(); // update the bus
+            </code>
+            
+            JSBSim can be used in a standalone mode by creating a compact stub program
+            that effectively performs the same progression of steps as outlined above for
+            the integrated version, but with two exceptions. First, the copy_to_JSBSim()
+            and copy_from_JSBSim() functions are not used because the control inputs are
+            handled directly by the scripting facilities and outputs are handled by the
+            output (data logging) class. Second, the name of a script file can be supplied
+            to the stub program. Scripting (see FGScript) provides a way to supply command
+            inputs to the simulation:
+            
+            <code>
+            FDMExec = new FGFDMExec();
+            Script = new FGScript( … );
+            Script.LoadScript( ScriptName ); // the script loads the aircraft and ICs
+            result = FDMExec.Run();
+            while (result) { // cyclic execution
+              if (Scripted) if (!Script.RunScript()) break; // execute script
+              result = FDMExec.Run(); // execute JSBSim
+            }
+            </code>
+            
+            The standalone mode has been useful for verifying changes before committing
+            updates to the source code repository. It is also useful for running sets of
+            tests that reveal some aspects of simulated aircraft performance, such as
+            range, time-to-climb, takeoff distance, etc.
+            
+            This code is based on FGFDMExec written by Jon S. Berndt
+            </summary>
+            <property name="simulator/do_trim">
+            (write only) Can be set to the integer equivalent to one of
+            tLongitudinal (0), tFull (1), tGround (2), tPullup (3),
+            tCustom (4), tTurn (5). Setting this to a legal value
+            (such as by a script) causes a trim to be performed. This
+            roperty actually maps toa function call of DoTrim().
+            </property>
+        </member>
+        <member name="F:JSBSim.FDMExecutive.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.FDMExecutive.#ctor(JSBSim.InputOutput.PropertyManager)">
+            Default constructor
+        </member>
+        <member name="M:JSBSim.FDMExecutive.Schedule(JSBSim.Models.Model,System.Int32)">
+            <summary>
+            This routine places a model into the runlist at the specified rate. The
+            "rate" is not really a clock rate. It represents how many calls to the
+            Run() method must be made before the model is executed. A
+            value of 1 means that the model will be executed for each call to the
+            exec's Run() method. A value of 5 means that the model will only be
+            executed every 5th call to the exec's Run() method.
+            </summary>
+            <param name="model">The model being scheduled</param>
+            <param name="rate">The rate at which to execute the model as described above</param>
+        </member>
+        <member name="M:JSBSim.FDMExecutive.Hold">
+            <summary>
+             Pauses execution by preventing time from incrementing.
+            </summary>
+        </member>
+        <member name="M:JSBSim.FDMExecutive.Resume">
+            <summary>
+             Resumes execution from a "Hold".
+            </summary>
+        </member>
+        <member name="M:JSBSim.FDMExecutive.Holding">
+            <summary>
+             Returns true if the simulation is Holding (i.e. simulation time is not moving).
+            </summary>
+        </member>
+        <member name="M:JSBSim.FDMExecutive.Run">
+            <summary>
+            This executes each scheduled model in succession.
+            </summary>
+            <returns>true if successful, false if sim should be ended</returns>
+        </member>
+        <member name="M:JSBSim.FDMExecutive.RunIC">
+            <summary>
+            Initializes the sim from the initial condition object and executes
+            each scheduled model without integrating i.e. dt=0.
+            </summary>
+            <returns>true if successful</returns>
+        </member>
+        <member name="M:JSBSim.FDMExecutive.LoadModel(System.String,System.String,System.String,System.Boolean)">
+            <summary>
+            Loads an aircraft model.
+            </summary>
+            <param name="aircraftPath">path to the aircraft directory. For instance:
+            "aircraft". Under aircraft, then, would be directories for various
+            modeled aircraft such as C172/, x15/, etc.</param>
+            <param name="enginePath">path to the directory under which engine config
+            files are kept, for instance "engine"</param>
+            <param name="model">the name of the aircraft model itself. This file 
+            will be looked for in the directory specified in the AircraftPath 
+            variable, and in turn under the directory with the same name as the
+            model. For instance: "aircraft/x15/x15.xml"</param>
+            <param name="addModelToPath">set to true to add the model name to the 
+            aircraftPath, defaults to true</param>
+            <returns>true if successful</returns>
+        </member>
+        <member name="M:JSBSim.FDMExecutive.LoadModel(System.String,System.Boolean)">
+            <summary>
+            Loads an aircraft model.
+            </summary>
+            <param name="model">the name of the aircraft model itself. This file 
+            will be looked for in the directory specified in the AircraftPath 
+            variable, and in turn under the directory with the same name as the
+            model. For instance: "aircraft/x15/x15.xml"</param>
+            <param name="addModelToPath">set to true to add the model name to the 
+            AircraftPath, defaults to true</param>
+            <returns>true if successful</returns>
+        </member>
+        <member name="M:JSBSim.FDMExecutive.GetTrim">
+            <summary>
+            Returns a reference to the Trim object
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:JSBSim.FDMExecutive.BuildPropertyCatalog(JSBSim.FDMExecutive.PropertyCatalogStructure)">
+            Builds a catalog of properties.
+            This function descends the property tree and creates a list (an STL vector)
+            containing the name and node for all properties.
+            @param pcs The "root" property catalog structure pointer.  
+        </member>
+        <member name="M:JSBSim.FDMExecutive.QueryPropertyCatalog(System.String)">
+            Retrieves property or properties matching the supplied string.
+            A string is returned that contains a carriage return delimited list of all
+            strings in the property catalog that matches the supplied check string.
+            @param check The string to search for in the property catalog.
+            @return the carriage-return-delimited string containing all matching strings
+                        in the catalog.  
+        </member>
+        <member name="M:JSBSim.FDMExecutive.UseAtmosphereMSIS">
+            Use the MSIS atmosphere model.
+        </member>
+        <member name="M:JSBSim.FDMExecutive.UseAtmosphereMars">
+            Use the Mars atmosphere model. (Not operative yet.)
+        </member>
+        <member name="P:JSBSim.FDMExecutive.State">
+            <summary>
+            Returns the State
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.Atmosphere">
+            <summary>
+            Returns the Atmosphere model
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.MassBalance">
+            <summary>
+            Returns the Aircraft reference.
+            </summary>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.Aircraft">
+            <summary>
+            Returns the Aircraft reference.
+            </summary>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.Propulsion">
+            <summary>
+            Returns the Propulsion reference.
+            </summary>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.Aerodynamics">
+            <summary>
+            Returns the Aerodynamics reference
+            </summary>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.FlightControlSystem">
+            <summary>
+            Returns the FlightControlSystem model.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.GroundReactions">
+            <summary>
+            Returns the GroundReactions reference.
+            </summary>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.Input">
+            <summary>
+            Returns the Input reference.
+            </summary>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.Inertial">
+            <summary>
+            Returns the Inertial reference.
+            </summary>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.GetIC">
+            <summary>
+            Returns a reference to the InitialCondition object
+            </summary>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.Auxiliary">
+            <summary>
+            Returns the Auxiliary reference.
+            </summary>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.Propagate">
+            <summary>
+            Returns the Propagate reference.
+            </summary>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.EnginePath">
+            <summary>
+            Gets/Sets the engine path to the directory under which engine 
+            config files are kept, for instance "engine"
+            </summary>
+        </member>
+        <member name="P:JSBSim.FDMExecutive.AircraftPath">
+            <summary>
+            Gets/sets the aircraft path. For instance: 
+            "aircraft". Under aircraft, then, would be directories for various	
+            modeled aircraft such as C172/, x15/, etc.path.
+            </summary>
+        </member>
+        <member name="F:JSBSim.FDMExecutive.PropertyCatalogStructure.base_string">
+            Name of the property.
+        </member>
+        <member name="F:JSBSim.FDMExecutive.PropertyCatalogStructure.node">
+            The node for the property.
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Force" -->
+        <member name="F:JSBSim.Force.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Force.#ctor(JSBSim.FDMExecutive)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="exec"></param>
+        </member>
+        <member name="M:JSBSim.Force.SetLocation(System.Double,System.Double,System.Double)">
+            <summary>
+            Normal point of application, JSBsim structural coords
+            </summary>
+            <param name="x">x +back inches</param>
+            <param name="y">y +right inches</param>
+            <param name="z">z +upinches</param>
+        </member>
+        <member name="M:JSBSim.Force.SetActingLocation(System.Double,System.Double,System.Double)">
+            <summary>
+            Acting point of application.
+            JSBsim structural coords used (inches, x +back, y +right, z +up).
+            This function sets the point at which the force acts - this may
+            not be the same as where the object resides. One area where this
+            is true is P-Factor modeling.
+            </summary>
+            <param name="x">acting location of force</param>
+            <param name="y">acting location of force</param>
+            <param name="z">acting location of force</param>
+        </member>
+        <member name="T:JSBSim.Format.FormatHelper">
+            <summary>
+            Summary description for RegExprFormat.
+            </summary>
+        </member>
+        <member name="T:JSBSim.InitialCondition">
+            <summary>
+            Takes a set of initial conditions and provide a kinematically consistent set
+            of body axis velocity components, euler angles, and altitude.  This class
+            does not attempt to trim the model i.e. the sim will most likely start in a
+            very dynamic state (unless, of course, you have chosen your IC's wisely)
+            even after setting it up with this class.
+            
+            USAGE NOTES
+            
+            With a valid object of FDMExecutive and an aircraft model loaded
+            InitialCondition fgic=new InitialCondition(FDMExec);
+            fgic.SetVcalibratedKtsIC()
+            fgic.SetAltitudeFtIC();
+            
+            to directly into Run
+            FDMExec.GetState().Initialize(fgic)
+            delete fgic;
+            FDMExec.Run()
+            
+            or to loop the sim w/o integrating
+            FDMExec.RunIC(fgic)
+            
+            Speed:
+            
+            Since vc, ve, vt, and mach all represent speed, the remaining
+            three are recalculated each time one of them is set (using the
+            current altitude).  The most recent speed set is remembered so 
+            that if and when altitude is reset, the last set speed is used 
+            to recalculate the remaining three. Setting any of the body 
+            components forces a recalculation of vt and vt then becomes the
+            most recent speed set.
+             
+            Alpha,Gamma, and Theta:
+            
+            This class assumes that it will be used to set up the sim for a
+            steady, zero pitch rate condition. Since any two of those angles 
+            specifies the third gamma (flight path angle) is favored when setting
+            alpha and theta and alpha is favored when setting gamma. i.e.
+             
+            - set alpha : recalculate theta using gamma as currently set
+            - set theta : recalculate alpha using gamma as currently set
+            - set gamma : recalculate theta using alpha as currently set
+            
+            The idea being that gamma is most interesting to pilots (since it 
+            is indicative of climb rate). 
+            Setting climb rate is, for the purpose of this discussion,
+            considered equivalent to setting gamma.
+            
+            These are the items that can be set in an initialization file:
+            
+            - ubody (velocity, ft/sec)
+            - vbody (velocity, ft/sec)
+            - wbody (velocity, ft/sec)
+            - latitude (position, degrees)
+            - longitude (position, degrees)
+            - phi (orientation, degrees)
+            - theta (orientation, degrees)
+            - psi (orientation, degrees)
+            - alpha (angle, degrees)
+            - beta (angle, degrees)
+            - gamma (angle, degrees)
+            - roc (vertical velocity, ft/sec)
+            - altitude (altitude, ft)
+            - winddir (wind from-angle, degrees)
+            - vwind (magnitude wind speed, ft/sec)
+            - hwind (headwind speed, knots)
+            - xwind (crosswind speed, knots)
+            - vc (calibrated airspeed, ft/sec)
+            - mach (mach)
+            - vground (ground speed, ft/sec)
+            - running (0 or 1)
+            Setting climb rate is, for the purpose of this discussion, 
+            considered equivalent to setting gamma.
+            @author Tony Peden
+            
+            </summary>
+        </member>
+        <member name="F:JSBSim.InitialCondition.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.VcalibratedKtsIC">
+            <summary>
+            sets/gets calibrated airspeed initial condition in knots.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.VequivalentKtsIC">
+            <summary>
+            sets/gets equivalent airspeed initial condition in knots.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.VgroundKtsIC">
+            <summary>
+            sets/gets ground speed initial condition in knots.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.VtrueKtsIC">
+            <summary>
+            sets/gets true airspeed initial condition in knots.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.MachIC">
+            <summary>
+            sets/gets mach initial condition.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.AlphaDegIC">
+            <summary>
+            sets/gets angle of attack initial condition in degrees.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.BetaDegIC">
+            <summary>
+            sets/gets angle of sideslip initial condition in degrees.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.ThetaDegIC">
+            <summary>
+            sets/gets pitch angle initial condition in degrees.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.PhiDegIC">
+            <summary>
+            sets/gets the roll angle initial condition in degrees.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.PsiDegIC">
+            <summary>
+            sets/gets the heading angle initial condition in degrees.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.ClimbRateFpmIC">
+            <summary>
+            sets/gets the climb rate initial condition in feet/minute.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.FlightPathAngleDegIC">
+            <summary>
+            sets/gets the flight path angle initial condition in degrees.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.AltitudeFtIC">
+            <summary>
+            sets/gets the altitude initial condition in feet.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.AltitudeAGLFtIC">
+            <summary>
+            sets/gets the initial Altitude above ground level.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.SeaLevelRadiusFtIC">
+            <summary>
+            sets/gets the initial sea level radius from planet center
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.TerrainAltitudeFtIC">
+            <summary>
+            sets/gets the initial terrain elevation.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.LatitudeDegIC">
+            <summary>
+            sets/gets  the initial latitude in degrees.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.LongitudeDegIC">
+            <summary>
+            sets/gets the initial longitude in degrees.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.VgroundFpsIC">
+            <summary>
+            sets/gets the initial ground speed in feet/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.VtrueFpsIC">
+            <summary>
+            sets/gets the initial true airspeed in feet/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.UBodyFpsIC">
+            <summary>
+            sets/gets the initial body axis X velocity in feet/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.VBodyFpsIC">
+            <summary>
+            sets/gets the initial body axis Y velocityin feet/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.WBodyFpsIC">
+            <summary>
+            sets/gets the initial body axis Z velocity in feet/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.WindUFpsIC">
+            <summary>
+            Gets the initial body axis X wind velocity in feet/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.WindVFpsIC">
+            <summary>
+            Gets the initial body axis Y wind velocity in feet/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.WindWFpsIC">
+            <summary>
+            Gets the initial body axis Z wind velocity in feet/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.WindNFpsIC">
+            <summary>
+            sets/gets the initial body axis Z velocity in feet/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.WindEFpsIC">
+            <summary>
+            sets/gets the initial body axis Z velocity in feet/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.WindDFpsIC">
+            <summary>
+            sets/gets the initial body axis Z velocity in feet/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.WindFpsIC">
+            <summary>
+            gets the initial total wind velocity in feet/sec.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.PRadpsIC">
+            <summary>
+            gets/sets the initial body axis roll rate in radians/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.QRadpsIC">
+            <summary>
+            gets/sets the initial body axis pitch rate in radians/second.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InitialCondition.RRadpsIC">
+            <summary>
+            gets/sets the initial body axis yaw rate in radians/second.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Trim">
+            <summary>
+            Trim -- the trimming routine for JSBSim.
+            Trim finds the aircraft attitude and control settings needed to maintain
+            the steady state described by the InitialCondition object .  It does this
+            iteratively by assigning a control to each state and adjusting that control
+            until the state is within a specified tolerance of zero. States include the
+            recti-linear accelerations udot, vdot, and wdot, the angular accelerations
+            qdot, pdot, and rdot, and the difference between heading and ground track.
+            Controls include the usual flight deck controls available to the pilot plus
+            angle of attack (alpha), sideslip angle(beta), flight path angle (gamma),
+            pitch attitude(theta), roll attitude(phi), and altitude above ground.  The
+            last three are used for on-ground trimming. The state-control pairs used in
+            a given trim are completely user configurable and several pre-defined modes
+            are provided as well. They are:
+            - tLongitudinal: Trim wdot with alpha, udot with thrust, qdot with elevator
+            - tFull: tLongitudinal + vdot with phi, pdot with aileron, rdot with rudder
+            and heading minus ground track (hmgt) with beta
+            - tPullup: tLongitudinal but adjust alpha to achieve load factor input
+            with SetTargetNlf()
+            - tGround: wdot with altitude, qdot with theta, and pdot with phi
+            
+            The remaining modes include <b>tCustom</b>, which is completely user defined and
+            <b>tNone</b>.
+            
+            Note that trims can (and do) fail for reasons that are completely outside
+            the control of the trimming routine itself. The most common problem is the
+            initial conditions: is the model capable of steady state flight
+            at those conditions?  Check the speed, altitude, configuration (flaps,
+            gear, etc.), weight, cg, and anything else that may be relevant.
+            
+            Example usage:<pre>
+            FGFDMExec* FDMExec = new FGFDMExec();
+            
+            FGInitialCondition* fgic = new FGInitialCondition(FDMExec);
+            FGTrim fgt(FDMExec, fgic, tFull);
+            fgic.SetVcaibratedKtsIC(100);
+            fgic.SetAltitudeFtIC(1000);
+            fgic.SetClimbRate(500);
+            if( !fgt.DoTrim() ) 
+            {
+            cout + "Trim Failed" + endl;
+            }
+            fgt.Report(); </pre>
+            @author Tony Peden
+            </summary>
+        </member>
+        <member name="F:JSBSim.Trim.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Trim.#ctor(JSBSim.FDMExecutive,JSBSim.TrimMode)">
+            <summary>
+            Initializes the trimming class
+            </summary>
+            <param name="fdmexec">a JSBSim executive object</param>
+            <param name="tm">trim mode</param>
+        </member>
+        <member name="M:JSBSim.Trim.DoTrim">
+            <summary>
+            Execute the trim
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:JSBSim.Trim.Report">
+            Print the results of the trim. For each axis trimmed, this
+            			includes the final state value, control value, and tolerance
+            			used.
+            			@return true if trim succeeds
+        </member>
+        <member name="M:JSBSim.Trim.TrimStats">
+            Iteration statistics
+        </member>
+        <member name="M:JSBSim.Trim.SetMode(JSBSim.TrimMode)">
+            <summary>
+            Clear all state-control pairs and set a predefined trim mode
+            </summary>
+            <param name="tm">the set of axes to trim. Can be:
+            tLongitudinal, tFull, tGround, tCustom, or tNone</param>
+        </member>
+        <member name="M:JSBSim.Trim.ClearStates">
+            <summary>
+            Clear all state-control pairs from the current configuration.
+            The trimming routine must have at least one state-control pair
+            configured to be useful
+            </summary>
+        </member>
+        <member name="M:JSBSim.Trim.AddState(JSBSim.StateType,JSBSim.ControlType)">
+            <summary>
+            Add a state-control pair to the current configuration. See the enums
+            State and Control in TrimAxis.h for the available options.
+            Will fail if the given state is already configured.
+            </summary>
+            <param name="state">the accel or other condition to zero</param>
+            <param name="control">the control used to zero the state</param>
+            <returns>true if add is successful</returns>
+        </member>
+        <member name="M:JSBSim.Trim.RemoveState(JSBSim.StateType)">
+            <summary>
+            Remove a specific state-control pair from the current configuration
+            </summary>
+            <param name="state">the state to remove</param>
+            <returns>true if removal is successful</returns>
+        </member>
+        <member name="M:JSBSim.Trim.EditState(JSBSim.StateType,JSBSim.ControlType)">
+            <summary>
+            Change the control used to zero a state previously configured
+            </summary>
+            <param name="state">the accel or other condition to zero</param>
+            <param name="new_control">the control used to zero the state</param>
+            <returns></returns>
+        </member>
+        <member name="M:JSBSim.Trim.SetGammaFallback(System.Boolean)">
+            automatically switch to trimming longitudinal acceleration with
+            			flight path angle (gamma) once it becomes apparent that there
+            			is not enough/too much thrust.
+            			@param bb true to enable fallback
+        </member>
+        <member name="M:JSBSim.Trim.GetGammaFallback">
+            query the fallback state
+            			@return true if fallback is enabled.
+        </member>
+        <member name="M:JSBSim.Trim.SetMaxCycles(System.Int32)">
+            Set the iteration limit. DoTrim() will return false if limit
+            			iterations are reached before trim is achieved.  The default
+            			is 60.  This does not ordinarily need to be changed.
+            			@param ii integer iteration limit
+        </member>
+        <member name="M:JSBSim.Trim.SetMaxCyclesPerAxis(System.Int32)">
+            Set the per-axis iteration limit.  Attempt to zero each state
+            			by iterating limit times before moving on to the next. The
+            			default limit is 100 and also does not ordinarily need to
+            			be changed.
+            			@param ii integer iteration limit
+        </member>
+        <member name="M:JSBSim.Trim.SetTolerance(System.Double)">
+            Set the tolerance for declaring a state trimmed. Angular accels are
+            			held to a tolerance of 1/10th of the given.  The default is
+            			0.001 for the recti-linear accelerations and 0.0001 for the angular.
+        </member>
+        <!-- Badly formed XML comment ignored for member "M:JSBSim.Trim.SetDebug(System.Int32)" -->
+        <member name="M:JSBSim.Trim.DebugState(JSBSim.StateType)">
+            		  Output debug data for one of the axes
+            		  The State enum is defined in TrimAxis.h
+        </member>
+        <member name="M:JSBSim.Trim.FindInterval">
+            <summary>
+            produces an interval (xlo..xhi) on one side or the other of the current 
+            control value in which a solution exists.  This domain is, hopefully, 
+            smaller than xmin..0 or 0..xmax and the solver will require fewer iterations 
+            to find the solution. This is, hopefully, more efficient than having the 
+            solver start from scratch every time. Maybe it isn't though...
+            This tries to take advantage of the idea that the changes from iteration to
+            iteration will be small after the first one or two top-level iterations.
+            
+            assumes that changing the control will a produce significant change in the
+            accel i.e. CheckLimits() has already been called.
+            
+            if a solution is found above the current control, the function returns true 
+            and xlo is set to the current control, xhi to the interval max it found, and 
+            solutionDomain is set to 1.
+            if the solution lies below the current control, then the function returns 
+            true and xlo is set to the interval min it found and xmax to the current 
+            control. if no solution is found, then the function returns false.
+             
+            in all cases, alo=accel(xlo) and ahi=accel(xhi) after the function exits.
+            no assumptions about the state of the sim after this function has run 
+            can be made.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:JSBSim.TrimAxis">
+            <summary>
+            Models an aircraft axis for purposes of trimming.
+            </summary>
+        </member>
+        <member name="F:JSBSim.TrimAxis.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.GroundCallback.GetAltitude(JSBSim.Location)">
+            <summary>
+             Compute the altitude above sealevel.
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.GroundCallback.GetAGLevel(System.Double,JSBSim.Location,JSBSim.Location@,CommonUtils.MathLib.Vector3D@,CommonUtils.MathLib.Vector3D@)">
+            <summary>
+             Compute the altitude above ground. Defaults to sealevel altitude.
+            </summary>
+        </member>
+        <member name="F:JSBSim.InputOutput.GroundCallback.mReferenceRadius">
+            Reference radius.
+        </member>
+        <member name="P:JSBSim.InputOutput.PropertyEventArgs.Property">
+            <returns>
+            returns the changed property object
+            </returns>
+        </member>
+        <member name="P:JSBSim.InputOutput.PropertyEventArgs.Key">
+            <returns>
+            The key of the changed property
+            </returns>
+        </member>
+        <member name="P:JSBSim.InputOutput.PropertyEventArgs.NewValue">
+            <returns>
+            The new value of the property
+            </returns>
+        </member>
+        <member name="P:JSBSim.InputOutput.PropertyEventArgs.OldValue">
+            <returns>
+            The new value of the property
+            </returns>
+        </member>
+        <member name="T:JSBSim.InputOutput.PropertyFileLoadException">
+            <summary>
+            Is thrown when no property file could be loaded.
+            </summary>
+        </member>
+        <member name="T:JSBSim.InputOutput.PropertyManager">
+            <summary>
+            Summary description for PropertyManager.
+            </summary>
+        </member>
+        <member name="F:JSBSim.InputOutput.PropertyManager.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyManager.#ctor">
+            <summary>
+            Constructor
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyManager.#ctor(System.Boolean)">
+            <summary>
+            Constructor
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyManager.GetNode____Obsolete(System.String,System.Boolean)">
+            <summary>
+            Get a property node.
+            </summary>
+            <param name="path">The path of the node, relative to root.</param>
+            <param name="create">true to create the node if it doesn't exist.</param>
+            <returns>The node, or null if none exists and none was created.</returns>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyManager.GetPropertyNode(System.String)">
+            <summary>
+            Gets a property.
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyManager.HasNode(System.String)">
+            <summary>
+            Test whether a given node exists.
+            </summary>
+            <param name="path">The path of the node, relative to root.</param>
+            <returns>true if the node exists, false otherwise.</returns>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyManager.GetName">
+            <summary>
+            Get the name of a node
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyManager.GetFullyQualifiedName">
+            <summary>
+            Get the fully qualified name of a node
+            This function is very slow, so is probably useful for debugging only.
+            </summary>
+            <returns>the fully qualified name</returns>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyManager.SetArchivable(System.String,System.Boolean)">
+             Set the state of the archive attribute for a property.
+            
+             If the archive attribute is true, the property will be written
+             when a flight is saved; if it is false, the property will be
+             skipped.
+            
+             A warning message will be printed if the property does not exist.
+            
+             @param name The property name.
+             @param state The state of the archive attribute (defaults to true).
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyManager.SetReadable(System.String,System.Boolean)">
+             Set the state of the read attribute for a property.
+            
+             If the read attribute is true, the property value will be readable;
+             if it is false, the property value will always be the default value
+             for its type.
+            
+             A warning message will be printed if the property does not exist.
+            
+             @param name The property name.
+             @param state The state of the read attribute (defaults to true).
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyManager.SetWritable(System.String,System.Boolean)">
+             Set the state of the write attribute for a property.
+            
+             If the write attribute is true, the property value may be modified
+             (depending on how it is tied); if the write attribute is false, the
+             property value may not be modified.
+            
+             A warning message will be printed if the property does not exist.
+            
+             @param name The property name.
+             @param state The state of the write attribute (defaults to true).
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyManager.Untie(System.String)">
+            <summary>
+            Untie a property from an external data source.
+            </summary>
+            <param name="name">Classes should use this function to release control of any
+            properties they are managing.</param>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyManager.Tie(System.String,System.Object,System.Reflection.PropertyInfo,System.Boolean)">
+            <summary>
+            Tie a property to an external variable.
+            The property's value will automatically mirror the variable's
+            value, and vice-versa, until the property is untied.
+            </summary>
+            <param name="name">The property name to tie (full path).</param>
+            <param name="val">the object to be tied</param>
+            <param name="useDefault">true if any existing property value should be
+            copied to the variable; false if the variable should not
+            be modified; defaults to true.</param>
+        </member>
+        <member name="T:JSBSim.InputOutput.PropertyNode">
+            <summary>
+            Summary description for IProperty.
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyNode.Get">
+            <summary>
+            Gets the value for object.
+            This method uses reflection and maybe some boxing/unboxing
+            So don't use this fuction if you plan to use it frecuently. Performance hit is expected.
+            Use GetInt16, GetInt32, GetInt64, GetDouble instead. Or even better, use delegates directly
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyNode.GetInt16">
+            <summary>
+            Gets the int16 value for object.
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyNode.GetInt32">
+            <summary>
+            Gets the int32 value for object.
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyNode.GetInt64">
+            <summary>
+            Gets the int64 value for object.
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyNode.GetDouble">
+            <summary>
+            Gets the Double value for object.
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyNode.Set(System.Object)">
+            <summary>
+            Sets the value for this object.
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyNode.FireHasChangedEvent">
+            <summary>
+            Fire a child-removed event to all listeners. 
+            </summary>
+        </member>
+        <member name="P:JSBSim.InputOutput.PropertyNode.ShortName">
+            <summary>
+            Get the node's simple name.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InputOutput.PropertyNode.GetInt16Delegate">
+            <summary>
+            Get the delegate foa an Int16 value.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InputOutput.PropertyNode.GetInt32Delegate">
+            <summary>
+            Get the delegate for an Int32 value.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InputOutput.PropertyNode.GetInt64Delegate">
+            <summary>
+            Get the delegate for an Int64 value.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InputOutput.PropertyNode.GetDoubleDelegate">
+            <summary>
+            Get the delegate for a double value.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InputOutput.PropertyNode.GetDoubleIndexedGetDelegate">
+            <summary>
+            Get the delegate for getting a double value accessed by index.
+            </summary>
+        </member>
+        <member name="P:JSBSim.InputOutput.PropertyNode.GetDoubleIndexedSetDelegate">
+            <summary>
+            Get the delegate for setting a double value accessed by index.
+            </summary>
+        </member>
+        <member name="E:JSBSim.InputOutput.PropertyNode.ValueChangedEvent">
+            <summary>
+            Event to notify that the property has changed.
+            </summary>
+            <value>
+            Event to notify that the property has changed.
+            </value>
+        </member>
+        <member name="T:JSBSim.InputOutput.PropertyNode.PropertyHasChangedEventHandler">
+            <summary>
+            This event handler is used when a property has changed. 
+            TODO: Not yet fully implemented and tested.
+            </summary>
+        </member>
+        <member name="T:JSBSim.InputOutput.PropertyTreeNode">
+            <summary>
+            Summary description for IProperty.
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyTreeNode.FireChildAddedEvent">
+            <summary>
+            Fire a child-added event to all listeners. 
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyTreeNode.FireChildRemovedEvent">
+            <summary>
+            Fire a child-removed event to all listeners. 
+            </summary>
+        </member>
+        <member name="F:JSBSim.InputOutput.PropertyTreeNode.compRegEx">
+            <summary>
+            A directory: 
+            A component: [_a-zA-Z][-._a-zA-Z0-9]*
+            An optional integer index for a component: "[" [0-9]+ "]"
+            </summary>
+        </member>
+        <member name="M:JSBSim.InputOutput.PropertyTreeNode.ParsePath(System.String)">
+            <summary>
+            Parse a path into its components.
+            </summary>
+            <param name="path"></param>
+            <returns></returns>
+        </member>
+        <member name="P:JSBSim.InputOutput.PropertyTreeNode.RootNode">
+            <summary>
+            Get the node's root .
+            </summary>
+        </member>
+        <member name="E:JSBSim.InputOutput.PropertyTreeNode.ChildAddedEvent">
+            <summary>
+            Event to notify that a child has been added.
+            </summary>
+            <value>
+            Event to notify that a child has been added.
+            </value>
+        </member>
+        <member name="E:JSBSim.InputOutput.PropertyTreeNode.ChildRemoveEvent">
+            <summary>
+            Event to notify that a child has been removed.
+            </summary>
+            <value>
+            Event to notify that a child has been removed.
+            </value>
+        </member>
+        <member name="T:JSBSim.InputOutput.PropertyTreeNode.PathComponent">
+            <summary>
+            A component in a path.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Script.Script">
+            <summary>
+            Encapsulates the JSBSim scripting capability.
+            <h4>Scripting support provided via FGScript.</h4>
+            
+            <p>There is simple scripting support provided in the FGScript
+            class. Commands are specified using the <em>Simple Scripting
+            Directives for JSBSim</em> (SSDJ). The script file is in XML
+            format. A test condition (or conditions) can be set up in the
+            script and when the condition evaluates to true, the specified
+            action[s] is/are taken. A test condition can be <em>persistent</em>,
+            meaning that if a test condition evaluates to true, then passes
+            and evaluates to false, the condition is reset and may again be
+            triggered. When the set of tests evaluates to true for a given
+            condition, an item may be set to another value. This value might
+            be a boolean, a value, or a delta value, and the change from the
+            current value to the new value can be either via a step function,
+            a ramp, or an exponential approach. The speed of a ramp or
+            approach is specified via the time constant. Here is the format
+            of the script file:</p>
+            
+            <pre><strong>&lt;?xml version=&quot;1.0&quot;?&gt;
+            &lt;runscript name=&quot;C172-01A&quot;&gt;
+            
+            &lt;!--
+            This run is for testing C172 runs
+            --&gt;
+            
+            &lt;use aircraft=&quot;c172&quot;&gt;
+            &lt;use initialize=&quot;reset00&quot;&gt;
+            
+            &lt;run start=&quot;0.0&quot; end=&quot;4.5&quot; dt=&quot;0.05&quot;&gt;
+              &lt;when&gt;
+                &lt;parameter name=&quot;FG_TIME&quot; comparison=&quot;ge&quot; value=&quot;0.25&quot;&gt;
+                &lt;parameter name=&quot;FG_TIME&quot; comparison=&quot;le&quot; value=&quot;0.50&quot;&gt;
+                &lt;set name=&quot;FG_AILERON_CMD&quot; type=&quot;FG_VALUE&quot; value=&quot;0.25&quot;
+                action=&quot;FG_STEP&quot; persistent=&quot;false&quot; tc =&quot;0.25&quot;&gt;
+              &lt;/when&gt;
+              &lt;when&gt;
+                &lt;parameter name=&quot;FG_TIME&quot; comparison=&quot;ge&quot; value=&quot;0.5&quot;&gt;
+                &lt;parameter name=&quot;FG_TIME&quot; comparison=&quot;le&quot; value=&quot;1.5&quot;&gt;
+                &lt;set name=&quot;FG_AILERON_CMD&quot; type=&quot;FG_DELTA&quot; value=&quot;0.5&quot;
+                action=&quot;FG_EXP&quot; persistent=&quot;false&quot; tc =&quot;0.5&quot;&gt;
+              &lt;/when&gt;
+              &lt;when&gt;
+                &lt;parameter name=&quot;FG_TIME&quot; comparison=&quot;ge&quot; value=&quot;1.5&quot;&gt;
+                &lt;parameter name=&quot;FG_TIME&quot; comparison=&quot;le&quot; value=&quot;2.5&quot;&gt;
+                &lt;set name=&quot;FG_RUDDER_CMD&quot; type=&quot;FG_DELTA&quot; value=&quot;0.5&quot;
+                action=&quot;FG_RAMP&quot; persistent=&quot;false&quot; tc =&quot;0.5&quot;&gt;
+              &lt;/when&gt;
+            &lt;/run&gt;
+            
+            &lt;/runscript&gt;</strong></pre>
+            
+            <p>The first line must always be present. The second line
+            identifies this file as a script file, and gives a descriptive
+            name to the script file. Comments are next, delineated by the
+            &lt;!-- and --&gt; symbols. The aircraft and initialization files
+            to be used are specified in the &quot;use&quot; lines. Next,
+            comes the &quot;run&quot; section, where the conditions are
+            described in &quot;when&quot; clauses.</p>
+            @author Jon S. Berndt
+            @version "$Id: FGScript.h,v 1.12 2003/12/04 05:12:53 jberndt Exp $
+            </summary>
+        </member>
+        <member name="F:JSBSim.Script.Script.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Script.Script.#ctor(JSBSim.FDMExecutive)">
+            Default constructor
+        </member>
+        <member name="M:JSBSim.Script.Script.LoadScript(System.String)">
+            <summary>
+            Loads a script to drive JSBSim (usually in standalone mode).
+            The language is the Simple Script Directives for JSBSim (SSDJ).
+            </summary>
+            <param name="script">the filename (including path name, if any) for the script.</param>
+        </member>
+        <member name="T:JSBSim.Script.ScriptAttribute">
+            <summary>
+            	Summary description for ScriptAttribute.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Script.ScriptAttribute.name">
+            <summary>
+               Name of the command the target class will be registered to handle.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Script.ScriptAttribute.description">
+            <summary>
+               Description of what this command does.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Script.ScriptAttribute.#ctor(System.String,System.String)">
+            <summary>
+               Constructor.
+            </summary>
+            <param name="name"></param>
+            <param name="description"></param>
+            <param name="target"></param>
+        </member>
+        <member name="M:JSBSim.Script.ScriptAttribute.#ctor(System.String)">
+            <summary>
+               Constructor.
+            </summary>
+            <param name="name"></param>
+        </member>
+        <member name="P:JSBSim.Script.ScriptAttribute.Name">
+            <summary>
+               Name of this command.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Script.ScriptAttribute.Description">
+            <summary>
+               Optional description of what this command does.
+            </summary>
+        </member>
+        <member name="T:JSBSim.InputOutput.UnknownPropertyNodeException">
+            <summary>
+            Is thrown when an unknown property is encountered.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Location" -->
+        <member name="F:JSBSim.Location.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Location.#ctor(System.Double,System.Double,System.Double)">
+            <summary>
+            Constructor to set the longitude, latitude and the distance
+            from the center of the earth.
+            </summary>
+            <param name="lon">longitude</param>
+            <param name="lat">GEOCENTRIC latitude</param>
+            <param name="radius">distance from center of earth to vehicle in feet</param>
+        </member>
+        <member name="M:JSBSim.Location.op_Subtraction(JSBSim.Location,JSBSim.Location)">
+            <summary>
+            Subtract two locations.
+            </summary>
+            <param name="vec1">The location to substract from.</param>
+            <param name="vec2">The location to substract.</param>
+            <returns>Result is ( vec1.X - vec2.X, vec1.Y - vec2.Y, vec1.Z - vec2.Z )</returns>
+        </member>
+        <member name="M:JSBSim.Location.op_Addition(JSBSim.Location,JSBSim.Location)">
+            <summary>
+            Add two locations.
+            </summary>
+            <param name="vec1">The first location to add.</param>
+            <param name="vec2">The second location to add.</param>
+            <returns>Result is ( vec1.X + vec2.X, vec1.Y + vec2.Y, vec1.Z + vec2.Z )</returns>
+        </member>
+        <member name="M:JSBSim.Location.op_Multiply(System.Double,JSBSim.Location)">
+            <summary>
+            Multiply Location <paramref name="vec"/> by a double value <paramref name="f"/>.
+            </summary>
+            <param name="f">The double value.</param>
+            <param name="loc">The Location.</param>
+            <returns>Result is ( vec.X*f, vec.Y*f, vec.Z*f ).</returns>
+        </member>
+        <member name="M:JSBSim.Location.op_Multiply(JSBSim.Location,System.Double)">
+            <summary>
+            Multiply Location <paramref name="vec"/> by a double value <paramref name="f"/>.
+            </summary>
+            <param name="f">The double value.</param>
+            <param name="loc">The Location.</param>
+            <returns>Result is ( vec.X*f, vec.Y*f, vec.Z*f ).</returns>
+        </member>
+        <member name="M:JSBSim.Location.ComputeDerivedUnconditional">
+            <summary>
+            Computation of derived values.
+            This function re-computes the derived values like lat/lon and
+            transformation matrices. It does this unconditionally.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Location.ComputeDerived">
+            <summary>
+            Computation of derived values
+            This function checks if the derived values like lat/lon and
+            transformation matrices are already computed. If so, it
+            returns. If they need to be computed this is done here.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Location.GetTl2ec">
+            <summary>
+            Transform matrix from local horizontal to earth centered frame.
+            Returns a copy of the rotation matrix of the transform from
+            the local horizontal frame to the earth centered frame.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Location.GetTec2l">
+            <summary>
+            Transform matrix from the earth centered to local horizontal frame.
+            Returns a const reference to the rotation matrix of the transform from
+            the earth centered frame to the local horizontal frame.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Location.LocalToLocation(CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Conversion from Local frame coordinates to a location in the
+            earth centered and fixed frame.
+            </summary>
+            <param name="lvec">Vector in the local horizontal coordinate frame</param>
+            <returns>The location in the earth centered and fixed frame</returns>
+        </member>
+        <member name="M:JSBSim.Location.LocationToLocal(CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Conversion from a location in the earth centered and fixed frame
+            to local horizontal frame coordinates.
+            </summary>
+            <param name="ecvec">Vector in the earth centered and fixed frame</param>
+            <returns>The vector in the local horizontal coordinate frame</returns>
+        </member>
+        <member name="M:JSBSim.Location.op_Explicit(CommonUtils.MathLib.Vector3D)~JSBSim.Location">
+            <summary>
+            Converts the Vector3D to a location.
+            </summary>
+            <param name="v"></param>
+            <returns></returns>
+        </member>
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Location.mECLoc" -->
+        <member name="F:JSBSim.Location.mLon">
+            The cached lon/lat/radius values. 
+        </member>
+        <member name="F:JSBSim.Location.mTl2ec">
+            The cached rotation matrices from and to the associated frames. 
+        </member>
+        <member name="F:JSBSim.Location.mCacheValid">
+            <summary>
+            A data validity flag.
+            This class implements caching of the derived values like the
+            orthogonal rotation matrices or the lon/lat/radius values. For caching we
+            carry a flag which signals if the values are valid or not.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "P:JSBSim.Location.Longitude" -->
+        <!-- Badly formed XML comment ignored for member "P:JSBSim.Location.LongitudeDeg" -->
+        <member name="P:JSBSim.Location.SinLongitude">
+            <summary>
+            Get the sine of Longitude. 
+            </summary>
+        </member>
+        <member name="P:JSBSim.Location.CosLongitude">
+            <summary>
+            Get the cosine of Longitude. 
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "P:JSBSim.Location.Latitude" -->
+        <!-- Badly formed XML comment ignored for member "P:JSBSim.Location.LatitudeDeg" -->
+        <member name="P:JSBSim.Location.SinLatitude">
+            <summary>
+            Get the sine of Latitude.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Location.CosLatitude">
+            <summary>
+            Get the cosine of Latitude.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Location.TanLatitude">
+            <summary>
+            Get the Tan of Latitude
+            </summary>
+        </member>
+        <member name="P:JSBSim.Location.Radius">
+            <summary>
+            Get/Set the distance from the center of the earth.
+            return the distance of the location represented with this class
+            instance to the center of the earth in ft. The radius value is
+            always positive.
+            Sets the radius of the location represented with this class
+            instance to the value of the given argument. The value is meant
+            to be in ft. The latitude and longitude values are preserved
+            with this call with the exception of radius being equal to
+            zero. If the radius is previously set to zero, latitude and
+            longitude is set equal to zero past this call.
+            The argument should be positive.
+            The behavior of this function called with a negative argument is
+            left as an exercise to the gentle reader ... 
+            </summary>
+        </member>
+        <member name="T:JSBSim.MathValues.Function">
+            <summary>
+            Represents various types of parameters.
+            </summary>
+        </member>
+        <member name="T:JSBSim.MathValues.IParameter">
+            <summary>
+            Represents various types of parameters.
+            </summary>
+        </member>
+        <member name="F:JSBSim.MathValues.Function.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="T:JSBSim.MathValues.PropertyValue">
+            <summary>
+            Represents a property value.
+            </summary>
+        </member>
+        <member name="T:JSBSim.MathValues.RealValue">
+            <summary>
+            Represents a real value.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.MathValues.Table" -->
+        <member name="F:JSBSim.MathValues.Table.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.MathValues.Table.#ctor(System.Int32)">
+            <summary>
+            The constructor for a VECTOR table
+            </summary>
+            <param name="rows">the number of rows in this VECTOR table.</param>
+        </member>
+        <member name="M:JSBSim.MathValues.Table.GetTableType">
+            Read the table in.
+            			Data in the config file should be in matrix format with the row
+            			independents as the first column and the column independents in
+            			the first row.  The implication of this layout is that there should
+            			be no value in the upper left corner of the matrix e.g:
+            			<pre>
+            				 0  10  20 30 ...
+            			-5   1  2   3  4  ...
+            			 ...
+            			 </pre>
+            
+            			 For multiple-table (i.e. 3D) data sets there is an additional number
+            			 key in the table definition. For example:
+            
+            			<pre>
+            			 0.0
+            				 0  10  20 30 ...
+            			-5   1  2   3  4  ...
+            			 ...
+            			 </pre>
+        </member>
+        <member name="T:JSBSim.Models.Aerodynamics">
+            <summary>
+            Encapsulates the aerodynamic calculations.
+            This class owns and contains the list of coefficients that define the
+            aerodynamic properties of this aircraft. Here also, such unique phenomena
+            as ground effect and maximum lift curve tailoff are handled.
+            @config
+            <pre>
+            \<AERODYNAMICS>
+               \<AXIS NAME="{LIFT|DRAG|SIDE|ROLL|PITCH|YAW}">
+                 {Coefficient definitions}
+               \</AXIS>
+               {Additional axis definitions}
+            \</AERODYNAMICS> </pre>
+            
+            This code is based on FGAerodynamics written by Jon S. Berndt, Tony Peden
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.Model">
+            <summary>
+            Base class for all scheduled JSBSim models
+            This code is based on FGFDMExec written by Jon S. Berndt
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Model.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Model.Run">
+            <summary>
+            Runs the model; called by the Executive
+            </summary>
+            <returns>false if no error</returns>
+        </member>
+        <member name="F:JSBSim.Models.Aerodynamics.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Aerodynamics.#ctor(JSBSim.FDMExecutive)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="exec">a reference to the parent executive object</param>
+        </member>
+        <member name="M:JSBSim.Models.Aerodynamics.Run">
+            <summary>
+            Runs the Aerodynamics model; called by the Executive
+            </summary>
+            <returns>false if no error</returns>
+        </member>
+        <member name="M:JSBSim.Models.Aerodynamics.GetForces(System.Int32)">
+            <summary>
+            Gets the aerodynamic force for an axis.
+            </summary>
+            <param name="n">Axis index. This could be 0, 1, or 2, or one of the axis enums: eX, eY, eZ.</param>
+            <returns>the force acting on an axis</returns>
+        </member>
+        <member name="M:JSBSim.Models.Aerodynamics.GetMoments(System.Int32)">
+            <summary>
+            Gets the aerodynamic moment for an axis.
+            </summary>
+            <param name="n">Axis index. This could be 0, 1, or 2, or one of the axis enums: eX, eY, eZ.</param>
+            <returns>the moment about a single axis (as described also in the
+            similar call to GetForces(int n).</returns>
+        </member>
+        <member name="M:JSBSim.Models.Aerodynamics.GetCoefficientStrings(System.String)">
+            <summary>
+            Gets the strings for the current set of coefficients.
+            </summary>
+            <param name="delimeter">delimeter either a tab or comma string depending on output type</param>
+            <returns>a string containing the descriptive names for all coefficients</returns>
+        </member>
+        <member name="M:JSBSim.Models.Aerodynamics.GetCoefficientValues(System.String,System.IFormatProvider,System.String)">
+            <summary>
+            Gets the coefficient values.
+            </summary>
+            <param name="delimeter">delimeter either a tab or comma string depending on output type</param>
+            <returns>a string containing the numeric values for the current set of
+            coefficients</returns>
+        </member>
+        <member name="P:JSBSim.Models.Aerodynamics.Forces">
+            <summary>
+            Gets the total aerodynamic force vector.
+            </summary>
+            <returns>a force vector reference.</returns>
+        </member>
+        <member name="P:JSBSim.Models.Aerodynamics.Moments">
+            <summary>
+            Gets the total aerodynamic moment vector.
+            </summary>
+            <returns>a moment vector reference.</returns>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Models.Aircraft" -->
+        <member name="F:JSBSim.Models.Aircraft.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Aircraft.#ctor(JSBSim.FDMExecutive)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="exec">Executive a reference to the parent executive object</param>
+        </member>
+        <member name="M:JSBSim.Models.Aircraft.Run">
+            <summary>
+            Runs the Aircraft model; called by the Executive
+            </summary>
+            <returns>false if no error</returns>
+        </member>
+        <member name="P:JSBSim.Models.Aircraft.AircraftName">
+            <summary>
+            Gets/Sets the aircraft name
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Aircraft.WingArea">
+            Gets the wing area
+        </member>
+        <member name="P:JSBSim.Models.Aircraft.WingSpan">
+            Gets the wing span
+        </member>
+        <member name="P:JSBSim.Models.Aircraft.WingChord">
+            Gets the average wing chord
+        </member>
+        <member name="P:JSBSim.Models.Aircraft.Lbarh">
+            <summary>
+            HTailArm / cbar
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Aircraft.Lbarv">
+            <summary>
+             VTailArm / cbar
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Aircraft.Vbarh">
+            <summary>
+             H. Tail Volume
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Aircraft.Vbarv">
+            <summary>
+            V. Tail Volume
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.Atmosphere">
+            <summary>
+            Models the standard atmosphere.
+            This code is based on FGAtmosphere written by Tony Peden, Jon Berndt
+            see Anderson, John D. "Introduction to Flight, Third Edition", McGraw-Hill,
+            1989, ISBN 0-07-001641-0
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Atmosphere.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.Run">
+            <summary>
+            Runs the Atmosphere model; called by the Executive
+            </summary>
+            <returns>false if no error</returns>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.UseExternal">
+            <summary>
+            Tells the simulator to use an externally calculated atmosphere model.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.UseInternal">
+            <summary>
+            Tells the simulator to use the internal atmosphere model.
+            This is the default
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.External">
+            <sumary>
+            Gets the boolean that tells if the external atmosphere model is being used.
+            </sumary>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.SetExTemperature(System.Double)">
+            <summary>
+             Provides the external atmosphere model with an interface to set the temperature.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.SetExDensity(System.Double)">
+            <summary>
+             Provides the external atmosphere model with an interface to set the density.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.SetExPressure(System.Double)">
+            <summary>
+             Provides the external atmosphere model with an interface to set the pressure.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.GetTempDev">
+            <summary>
+             Gets the at-altitude temperature deviation in degrees Fahrenheit
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.SetWindNED(System.Double,System.Double,System.Double)">
+            <summary>
+             Sets the wind components in NED frame.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.GetWindNED">
+            <summary>
+             Retrieves the wind components in NED frame.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.GetPressure(System.Double)">
+            <summary>
+            Returns the pressure at an arbitrary altitude in psf
+            </summary>
+            <param name="alt">the altitude</param>
+            <returns>the standard pressure at a specified altitude in psf</returns>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.GetTemperature(System.Double)">
+            <summary>
+            Returns the standard temperature at an arbitrary altitude
+            </summary>
+            <param name="alt">the altitude</param>
+            <returns>the standard temperature at a specified altitude</returns>
+        </member>
+        <member name="M:JSBSim.Models.Atmosphere.GetDensity(System.Double)">
+            <summary>
+            Get the standard density at an arbitrary altitude
+            </summary>
+            <param name="alt">the altitude</param>
+            <returns>the standard density at a specified altitude</returns>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.Temperature">
+            <summary>
+            Returns the temperature in degrees Rankine
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.Density">
+            <summary>
+            Returns the density in slugs/ft^3
+            This function may <b>only</b> be used if Run() is called first.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.Pressure">
+            <summary>
+            Returns the pressure in psf
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.SoundSpeed">
+            <summary>
+            Returns the speed of sound in ft/sec.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.TemperatureSeaLevel">
+            <summary>
+            Returns the sea level temperature in degrees Rankine
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.DensitySeaLevel">
+            <summary>
+            Returns the sea level density in slugs/ft^3
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.PressureSeaLevel">
+            <summary>
+            Returns the sea level pressure in psf.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.SoundSpeedSeaLevel">
+            <summary>
+            Returns the sea level speed of sound in ft/sec.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.TemperatureRatio">
+            <summary>
+            Returns the ratio of at-altitude temperature over the sea level value.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.DensityRatio">
+            <summary>
+            Returns the ratio of at-altitude density over the sea level value.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.PressureRatio">
+            <summary>
+            Returns the ratio of at-altitude pressure over the sea level value. 
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.TempDevSeaLevel">
+            <summary>
+             Gets/sets the temperature deviation at sea-level in degrees Fahrenheit
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.DeltaT">
+            <summary>
+             Sets/Gets the current delta-T in degrees Fahrenheit
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.DensityAltitude">
+            <summary>
+             Gets the density altitude in feet
+             </summary>
+        </member>
+        <member name="P:JSBSim.Models.Atmosphere.WindPsi">
+            <summary>
+            Retrieves the wind direction. The direction is defined as north=0 and
+            increases counterclockwise. The wind heading is returned in radians
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="F:JSBSim.Models.Mars.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.MSIS">
+            <summary>
+            Models the MSIS-00 atmosphere.
+            This is a wrapper for the NRL-MSIS-00 model 2001:
+            
+            This C++ format model wraps the NRLMSISE-00 C source code package - release
+            20020503
+            
+            The NRLMSISE-00 model was developed by Mike Picone, Alan Hedin, and
+            Doug Drob. They also wrote a NRLMSISE-00 distribution package in 
+            FORTRAN which is available at
+            http://uap-www.nrl.navy.mil/models_web/msis/msis_home.htm
+            
+            Dominik Brodowski implemented and maintains this C version. You can
+            reach him at devel@brodo.de. See the file "DOCUMENTATION" for details,
+            and check http://www.brodo.de/english/pub/nrlmsise/index.html for
+            updated releases of this package.
+            @author David Culp
+            @version $Id: FGMSIS.h,v 1.3 2005/06/13 16:59:18 ehofman Exp $
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.MSIS.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that uMath.Sing System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.MSIS.#ctor(JSBSim.FDMExecutive)">
+            Constructor
+        </member>
+        <member name="M:JSBSim.Models.MSIS.Run">
+            Runs the MSIS-00 atmosphere model; called by the Executive
+                  @return false if no error 
+        </member>
+        <member name="M:JSBSim.Models.MSIS.UseExternal">
+            Does nothing. External control is not allowed.
+        </member>
+        <member name="T:JSBSim.Models.MSISData">
+            <summary>
+            This file is part of the NRLMSISE-00  C source code package - release
+            20020503
+            
+            The NRLMSISE-00 model was developed by Mike Picone, Alan Hedin, and
+            Doug Drob. They also wrote a NRLMSISE-00 distribution package in 
+            FORTRAN which is available at
+            http://uap-www.nrl.navy.mil/models_web/msis/msis_home.htm
+            
+            Dominik Brodowski implemented and maintains this C version. You can
+            reach him at devel@brodo.de. See the file "DOCUMENTATION" for details,
+            and check http://www.brodo.de/english/pub/nrlmsise/index.html for
+            updated releases of this package.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.Auxiliary">
+            <summary>
+            Encapsulates various uncategorized scheduled functions.
+            Pilot sensed accelerations are calculated here. This is used
+            for the coordinated turn ball instrument. Motion base platforms sometimes
+            use the derivative of pilot sensed accelerations as the driving parameter,
+            rather than straight accelerations.
+            
+            The theory behind pilot-sensed calculations is presented:
+            
+            For purposes of discussion and calculation, assume for a minute that the
+            pilot is in space and motionless in inertial space. She will feel
+            no accelerations. If the aircraft begins to accelerate along any axis or
+            axes (without rotating), the pilot will sense those accelerations. If
+            any rotational moment is applied, the pilot will sense an acceleration
+            due to that motion in the amount:
+            
+            [wdot X R]  +  [w X (w X R)]
+            Term I          Term II
+            
+            where:
+            
+            wdot = omegadot, the rotational acceleration rate vector
+            w    = omega, the rotational rate vector
+            R    = the vector from the aircraft CG to the pilot eyepoint
+            
+            The sum total of these two terms plus the acceleration of the aircraft
+            body axis gives the acceleration the pilot senses in inertial space.
+            In the presence of a large body such as a planet, a gravity field also
+            provides an accelerating attraction. This acceleration can be transformed
+            from the reference frame of the planet so as to be expressed in the frame
+            of reference of the aircraft. This gravity field accelerating attraction
+            is felt by the pilot as a force on her tushie as she sits in her aircraft
+            on the runway awaiting takeoff clearance.
+            
+            In JSBSim the acceleration of the body frame in inertial space is given
+            by the F = ma relation. If the vForces vector is divided by the aircraft
+            mass, the acceleration vector is calculated. The term wdot is equivalent
+            to the JSBSim vPQRdot vector, and the w parameter is equivalent to vPQR.
+            The radius R is calculated below in the vector vToEyePt.
+            
+            @author Tony Peden, Jon Berndt
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Auxiliary.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Auxiliary.#ctor(JSBSim.FDMExecutive)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="exec">the parent executive object</param>
+        </member>
+        <member name="M:JSBSim.Models.Auxiliary.Run">
+            <summary>
+            Runs the Auxiliary routines; called by the Executive
+            </summary>
+            <returns>false if no error</returns>
+        </member>
+        <member name="P:JSBSim.Models.Auxiliary.TotalPressure">
+            <summary>
+            Total pressure above is freestream total pressure for subsonic only
+            for supersonic it is the 1D total pressure behind a normal shock
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Models.FlightControlSystem" -->
+        <member name="F:JSBSim.Models.FlightControlSystem.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.#ctor(JSBSim.FDMExecutive)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="exec">the parent executive object</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.Run">
+            <summary>
+            Runs the Flight Controls model; called by the Executive
+            </summary>
+            <returns>false if no error</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetThrottleCmd(System.Int32)">
+            <summary>
+            Gets the throttle command.
+            </summary>
+            <param name="engineNum">engine ID number</param>
+            <returns>throttle command in percent ( 0 - 100) for the given engine</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetMixtureCmd(System.Int32)">
+            <summary>
+            Gets the mixture command
+            </summary>
+            <param name="engine">engine ID number</param>
+            <returns>command in percent ( 0 - 100) for the given engine</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetPropAdvanceCmd(System.Int32)">
+            <summary>
+            Gets the prop pitch command.
+            </summary>
+            <param name="engine">engine ID number</param>
+            <returns>command in percent ( 0.0 - 1.0) for the given engine</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPDaCmd">
+            <summary>
+            Gets the AUTOPilot aileron command.
+            </summary>
+            <returns>aileron command in radians</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPDeCmd">
+            <summary>
+            Gets the AUTOPilot elevator command.
+            </summary>
+            <returns>elevator command in radians</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPDrCmd">
+            <summary>
+            Gets the AUTOPilot rudder command.
+            </summary>
+            <returns>rudder command in radians</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPThrottleCmd">
+            <summary>
+            Gets the AUTOPilot throttle (all engines) command.
+            </summary>
+            <returns>throttle command in percent</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPAttitudeSetPt">
+            <summary>
+            Gets the autopilot pitch attitude setpoint
+            </summary>
+            <returns>Pitch attitude setpoint in radians</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPAltitudeSetPt">
+            <summary>
+            Gets the autopilot altitude setpoint
+            </summary>
+            <returns>Altitude setpoint in feet</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPHeadingSetPt">
+            <summary>
+            Gets the autopilot heading setpoint
+            </summary>
+            <returns>Heading setpoint in radians</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPAirspeedSetPt">
+            <summary>
+            Gets the autopilot airspeed setpoint
+            </summary>
+            <returns>Airspeed setpoint in fps</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPAttitudeSetPt(System.Double)">
+            <summary>
+            Sets the autopilot pitch attitude setpoint
+            </summary>
+            <param name="set"></param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPAltitudeSetPt(System.Double)">
+            <summary>
+            Sets the autopilot altitude setpoint
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPHeadingSetPt(System.Double)">
+            <summary>
+            Sets the autopilot heading setpoint
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPAirspeedSetPt(System.Double)">
+            <summary>
+            Sets the autopilot airspeed setpoint
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPAcquireAttitude(System.Boolean)">
+            <summary>
+            Turns on/off the attitude-seeking autopilot.
+            </summary>
+            <param name="set">true turns the mode on, false turns it off</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPAcquireAltitude(System.Boolean)">
+            <summary>
+            Turns on/off the altitude-seeking autopilot.
+            </summary>
+            <param name="set">true turns the mode on, false turns it off</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPAcquireHeading(System.Boolean)">
+            <summary>
+            Turns on/off the heading-seeking autopilot.
+            </summary>
+            <param name="set">true turns the mode on, false turns it off</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPAcquireAirspeed(System.Boolean)">
+            <summary>
+            Turns on/off the airspeed-seeking autopilot.
+            </summary>
+            <param name="set">set true turns the mode on, false turns it off  </param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPAttitudeHold(System.Boolean)">
+            <summary>
+            Turns on/off the attitude-holding autopilot.
+            </summary>
+            <param name="set">true turns the mode on, false turns it off</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPAltitudeHold(System.Boolean)">
+            <summary>
+            Turns on/off the altitude-holding autopilot.
+            </summary>
+            <param name="set">true turns the mode on, false turns it off</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPHeadingHold(System.Boolean)">
+            <summary>
+            Turns on/off the heading-holding autopilot.
+            </summary>
+            <param name="set">true turns the mode on, false turns it off  </param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPAirspeedHold(System.Boolean)">
+            <summary>
+            Turns on/off the airspeed-holding autopilot.
+            </summary>
+            <param name="set">true turns the mode on, false turns it off</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPWingsLevelHold(System.Boolean)">
+            <summary>
+            Turns on/off the wing-leveler autopilot.
+            </summary>
+            <param name="set">true turns the mode on, false turns it off</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPAcquireAttitude">
+            <summary>
+            Retrieves the on/off mode of the autopilot AcquireAttitude mode
+            </summary>
+            <returns>true if on, false if off</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPAcquireAltitude">
+            <summary>
+            Retrieves the on/off mode of the autopilot AcquireAltitude mode
+            </summary>
+            <returns>true if on, false if off</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPAcquireHeading">
+            <summary>
+            Retrieves the on/off mode of the autopilot AcquireHeading mode
+            </summary>
+            <returns>true if on, false if off</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPAcquireAirspeed">
+            <summary>
+            Retrieves the on/off mode of the autopilot AcquireAirspeed mode
+            </summary>
+            <returns>true if on, false if off </returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPAttitudeHold">
+            <summary>
+            Retrieves the on/off mode of the autopilot AttitudeHold mode
+            </summary>
+            <returns>true if on, false if off</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPAltitudeHold">
+            <summary>
+            Retrieves the on/off mode of the autopilot AltitudeHold mode
+            </summary>
+            <returns>true if on, false if off</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPHeadingHold">
+            <summary>
+            Retrieves the on/off mode of the autopilot HeadingHold mode
+            </summary>
+            <returns>true if on, false if off</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPAirspeedHold">
+            <summary>
+            Retrieves the on/off mode of the autopilot AirspeedHold mode
+            </summary>
+            <returns>true if on, false if off</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetAPWingsLevelHold">
+            <summary>
+            Retrieves the on/off mode of the autopilot WingsLevelHold mode
+            </summary>
+            <returns>true if on, false if off</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDaRPosRadians">
+            <summary>
+            Aerosurface position retrieval
+            Gets the right aileron position.
+            </summary>
+            <returns>Right aileron position in radians</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDePosRadians">
+            Gets the elevator position.
+                        @return elevator position in radians 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDrPosRadians">
+            Gets the rudder position.
+                        @return rudder position in radians 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDsbPosRadians">
+            Gets the speedbrake position.
+                        @return speedbrake position in radians 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDspPosRadians">
+            Gets the spoiler position.
+                        @return spoiler position in radians 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDfPosRadians">
+            Gets the flaps position.
+                        @return flaps position in radians 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDaLPos(JSBSim.Models.FlightControlSystem.OutputForm)">
+            Gets the left aileron position.
+                        @return aileron position in radians 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDaRPos(JSBSim.Models.FlightControlSystem.OutputForm)">
+            Gets the right aileron position.
+                        @return aileron position in radians 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDePos(JSBSim.Models.FlightControlSystem.OutputForm)">
+            Gets the elevator position.
+                        @return elevator position in radians 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDrPos(JSBSim.Models.FlightControlSystem.OutputForm)">
+            Gets the rudder position.
+                        @return rudder position in radians 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDsbPos(JSBSim.Models.FlightControlSystem.OutputForm)">
+            Gets the speedbrake position.
+                        @return speedbrake position in radians 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDspPos(JSBSim.Models.FlightControlSystem.OutputForm)">
+            Gets the spoiler position.
+                        @return spoiler position in radians 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetDfPos(JSBSim.Models.FlightControlSystem.OutputForm)">
+            Gets the flaps position.
+                        @return flaps position in radians 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetThrottlePos(System.Int32)">
+            <summary>
+            Gets the throttle position.
+            </summary>
+            <param name="engine">engine ID number</param>
+            <returns>throttle position for the given engine in percent ( 0 - 100)</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetMixturePos(System.Int32)">
+            Gets the mixture position.
+                        @param engine engine ID number
+                        @return mixture position for the given engine in percent ( 0 - 100)
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetSteerPosDeg(System.Int32)">
+            Gets the steering position.
+                        @return steering position in degrees 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetPropAdvance(System.Int32)">
+            Gets the prop pitch position.
+                        @param engine engine ID number
+                        @return prop pitch position for the given engine in percent ( 0.0-1.0)
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetPropFeather(System.Int32)">
+            Gets the prop feather position.
+                        @param engine engine ID number
+                        @return prop fether for the given engine (on / off)
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetState">
+            <summary>
+            Retrieves the state object pointer.
+            This is used by the FGFCS-owned components.
+            </summary>
+            <returns>the State object</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetComponentStrings(System.String)">
+            <summary>
+            Retrieves all component names for inclusion in output stream
+            </summary>
+            <param name="delimeter">either a tab or comma string depending on output type</param>
+            <returns>a string containing the descriptive names for all components</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetComponentValues(System.String,System.IFormatProvider,System.String)">
+            <summary>
+            Retrieves all component outputs for inclusion in output stream
+            </summary>
+            <param name="delimeter">either a tab or comma string depending on output type</param>
+            <returns>a string containing the numeric values for the current set of
+            component outputs</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetThrottleCmd(System.Int32,System.Double)">
+            <summary>
+            Sets the throttle command for the specified engine
+            </summary>
+            <param name="engineNum">engine engine ID number</param>
+            <param name="cmd">throttle command in percent (0 - 100)</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetMixtureCmd(System.Int32,System.Double)">
+            <summary>
+            Sets the mixture command for the specified engine
+            </summary>
+            <param name="engineNum">engine ID number</param>
+            <param name="setting">mixture command in percent (0 - 100)</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetPropAdvanceCmd(System.Int32,System.Double)">
+            <summary>
+            Sets the propeller pitch command for the specified engine
+            </summary>
+            <param name="engineNum">engine ID number</param>
+            <param name="setting">mixture command in percent (0.0 - 1.0)</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPDaCmd(System.Double)">
+            Sets the AUTOPilot aileron command
+                        @param cmd AUTOPilot aileron command in radians
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPDeCmd(System.Double)">
+            Sets the AUTOPilot elevator command
+                        @param cmd AUTOPilot elevator command in radians
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPDrCmd(System.Double)">
+            Sets the AUTOPilot rudder command
+                        @param cmd AUTOPilot rudder command in radians
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetAPThrottleCmd(System.Double)">
+            Sets the AUTOPilot throttle command
+                        @param cmd AUTOPilot throttle command in percent
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetDaLPos(JSBSim.Models.FlightControlSystem.OutputForm,System.Double)">
+            Sets the left aileron position
+                        @param cmd left aileron position in radians
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetDaRPos(JSBSim.Models.FlightControlSystem.OutputForm,System.Double)">
+            Sets the right aileron position
+                        @param cmd right aileron position in radians
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetDePos(JSBSim.Models.FlightControlSystem.OutputForm,System.Double)">
+            Sets the elevator position
+                        @param cmd elevator position in radians
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetDrPos(JSBSim.Models.FlightControlSystem.OutputForm,System.Double)">
+            Sets the rudder position
+                        @param cmd rudder position in radians
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetDfPos(JSBSim.Models.FlightControlSystem.OutputForm,System.Double)">
+            Sets the flaps position
+                       @param cmd flaps position in radians
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetDsbPos(JSBSim.Models.FlightControlSystem.OutputForm,System.Double)">
+            Sets the speedbrake position
+                        @param cmd speedbrake position in radians
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetDspPos(JSBSim.Models.FlightControlSystem.OutputForm,System.Double)">
+            Sets the spoiler position
+                        @param cmd spoiler position in radians
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetThrottlePos(System.Int32,System.Double)">
+            <summary>
+            Sets the actual throttle setting for the specified engine
+            </summary>
+            <param name="engine">engine ID number</param>
+            <param name="cmd">throttle setting in percent (0 - 100)</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetMixturePos(System.Int32,System.Double)">
+            Sets the actual mixture setting for the specified engine
+                        @param engine engine ID number
+                        @param cmd mixture setting in percent (0 - 100)
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetSteerPosDeg(System.Int32,System.Double)">
+            Sets the steering position
+                        @param cmd steering position in degrees
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetPropAdvance(System.Int32,System.Double)">
+            <summary>
+            Sets the actual prop pitch setting for the specified engine
+            </summary>
+            <param name="engineNum">engine ID number</param>
+            <param name="setting">prop pitch setting in percent (0.0 - 1.0)</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetLBrake(System.Double)">
+            Sets the left brake group
+                        @param cmd brake setting in percent (0.0 - 1.0) 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetRBrake(System.Double)">
+            Sets the right brake group
+                        @param cmd brake setting in percent (0.0 - 1.0) 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.SetCBrake(System.Double)">
+            Sets the center brake group
+                        @param cmd brake setting in percent (0.0 - 1.0) 
+        </member>
+        <member name="M:JSBSim.Models.FlightControlSystem.GetBrake(JSBSim.Models.LGear.BrakeGroup)">
+            <summary>
+            Gets the brake for a specified group.
+            </summary>
+            <param name="bg">which brakegroup to retrieve the command for</param>
+            <returns>the brake setting for the supplied brake group argument</returns>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.AileronCmd">
+            <summary>
+            Sets/Gets the aileron command in percent
+            </summary>
+            <param name="cmd">cmd </param>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.ElevatorCmd">
+            <summary>
+            Sets/Gets the elevator command in percent
+            </summary>
+            <param name="cmd"></param>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.RudderCmd">
+            <summary>
+            Sets/Gets the rudder command in percent
+            </summary>
+            <param name="cmd">rudder command in percent</param>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.SteeringCmd">
+            <summary>
+            Sets/Gets the steering command in percent
+            </summary>
+            <param name="cmd">steering command in percent</param>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.FlapsCmd">
+            <summary>
+            Sets/Gets the flaps command in percent
+            </summary>
+            <param name="cmd">flaps command in percent</param>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.SpeedbrakeCmd">
+            <summary>
+            Sets/Gets the speedbrake command in percent
+            </summary>
+            <param name="cmd">speedbrake command in percent</param>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.SpoilersCmd">
+            <summary>
+            Sets/Gets the spoilers command in percent
+            </summary>
+            <param name="cmd">spoilers command in percent</param>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.PitchTrimCmd">
+            <summary>
+            Sets/Gets the pitch trim command in percent
+            </summary>
+            <param name="cmd">pitch trim command in percent</param>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.YawTrimCmd">
+            <summary>
+            Sets/Gets the rudder trim command in percent
+            </summary>
+            <param name="cmd">rudder trim command in percent</param>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.RollTrimCmd">
+            <summary>
+            Sets/Gets the aileron trim command in percent
+            </summary>
+            <param name="cmd">aileron trim command in percent</param>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.GearCmd">
+            <summary>
+            Sets/Gets the gear extend/retract command, defaults to down
+            </summary>
+            <param name="cmd">command 0 for up, 1 for down</param>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.LeftAileronPositionRadians">
+            <summary>
+            Sets/Gets the left aileron position in radians.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.LeftAileronPositionDeg">
+            <summary>
+            Sets/Gets the left aileron position in deg.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.LeftAileronPositionNorm">
+            <summary>
+            Sets/Gets the left aileron position Norm form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.LeftAileronPositionMag">
+            <summary>
+            Sets/Gets the left aileron position Norm form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.RightAileronPositionRadians">
+            <summary>
+            Sets/Gets the right aileron position in radians.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.RightAileronPositionDeg">
+            <summary>
+            Sets/Gets the right aileron position Deg form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.RightAileronPositionNorm">
+            <summary>
+            Sets/Gets the right aileron position Norm form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.RightAileronPositionMag">
+            <summary>
+            Sets/Gets the right aileron position Norm form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.ElevatorPositionRadians">
+            <summary>
+            Sets/Gets the Elevator position in radians.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.ElevatorPositionDeg">
+            <summary>
+            Sets/Gets the Elevator position in Deg.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.ElevatorPositionNorm">
+            <summary>
+            Sets/Gets the Elevator position Norm form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.ElevatorPositionMag">
+            <summary>
+            Sets/Gets the elevator position Norm form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.RudderPositionRadians">
+            <summary>
+            Sets/Gets the Rudder position in radians.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.RudderPositionDeg">
+            <summary>
+            Sets/Gets the Rudder position in deg
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.RudderPositionNorm">
+            <summary>
+            Sets/Gets the Rudder position Norm form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.RudderPositionMag">
+            <summary>
+            Sets/Gets the Rudder position Mag form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.FlapsPositionRadians">
+            <summary>
+            Sets/Gets the flaps position in radians.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.FlapsPositionDeg">
+            <summary>
+            Sets/Gets the flaps position in radians.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.FlapsPositionNorm">
+            <summary>
+            Sets/Gets the flaps position Norm form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.SpeedbrakePositionRadians">
+            <summary>
+            Sets/Gets the Speedbrake position in radians.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.SpeedbrakePositionDeg">
+            <summary>
+            Sets/Gets the Speedbrake position in deg.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.SpeedbrakePositionNorm">
+            <summary>
+            Sets/Gets the Speedbrake position Norm form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.SpeedbrakePositionMag">
+            <summary>
+            Sets/Gets the Speedbrake position Norm form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.SpoilerPositionRadians">
+            <summary>
+            Sets/Gets the Spoiler position in radians.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.SpoilerPositionDeg">
+            <summary>
+            Sets/Gets the Spoiler position in Deg.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.SpoilerPositionNorm">
+            <summary>
+            Sets/Gets the Spoiler position Norm form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.SpoilerPositionMag">
+            <summary>
+            Sets/Gets the Spoiler position Norm form.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.FlightControlSystem.GearPosition">
+            <summary>
+            Sets/Gets the gear extend/retract position, (0 up, 1 down), defaults to down.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.FlightControl.Condition.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.FlightControl.DeadBand">
+            <summary>
+            Models a deadband object.
+            Here is the format of the deadband control specification:
+            <code>
+            <pre>
+            \<COMPONENT NAME="Deadbeat1" TYPE="DEADBAND">
+               INPUT {input}
+               WIDTH {deadband width}
+               MIN {minimum value}
+               MAX {maximum value}
+               [GAIN {optional deadband gain}]
+               [OUTPUT {optional output parameter to set}]
+            \</COMPONENT>
+            </pre>
+            </code>
+            The WIDTH value is the total deadband region within which an input will
+            produce no output. For example, say that the WIDTH value is 2.0.  If the
+            input is between -1.0 and +1.0, the output will be zero.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.FlightControl.FCSComponent">
+            <summary>
+            Base class for JSBSim Flight Control System Components.
+            The Flight Control System (FCS) for JSBSim consists of the FCS container
+            class (see \URL[FGFCS]{FGFCS.html}), the FGFCSComponent base class, and the
+            component classes from which can be constructed a string, or channel. See:
+            
+            - Switch
+            - Gain
+            - Kinemat
+            - Filter
+            - DeadBand
+            - Summer
+            - Gradient
+            
+            author Jon S. Berndt
+            Documentation for the FGFCS class, and for the configuration file class
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.FlightControl.FCSComponent.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.FlightControl.FCSComponent.#ctor(JSBSim.Models.FlightControlSystem,System.Xml.XmlElement)">
+            Constructor
+        </member>
+        <member name="F:JSBSim.Models.FlightControl.DeadBand.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.FlightControl.FCSFunction.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Models.FlightControl.Filter" -->
+        <member name="F:JSBSim.Models.FlightControl.Filter.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.FlightControl.Filter.initialize">
+            <summary>
+            When true, causes previous values to be set to current values. This
+            is particularly useful for first pass.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Models.FlightControl.Gain" -->
+        <member name="F:JSBSim.Models.FlightControl.Gain.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.FlightControl.Gradient">
+            <summary>
+            Encapsulates a gradient component for the flight control system.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.FlightControl.Gradient.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.FlightControl.Kinemat">
+            <summary>
+            Encapsulates a kinematic component for the flight control system.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.FlightControl.Kinemat.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.FlightControl.Kinemat.#ctor(JSBSim.Models.FlightControlSystem,System.Xml.XmlElement)">
+            <summary>
+            Initializer.
+            Initializes the FGKinemat object from the given configuration
+            file. The Configuration file is expected to be at the stream
+            position where the KINEMAT object starts. Also it is expected to
+            be past the end of the current KINEMAT configuration on exit.
+            </summary>
+            <param name="fcs">A reference to the ccurrent flightcontrolsystem.</param>
+            <param name="element">reference to the current aircraft configuration element</param>
+        </member>
+        <member name="M:JSBSim.Models.FlightControl.Kinemat.GetOutputPct">
+            <summary>
+            Kinemat output value.
+            </summary>
+            <returns>the current output of the kinemat object on the range of [0,1].</returns>
+        </member>
+        <member name="M:JSBSim.Models.FlightControl.Kinemat.Run">
+            <summary>
+            Run method, overwrites FCSComponent.Run()
+            </summary>
+            <returns>false on success, true on failure. The routine doing the work.</returns>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Models.FlightControl.Sensor" -->
+        <member name="F:JSBSim.Models.FlightControl.Sensor.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.FlightControl.Sensor.cb">
+            lag filter coefficient "a"
+        </member>
+        <member name="F:JSBSim.Models.FlightControl.Sensor.PreviousOutput">
+            lag filter coefficient "b"
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Models.FlightControl.Summer" -->
+        <member name="F:JSBSim.Models.FlightControl.Summer.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.FlightControl.Summer.Run">
+            The execution method for this FCS component.
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Models.FlightControl.Switch" -->
+        <member name="F:JSBSim.Models.FlightControl.Switch.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.GroundReactions">
+            <summary>
+            Summary description for GroundReactions.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.GroundReactions.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.GroundReactions.GetGearUnit(System.Int32)">
+            <summary>
+            Gets a gear instance
+            </summary>
+            <param name="gear">index of gear instance</param>
+            <returns>the LGear instance of the gear unit requested</returns>
+        </member>
+        <member name="T:JSBSim.Models.Inertial">
+            <summary>
+             Models inertial forces (e.g. centripetal and coriolis accelerations).
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Inertial.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Input.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Models.LGear" -->
+        <member name="F:JSBSim.Models.LGear.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.LGear.#ctor(System.Xml.XmlElement,JSBSim.FDMExecutive,System.Int32)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="File">the config file instance</param>
+            <param name="exec">the parent executive object</param>
+            <param name="number"></param>
+        </member>
+        <member name="M:JSBSim.Models.LGear.#ctor(System.String,JSBSim.FDMExecutive,System.Int32)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="File">the config file instance</param>
+            <param name="exec">the parent executive object</param>
+            <param name="number"></param>
+        </member>
+        <member name="M:JSBSim.Models.LGear.#ctor(JSBSim.Models.LGear)">
+            Constructor
+                            @param lgear a reference to an existing FGLGear object     
+        </member>
+        <member name="M:JSBSim.Models.LGear.Force">
+            The Force vector for this gear
+        </member>
+        <member name="M:JSBSim.Models.LGear.Moment">
+            The Moment vector for this gear
+        </member>
+        <member name="M:JSBSim.Models.LGear.GetBodyLocation">
+            Gets the location of the gear in Body axes
+        </member>
+        <member name="M:JSBSim.Models.LGear.GetName">
+            Gets the name of the gear
+        </member>
+        <member name="M:JSBSim.Models.LGear.GetWOW">
+            Gets the Weight On Wheels flag value
+        </member>
+        <member name="M:JSBSim.Models.LGear.GetCompLen">
+            Gets the current compressed length of the gear in feet
+        </member>
+        <member name="M:JSBSim.Models.LGear.GetCompVel">
+            Gets the current gear compression velocity in ft/sec
+        </member>
+        <member name="M:JSBSim.Models.LGear.GetCompForce">
+            Gets the gear compression force in pounds
+        </member>
+        <member name="M:JSBSim.Models.LGear.GetTirePressure">
+            Gets the current normalized tire pressure
+        </member>
+        <member name="M:JSBSim.Models.LGear.SetTirePressure(System.Double)">
+            Sets the new normalized tire pressure
+        </member>
+        <member name="M:JSBSim.Models.LGear.SetBrake(System.Double)">
+            Sets the brake value in percent (0 - 100)
+        </member>
+        <member name="M:JSBSim.Models.LGear.SetReport(System.Boolean)">
+            Set the console touchdown reporting feature
+                            @param flag true turns on touchdown reporting, false turns it off 
+        </member>
+        <member name="M:JSBSim.Models.LGear.GetReport">
+            Get the console touchdown reporting feature
+                            @return true if reporting is turned on 
+        </member>
+        <member name="T:JSBSim.Models.LGear.BrakeGroup">
+            Brake grouping enumerators
+        </member>
+        <member name="T:JSBSim.Models.LGear.SteerType">
+            Steering group membership enumerators
+        </member>
+        <member name="T:JSBSim.Models.LGear.ReportType">
+            Report type enumerators
+        </member>
+        <member name="T:JSBSim.Models.MassBalance">
+            <summary>
+            Models weight and balance information.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.MassBalance.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.MassBalance.GetPointmassInertia(System.Double,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Computes the inertia contribution of a pointmass.
+            Computes and returns the inertia matrix of a pointmass of mass
+            slugs at the given vector r in the structural frame. The units
+            should be for the mass in slug and the vector in the structural
+            frame as usual in inches.
+            </summary>
+            <param name="slugs">the mass of this single pointmass given in slugs</param>
+            <param name="r">the location of this single pointmass in the structural frame</param>
+            <returns></returns>
+        </member>
+        <member name="M:JSBSim.Models.MassBalance.StructuralToBody(CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Conversion from the structural frame to the body frame.
+            Converts the location given in the structural frame
+            coordinate system to the body frame. The units of the structural
+            frame are assumed to be in inches. The unit of the result is in
+            ft.
+            </summary>
+            <param name="r">vector coordinate in the structural reference frame (X positive
+            aft, measurements in inches).</param>
+            <returns>coordinate in the body frame, in feet.</returns>
+        </member>
+        <member name="T:JSBSim.Models.Output">
+            <summary>
+            Handles simulation output.
+            OUTPUT section definition
+            
+            The following specifies the way that JSBSim writes out data.
+            
+            NAME is the filename you want the output to go to
+            
+            TYPE can be:
+            CSV       Comma separated data. If a filename is supplied then the data
+            goes to that file. If COUT or cout is specified, the data goes
+            to stdout. If the filename is a null filename the data goes to
+            stdout, as well.
+            SOCKET    Will eventually send data to a socket output, where NAME
+            would then be the IP address of the machine the data should be
+            sent to. DON'T USE THIS YET!
+            TABULAR   Columnar data. NOT IMPLEMENTED YET!
+            TERMINAL  Output to terminal. NOT IMPLEMENTED YET!
+            NONE      Specifies to do nothing. THis setting makes it easy to turn on and
+            off the data output without having to mess with anything else.
+            
+            The arguments that can be supplied, currently, are
+            
+            RATE_IN_HZ  An integer rate in times-per-second that the data is output. This
+            value may not be *exactly* what you want, due to the dependence
+            on dt, the cycle rate for the FDM.
+            
+            The following parameters tell which subsystems of data to output:
+            
+            SIMULATION       ON|OFF
+            ATMOSPHERE       ON|OFF
+            MASSPROPS        ON|OFF
+            AEROSURFACES     ON|OFF
+            RATES            ON|OFF
+            VELOCITIES       ON|OFF
+            FORCES           ON|OFF
+            MOMENTS          ON|OFF
+            POSITION         ON|OFF
+            COEFFICIENTS     ON|OFF
+            GROUND_REACTIONS ON|OFF
+            FCS              ON|OFF
+            PROPULSION       ON|OFF
+            
+            NOTE that Time is always output with the data
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Output.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.Output.eSubSystems">
+            Subsystem types for specifying which will be output in the FDM data logging
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.Simulation">
+            Subsystem: Simulation (= 1)          
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.Aerosurfaces">
+            Subsystem: Aerosurfaces (= 2)        
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.Rates">
+            Subsystem: Body rates (= 4)          
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.Velocities">
+            Subsystem: Velocities (= 8)          
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.Forces">
+            Subsystem: Forces (= 16)             
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.Moments">
+            Subsystem: Moments (= 32)            
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.Atmosphere">
+            Subsystem: Atmosphere (= 64)         
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.MassProps">
+            Subsystem: Mass InputOutput (= 128)   
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.Coefficients">
+            Subsystem: Coefficients (= 256)      
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.Propagate">
+            Subsystem: Propagate (= 512)         
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.GroundReactions">
+            Subsystem: Ground Reactions (= 1024) 
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.FCS">
+            Subsystem: FCS (= 2048)              
+        </member>
+        <member name="F:JSBSim.Models.Output.eSubSystems.Propulsion">
+            Subsystem: Propulsion (= 4096)       
+        </member>
+        <member name="T:JSBSim.Models.Propagate">
+            <summary>
+            Models the EOM and integration/propagation of state
+            @author Jon S. Berndt, Mathias Froehlich
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Propagate.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propagate.#ctor(JSBSim.FDMExecutive)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="exec">the parent executive object</param>
+        </member>
+        <member name="M:JSBSim.Models.Propagate.Run">
+            <summary>
+            Runs the Propagate model; called by the Executive
+            </summary>
+            <returns>false if no error</returns>
+        </member>
+        <member name="M:JSBSim.Models.Propagate.GetRunwayRadius">
+            <summary>
+            Returns the "constant" RunwayRadius.
+            The RunwayRadius parameter is set by the calling application or set to
+            zero if JSBSim is running in standalone mode. units feet
+            </summary>
+            <returns>distance of the runway from the center of the earth. </returns>
+        </member>
+        <member name="M:JSBSim.Models.Propagate.GetTl2b">
+            <summary>
+            Retrieves the local-to-body transformation matrix.
+            </summary>
+            <returns>the local-to-body transformation matrix.</returns>
+        </member>
+        <member name="M:JSBSim.Models.Propagate.GetTb2l">
+            <summary>
+            Retrieves the body-to-local transformation matrix.
+            </summary>
+            <returns>the body-to-local matrix.</returns>
+        </member>
+        <member name="P:JSBSim.Models.Propagate.Altitude">
+            <summary>
+            Get/sets the altitude
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.Propulsion.Electric">
+            <summary>
+            Summary description for Electric.
+            Models and electric motor.
+            FGElectric models an electric motor based on the configuration file
+            POWER_WATTS parameter.  The throttle controls motor output linearly from
+            zero to POWER_WATTS.  This power value (converted internally to horsepower)
+            is then used by FGPropeller to apply torque to the propeller.
+            @author David Culp
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.Propulsion.Engine">
+            <summary>
+            Base class for all engines.
+            This base class contains methods and members common to all engines, such as
+            logic to drain fuel from the appropriate tank, etc.
+            This code is based on FGEngine written by Jon S. Berndt
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Propulsion.Engine.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Engine.GetStarved">
+            <summary>
+            TODO make IsStarved, isRunning, isCranking ???
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Engine.Calculate">
+            <summary>
+            Calculates the thrust of the engine, and other engine functions.
+            </summary>
+            <returns>Thrust in pounds</returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Engine.ConsumeFuel">
+            <summary>
+            Reduces the fuel in the active tanks by the amount required.
+            This function should be called from within the
+            derived class' Calculate() function before any other calculations are
+            done. This base class method removes fuel from the fuel tanks as
+            appropriate, and sets the starved flag if necessary.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Engine.CalcFuelNeed">
+            <summary>
+            The fuel need is calculated based on power levels and flow rate for that
+            power level. It is also turned from a rate into an actual amount (pounds)
+            by multiplying it by the delta T and the rate.
+            </summary>
+            <returns>Total fuel requirement for this engine in pounds. </returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Engine.CalcOxidizerNeed">
+            <summary>
+            The oxidizer need is calculated based on power levels and flow rate for that
+            power level. It is also turned from a rate into an actual amount (pounds)
+            by multiplying it by the delta T and the rate.
+            </summary>
+            <returns>Total oxidizer requirement for this engine in pounds.</returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Engine.SetPlacement(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            Sets engine placement information
+        </member>
+        <member name="F:JSBSim.Models.Propulsion.Electric.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Electric.#ctor(JSBSim.FDMExecutive,System.Xml.XmlElement,System.Xml.XmlElement,System.Int32)">
+            Constructor
+        </member>
+        <member name="T:JSBSim.Models.Propulsion.Nozzle">
+            <summary>
+            Models a rocket nozzle.
+            @author Jon S. Berndt
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.Propulsion.Thruster">
+            <summary>
+            Base class for specific thrusting devices such as propellers, nozzles, etc.
+            @author Jon Berndt
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Propulsion.Thruster.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Propulsion.Nozzle.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="T:JSBSim.Models.Propulsion.Piston">
+            <summary>
+            Models Dave Luff's Turbo/Supercharged Piston engine model.
+            Additional elements are required for a supercharged engine.  These can be
+            left off a non-supercharged engine, ie. the changes are all backward
+            compatible at present.
+            
+            - NUMBOOSTSPEEDS - zero (or not present) for a naturally-aspirated engine,
+            either 1, 2 or 3 for a boosted engine.  This corresponds to the number of
+            supercharger speeds.  Merlin XII had 1 speed, Merlin 61 had 2, a late
+            Griffon engine apparently had 3.  No known engine more than 3, although
+            some German engines apparently had a continuously variable-speed
+            supercharger.
+            
+            - BOOSTOVERRIDE - whether the boost pressure control system (either a boost
+            control valve for superchargers or wastegate for turbochargers) can be
+            overriden by the pilot.  During wartime this was commonly possible, and
+            known as "War Emergency Power" by the Brits.  1 or 0 in the config file.
+            This isn't implemented in the model yet though, there would need to be
+            some way of getting the boost control cutout lever position (on or off)
+            from FlightGear first.
+            
+            - The next items are all appended with either 1, 2 or 3 depending on which
+            boost speed they refer to, eg RATEDBOOST1.  The rated values seems to have
+            been a common convention at the time to express the maximum continuously
+            available power, and the conditions to attain that power.
+            
+            - RATEDBOOST[123] - the absolute rated boost above sea level ambient for a
+            given boost speed, in psi.  Eg the Merlin XII had a rated boost of 9psi,
+            giving approximately 42inHg manifold pressure up to the rated altitude.
+            
+            - RATEDALTITUDE[123] - The altitude up to which rated boost can be
+            maintained.  Up to this altitude the boost is maintained constant for a
+            given throttle position by the BCV or wastegate.  Beyond this altitude the
+            manifold pressure must drop, since the supercharger is now at maximum
+            unregulated output.  The actual pressure multiplier of the supercharger
+            system is calculated at initialisation from this value.
+            
+            - RATEDPOWER[123] - The power developed at rated boost at rated altitude at
+            rated rpm.
+            
+            - RATEDRPM[123] - The rpm at which rated power is developed.
+            
+            - TAKEOFFBOOST - Takeoff boost in psi above ambient.  Many aircraft had an
+            extra boost setting beyond rated boost, but not totally uncontrolled as in
+            the already mentioned boost-control-cutout, typically attained by pushing
+            the throttle past a mechanical 'gate' preventing its inadvertant use. This
+            was typically used for takeoff, and emergency situations, generally for
+            not more than five minutes.  This is a change in the boost control
+            setting, not the actual supercharger speed, and so would only give extra
+            power below the rated altitude.  When TAKEOFFBOOST is specified in the
+            config file (and is above RATEDBOOST1), then the throttle position is
+            interpreted as:
+            
+            - 0 to 0.95 : idle manifold pressure to rated boost (where attainable)
+            - 0.96, 0.97, 0.98 : rated boost (where attainable).
+            - 0.99, 1.0 : takeoff boost (where attainable).
+            
+            A typical takeoff boost for an earlyish Merlin was about 12psi, compared
+            with a rated boost of 9psi.
+            
+            It is quite possible that other boost control settings could have been used
+            on some aircraft, or that takeoff/extra boost could have activated by other
+            means than pushing the throttle full forward through a gate, but this will
+            suffice for now.
+            
+            Note that MAXMP is still the non-boosted max manifold pressure even for
+            boosted engines - effectively this is simply a measure of the pressure drop
+            through the fully open throttle.
+            
+            @author Jon S. Berndt (Engine framework code and framework-related mods)
+            @author Dave Luff (engine operational code)
+            @author David Megginson (initial porting and additional code)
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Propulsion.Piston.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Piston.doEngineStartup">
+            <summary>
+             Start or stop the engine.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Piston.doBoostControl">
+            <summary>
+            Calculate the Current Boost Speed
+            
+            This function calculates the current turbo/supercharger boost speed
+            based on altitude and the (automatic) boost-speed control valve configuration.
+            
+            Inputs: p_amb, BoostSwitchPressure, BoostSwitchHysteresis
+            
+            Outputs: BoostSpeed
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Piston.doMAP">
+            <summary>
+            Calculate the manifold absolute pressure (MAP) in inches hg
+            
+            This function calculates manifold absolute pressure (MAP)
+            from the throttle position, turbo/supercharger boost control
+            system, engine speed and local ambient air density.
+            
+            TODO: changes in MP should not be instantaneous -- introduce
+            a lag between throttle changes and MP changes, to allow pressure
+            to build up or disperse.
+            
+            Inputs: minMAP, maxMAP, p_amb, Throttle
+            
+            Outputs: MAP, ManifoldPressure_inHg
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Piston.doAirFlow">
+            <summary>
+             Calculate the air flow through the engine.
+             Also calculates ambient air density
+             (used in CHT calculation for air-cooled engines).
+             
+              Inputs: p_amb, R_air, T_amb, MAP, Displacement,
+               RPM, volumetric_efficiency
+             
+             TODO: Model inlet manifold air temperature.
+             
+             Outputs: rho_air, m_dot_air
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Piston.doFuelFlow">
+            <summary>
+            Calculate the fuel flow into the engine.
+            
+             Inputs: Mixture, thi_sea_level, p_amb_sea_level, p_amb, m_dot_air
+            
+             Outputs: equivalence_ratio, m_dot_fuel
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Piston.doEnginePower">
+            <summary>
+            Calculate the power produced by the engine.
+            
+             Currently, the JSBSim propellor model does not allow the
+             engine to produce enough RPMs to get up to a high horsepower.
+             When tested with sufficient RPM, it has no trouble reaching
+             200HP.
+            
+             Inputs: ManifoldPressure_inHg, p_amb, p_amb_sea_level, RPM, T_amb,
+               equivalence_ratio, Cycles, MaxHP
+            
+             Outputs: Percentage_Power, HP
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Piston.doEGT">
+             <summary>
+             Calculate the exhaust gas temperature.
+            
+             Inputs: equivalence_ratio, m_dot_fuel, calorific_value_fuel,
+              Cp_air, m_dot_air, Cp_fuel, m_dot_fuel, T_amb, Percentage_Power
+            
+             Outputs: combustion_efficiency, ExhaustGasTemp_degK
+             </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Piston.doCHT">
+            <summary>
+            Calculate the cylinder head temperature.
+            
+            Inputs: T_amb, IAS, rho_air, m_dot_fuel, calorific_value_fuel,
+              combustion_efficiency, RPM
+            
+             Outputs: CylinderHeadTemp_degK
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Piston.doOilTemperature">
+            <summary>
+            Calculate the oil temperature.
+            
+             Inputs: Percentage_Power, running flag.
+            
+            Outputs: OilTemp_degK
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Piston.doOilPressure">
+            <summary>
+            Calculate the oil pressure.
+            
+            Inputs: RPM
+            
+            Outputs: OilPressure_psi 
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Models.Propulsion.Propeller" -->
+        <member name="F:JSBSim.Models.Propulsion.Propeller.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propeller.SetRPM(System.Double)">
+            <summary>
+            Sets the Revolutions Per Minute for the propeller. Normally the propeller
+            instance will calculate its own rotational velocity, given the Torque
+            produced by the engine and integrating over time using the standard
+            equation for rotational acceleration "a": a = Q/I , where Q is Torque and
+            I is moment of inertia for the propeller.
+            </summary>
+            <param name="rpm">the rotational velocity of the propeller</param>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propeller.IsVPitch">
+            Returns true of this propeller is variable pitch
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propeller.SetPitch(System.Double)">
+            <summary>
+            This commands the pitch of the blade to change to the value supplied.
+            This call is meant to be issued either from the cockpit or by the flight
+            control system (perhaps to maintain constant RPM for a constant-speed
+            propeller). This value will be limited to be within whatever is specified
+            in the config file for Max and Min pitch. It is also one of the lookup
+            indices to the power and thrust tables for variable-pitch propellers.
+            
+            </summary>
+            <param name="pitch">the pitch of the blade in degrees</param>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propeller.SetPFactor(System.Double)">
+            Sets the P-Factor constant
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propeller.GetPitch">
+            Retrieves the pitch of the propeller in degrees.
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propeller.GetRPM">
+            Retrieves the RPMs of the propeller
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propeller.GetIxx">
+            Retrieves the propeller moment of inertia
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propeller.GetTorque">
+            Retrieves the Torque in foot-pounds (Don't you love the English system?)
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propeller.GetPowerRequired">
+            <summary>
+            Retrieves the power required (or "absorbed") by the propeller -
+            i.e. the power required to keep spinning the propeller at the current
+            velocity, air density,  and rotational rate. */
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propeller.Calculate(System.Double)">
+            <summary>
+            Calculates and returns the thrust produced by this propeller.
+            Given the excess power available from the engine (in foot-pounds), the thrust is
+            calculated, as well as the current RPM. The RPM is calculated by integrating
+            the torque provided by the engine over what the propeller "absorbs"
+            (essentially the "drag" of the propeller).
+            </summary>
+            <param name="PowerAvailable">this is the excess power provided by the engine to
+            accelerate the prop. It could be negative, dictating that the propeller
+            would be slowed.</param>
+            <returns>the thrust in pounds</returns>
+        </member>
+        <member name="P:JSBSim.Models.Propulsion.Propeller.RotationSense">
+            <summary>
+            Gets/Sets the rotation sense of the propeller.
+            </summary>
+            <param name="s">this value should be +/- 1 ONLY. +1 indicates clockwise rotation as
+            	 viewed by someone standing behind the engine looking forward into
+            	 the direction of flight</param>
+        </member>
+        <member name="T:JSBSim.Models.Propulsion.Propulsion">
+            <summary>
+            Propulsion management class.
+            The Propulsion class is the container for the entire propulsion system, which is
+            comprised of engines, and tanks. Once the Propulsion class gets the config file,
+            it reads in information which is specific to a type of engine. Then:
+            
+            -# The appropriate engine type instance is created
+            -# At least one tank object is created, and is linked to an engine.
+            
+            At Run time each engines Calculate() method is called.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Propulsion.Propulsion.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propulsion.#ctor(JSBSim.FDMExecutive)">
+            Constructor
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propulsion.Run">
+            <summary>
+            Executes the propulsion model.
+            The initial plan for the FGPropulsion class calls for Run() to be executed,
+            calculating the power available from the engine.
+            
+            [Note: Should we be checking the Starved flag here?]
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propulsion.GetNumEngines">
+            Retrieves the number of engines defined for the aircraft.
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propulsion.GetEngine(System.Int32)">
+            <summary>
+            Retrieves an engine object pointer from the list of engines.
+            </summary>
+            <param name="index">the engine index within the vector container</param>
+            <returns>the specific engine, or zero if no such engine is
+            available</returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propulsion.GetNumTanks">
+            Retrieves the number of tanks defined for the aircraft.
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propulsion.GetTank(System.Int32)">
+            <summary>
+            Retrieves a tank object pointer from the list of tanks.
+            </summary>
+            <param name="index">the tank index within the vector container</param>
+            <returns>the specific tank, or zero if no such tank is available</returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propulsion.GetnumSelectedFuelTanks">
+            <summary>
+            Returns the number of fuel tanks currently actively supplying fuel
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propulsion.GetnumSelectedOxiTanks">
+            <summary>
+            Returns the number of oxidizer tanks currently actively supplying oxidizer
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propulsion.GetSteadyState">
+            <summary>
+            Loops the engines until thrust output steady (used for trimming)
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propulsion.ICEngineStart">
+            <summary>
+            starts the engines in IC mode (dt=0).  All engine-specific setup must
+            be done before calling this (i.e. magnetos, starter engage, etc.) 
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Propulsion.Load(System.Xml.XmlElement)">
+            <summary>
+            Loads the propulsion system (engine[s] and tank[s]).
+            Characteristics of the propulsion system are read in from the config file.
+            </summary>
+            <param name="element">XML element that contains the engine information</param>
+        </member>
+        <member name="T:JSBSim.Models.Propulsion.Rocket">
+            <summary>
+             Models a generic rocket engine.
+             The rocket engine is modeled given the following parameters:
+             <ul>
+             <li>Chamber pressure (in psf)</li>
+             <li>Specific heat ratio (usually about 1.2 for hydrocarbon fuel and LOX)</li>
+             <li>Propulsive efficiency (in percent, from 0 to 1.0)</li>
+             <li>Variance (in percent, from 0 to 1.0, nominally 0.05)</li>
+             </ul>
+             Additionally, the following control inputs, operating characteristics, and
+             location are required, as with all other engine types:
+             <ul>
+             <li>Throttle setting (in percent, from 0 to 1.0)</li>
+             <li>Maximum allowable throttle setting</li>
+             <li>Minimum working throttle setting</li>
+             <li>Sea level fuel flow at maximum thrust</li>
+             <li>Sea level oxidizer flow at maximum thrust</li>
+             <li>X, Y, Z location in structural coordinate frame</li>
+             <li>Pitch and Yaw</li>
+             </ul>
+             The nozzle exit pressure (p2) is returned via a
+             call to FGNozzle::GetPowerRequired(). This exit pressure is used,
+             along with chamber pressure and specific heat ratio, to get the
+             thrust coefficient for the throttle setting. This thrust
+             coefficient is multiplied by the chamber pressure and then passed
+             to the nozzle Calculate() routine, where the thrust force is
+             determined.
+             
+             @author Jon S. Berndt
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Propulsion.Rocket.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Rocket.Calculate">
+            <summary>
+            Determines the thrust coefficient.
+            </summary>
+            <returns>thrust coefficient times chamber pressure</returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Rocket.GetChamberPressure">
+            <summary>
+            Gets the chamber pressure.
+            </summary>
+            <returns>mber pressure in psf. </returns>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Rocket.GetFlameout">
+            <summary>
+            Gets the flame-out status.
+            The engine will "flame out" if the throttle is set below the minimum
+            sustainable setting.
+            </summary>
+            <returns>true if engine has flamed out. </returns>
+        </member>
+        <member name="T:JSBSim.Models.Propulsion.Rotor">
+            <summary>
+            Models a rotor (such as for a helicopter); NOT YET IMPLEMENTED.
+            </summary>
+        </member>
+        <member name="F:JSBSim.Models.Propulsion.Rotor.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Models.Propulsion.Tank" -->
+        <member name="F:JSBSim.Models.Propulsion.Tank.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Propulsion.Tank.TemperatureCelsius">
+            <summary>
+            Gets/sets the temperature in Celsius
+            </summary>
+        </member>
+        <member name="P:JSBSim.Models.Propulsion.Tank.TemperatureFahrenheit">
+            <summary>
+            Gets/sets the temperature in Fahrenheit
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:JSBSim.Models.Propulsion.Turbine" -->
+        <member name="F:JSBSim.Models.Propulsion.Turbine.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.Turbine.#ctor(JSBSim.FDMExecutive,System.Xml.XmlElement,System.Xml.XmlElement,System.Int32)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="exec">to executive structure</param>
+            <param name="element">engine config file instance</param>
+            <param name="engine_number">engine number</param>
+        </member>
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.MilThrust" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.MaxThrust" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.BypassRatio" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.TSFC" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.ATSFC" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.IdleN1" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.IdleN2" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.N1" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.N2" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.MaxN1" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.MaxN2" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.IdleFF" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.delay" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.dt" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.N1_factor" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.N2_factor" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.ThrottlePos" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.AugmentCmd" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.TAT" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.Stalled" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.Seized" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.Overtemp" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.Fire" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.Injection" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.Ignition" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.AugMethod" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.Turbine.EGT_degC" -->
+        <member name="F:JSBSim.Models.Propulsion.TurboProp.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.Models.Propulsion.TurboProp.Calculate">
+            <summary>
+            The main purpose of Calculate() is to determine what phase the engine should
+            be in, then call the corresponding function.
+            </summary>
+            <returns></returns>
+        </member>
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.MilThrust" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.IdleN1" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.IdleN2" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.N1" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.N2" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.MaxN1" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.MaxN2" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.IdleFF" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.delay" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.dt" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.N1_factor" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.N2_factor" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.ThrottleCmd" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.TAT" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.Stalled" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.Seized" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.Overtemp" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.Fire" -->
+        <!-- Badly formed XML comment ignored for member "F:JSBSim.Models.Propulsion.TurboProp.Reversed" -->
+        <member name="T:JSBSim.State">
+            <summary>
+            Encapsulates the calculation of aircraft state.
+             This code is based on FGState written by Jon S. Berndt
+            </summary>
+        </member>
+        <member name="F:JSBSim.State.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
+        <member name="M:JSBSim.State.#ctor(JSBSim.FDMExecutive)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="exec">the parent executive object</param>
+        </member>
+        <member name="M:JSBSim.State.SuspendIntegration">
+            <summary>
+            Suspends the simulation and sets the delta T to zero.
+            </summary>
+        </member>
+        <member name="M:JSBSim.State.ResumeIntegration">
+            <summary>
+            Resumes the simulation by resetting delta T to the correct value.
+            </summary>
+        </member>
+        <member name="M:JSBSim.State.IncrTime">
+            <summary>
+            Increments the simulation time.
+            </summary>
+            <returns>the new simulation time.</returns>
+        </member>
+        <member name="M:JSBSim.State.Initialize(JSBSim.InitialCondition)">
+            <summary>
+            Initializes the simulation state based on parameters from an Initial Conditions object.
+            </summary>
+            <param name="initCond">an initial conditions object.</param>
+        </member>
+        <member name="M:JSBSim.State.GetTs2b">
+            <summary>
+            Calculates and returns the stability-to-body axis transformation matrix.
+            </summary>
+            <returns>the stability-to-body transformation matrix.</returns>
+        </member>
+        <member name="M:JSBSim.State.GetTb2s">
+            <summary>
+            Calculates and returns the body-to-stability axis transformation matrix.
+            </summary>
+            <returns>the stability-to-body transformation matrix.</returns>
+        </member>
+        <member name="M:JSBSim.State.ReportState">
+            <summary>
+            Prints a summary of simulator state (speed, altitude,
+            configuration, etc.)
+            </summary>
+        </member>
+        <member name="P:JSBSim.State.IsIntegrationSuspended">
+            <summary>
+            Returns the simulation suspension state.
+            return true if suspended, false if executing
+            </summary>
+        </member>
+        <member name="P:JSBSim.State.SimTime">
+            <summary>
+            Gets/Sets the current sim time in seconds..
+            </summary>
+        </member>
+        <member name="P:JSBSim.State.DeltaTime">
+            <summary>
+            Gets/Sets the integration time step for the simulation executive.
+            the time step or delta time is defined in seconds.
+            </summary>
+        </member>
+    </members>
+</doc>

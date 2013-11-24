@@ -1,0 +1,320 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <ProjectType>Local</ProjectType>
+    <ProductVersion>7.10.3077</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{A27CDBB3-C844-4C0E-B4C6-060CF1D910B0}</ProjectGuid>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ApplicationIcon />
+    <AssemblyKeyContainerName />
+    <AssemblyName>JSBSimNet.JSBSim</AssemblyName>
+    <AssemblyOriginatorKeyFile />
+    <DefaultClientScript>JScript</DefaultClientScript>
+    <DefaultHTMLPageLayout>Grid</DefaultHTMLPageLayout>
+    <DefaultTargetSchema>IE50</DefaultTargetSchema>
+    <DelaySign>false</DelaySign>
+    <OutputType>Library</OutputType>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <RootNamespace>JSBSimNet</RootNamespace>
+    <StartupObject />
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>0.0</OldToolsVersion>
+    <TargetFrameworkProfile />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>..\..\build\Debug\</OutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile />
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn />
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>full</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>..\..\build\Release\JSBSim\</OutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile />
+    <DefineConstants>TRACE</DefineConstants>
+    <DocumentationFile>JSBSimNet.JSBSim.xml</DocumentationFile>
+    <DebugSymbols>false</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn />
+    <Optimize>true</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>none</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'AutomatedDebug|AnyCPU' ">
+    <OutputPath>..\..\build\AutomatedDebug\JSBSim\</OutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile />
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <NoWarn />
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>full</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CommonUtils\JSBSimNet.CommonUtils.csproj">
+      <Name>JSBSimNet.CommonUtils</Name>
+      <AssemblyName>JSBSimNet.CommonUtils</AssemblyName>
+      <Project>{D677F99F-7C8B-4CC8-9227-615826E09B54}</Project>
+      <Package>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</Package>
+    </ProjectReference>
+    <Reference Include="log4net">
+      <HintPath>..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System">
+      <Name>System</Name>
+    </Reference>
+    <Reference Include="System.Data">
+      <Name>System.Data</Name>
+    </Reference>
+    <Reference Include="System.Xml">
+      <Name>System.Xml</Name>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="FDMExecutive.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Force.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Format\FormatHelper.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Initialization\InitialCondition.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Initialization\Trim.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Initialization\TrimAxis.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="InputOutput\Coefficient.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="InputOutput\GroundCallback.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="InputOutput\PropertyEventArgs.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="InputOutput\PropertyFileLoadException.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="InputOutput\PropertyManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="InputOutput\PropertyNode.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="InputOutput\PropertyTreeNode.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="InputOutput\Script.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="InputOutput\ScriptAttributes\ScriptAttribute.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="InputOutput\UnknownPropertyNodeException.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Location.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MathValues\Function.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MathValues\IParameter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MathValues\PropertyValue.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MathValues\RealValue.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MathValues\Table.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Aerodynamics.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Aircraft.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Atmosphere\Atmosphere.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Atmosphere\Mars.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Atmosphere\MSIS.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Atmosphere\MSISData.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Auxiliary.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\FlightControlSystem.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\FlightControl\Condition.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\FlightControl\DeadBand.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\FlightControl\FCSComponent.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\FlightControl\FCSFunction.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\FlightControl\Filter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\FlightControl\Gain.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\FlightControl\Gradient.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\FlightControl\Kinemat.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\FlightControl\Sensor.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\FlightControl\Summer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\FlightControl\Switch.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\GroundReactions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Inertial.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Input.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\LGear.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\MassBalance.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Model.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Output.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propagate.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propulsion\Electric.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propulsion\Engine.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propulsion\Nozzle.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propulsion\Piston.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propulsion\Propeller.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propulsion\Propulsion.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propulsion\Rocket.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propulsion\Rotor.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propulsion\Tank.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propulsion\Thruster.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propulsion\Turbine.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Models\Propulsion\TurboProp.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="State.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <EmbeddedResource Include="JSBSim.xsd">
+      <SubType>Code</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent />
+    <PostBuildEvent />
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+</Project>
