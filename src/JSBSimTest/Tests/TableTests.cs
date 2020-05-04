@@ -40,8 +40,9 @@ namespace JSBSim.Tests
 	[TestFixture]
 	public class TableTests
 	{
+        private const double tolerance = 10E-12;
 
-		[Test]
+        [Test]
 		public void CheckLoad2D()
 		{
 			string test = 
@@ -90,78 +91,78 @@ namespace JSBSim.Tests
 			//0.3491	0.1097	0.1512	0.1744	0.1966
 			class1.alphaRad = 0.3491;
 			class1.flapPosDeg = 0.0000;
-			Assert.AreEqual(0.1097, table.GetValue());
+			Assert.AreEqual(0.1097, table.GetValue(), tolerance);
 
 			class1.flapPosDeg =	1.0000;
-			Assert.AreEqual(0.1512, table.GetValue());
+			Assert.AreEqual(0.1512, table.GetValue(), tolerance);
 
 			class1.flapPosDeg =	25.0000;
-			Assert.AreEqual(0.1744, table.GetValue());
+			Assert.AreEqual(0.1744, table.GetValue(), tolerance);
 
 			class1.flapPosDeg = 40.0000;
-			Assert.AreEqual(0.1966, table.GetValue());
+			Assert.AreEqual(0.1966, table.GetValue(), tolerance);
 
 			//-0.0873	0.0041	0.0000	0.0005	0.0014
 			class1.alphaRad = -0.0873;
 			class1.flapPosDeg = 0.0000;
-			Assert.AreEqual(0.0041, table.GetValue());
+			Assert.AreEqual(0.0041, table.GetValue(), tolerance);
 
 			class1.flapPosDeg =	1.0000;
-			Assert.AreEqual(0.0000, table.GetValue());
+			Assert.AreEqual(0.0000, table.GetValue(), tolerance);
 
 			class1.flapPosDeg =	25.0000;
-			Assert.AreEqual(0.0005, table.GetValue());
+			Assert.AreEqual(0.0005, table.GetValue(), tolerance);
 
 			class1.flapPosDeg = 40.0000;
-			Assert.AreEqual(0.0014, table.GetValue());
+			Assert.AreEqual(0.0014, table.GetValue(), tolerance);
 
 			//0.1571	0.0962	0.1353	0.1573	0.1790
 			class1.alphaRad = 0.1571;
 			class1.flapPosDeg = 0.0000;
-			Assert.AreEqual(0.0962, table.GetValue());
+			Assert.AreEqual(0.0962, table.GetValue(), tolerance);
 
 			class1.flapPosDeg =	1.0000;
-			Assert.AreEqual(0.1353, table.GetValue());
+			Assert.AreEqual(0.1353, table.GetValue(), tolerance);
 
 			class1.flapPosDeg =	25.0000;
-			Assert.AreEqual(0.1573, table.GetValue());
+			Assert.AreEqual(0.1573, table.GetValue(), tolerance);
 
 			class1.flapPosDeg = 40.0000;
-			Assert.AreEqual(0.1790, table.GetValue());
+			Assert.AreEqual(0.1790, table.GetValue(), tolerance);
 			
 			//checks limits
 
 			///Key underneath table
 			class1.alphaRad = -1.0;
 			class1.flapPosDeg = 40.0000;
-			Assert.AreEqual(0.0014, table.GetValue());
+			Assert.AreEqual(0.0014, table.GetValue(), tolerance);
 
 			///Key over table
 			class1.alphaRad = 1.0;
-			Assert.AreEqual(0.1966, table.GetValue());
+			Assert.AreEqual(0.1966, table.GetValue(), tolerance);
 
 			///Key underneath table
 			class1.alphaRad = 0.3491;
 			class1.flapPosDeg = -1.0;
-			Assert.AreEqual(0.1097, table.GetValue());
+			Assert.AreEqual(0.1097, table.GetValue(), tolerance);
 
 			///Key over table
 			class1.flapPosDeg = 50.0000;
-			Assert.AreEqual(0.1966, table.GetValue());
+			Assert.AreEqual(0.1966, table.GetValue(), tolerance);
 
 			//0.1396	0.0860	0.1232	0.1442	0.1654	
 			//0.1571	0.0962	0.1353	0.1573	0.1790
 			class1.alphaRad = (0.1396+0.1571)/2;
 			class1.flapPosDeg = 1.0;
-			Assert.AreEqual((0.1232+0.1353)/2, table.GetValue());
+			Assert.AreEqual((0.1232+0.1353)/2, table.GetValue(), tolerance);
 
 			class1.alphaRad = 0.1396;
 			class1.flapPosDeg = (1.0+25.0)/2;
-			Assert.AreEqual((0.1232+0.1442)/2, table.GetValue());
+			Assert.AreEqual((0.1232+0.1442)/2, table.GetValue(), tolerance);
 
 			class1.alphaRad = (0.1396+0.1571)/2;
 			class1.flapPosDeg = (1.0+25.0)/2;
-			Assert.AreEqual((0.1232+0.1442+0.1353+0.1573)/4, table.GetValue());
+			Assert.AreEqual((0.1232+0.1442+0.1353+0.1573)/4, table.GetValue(), tolerance);
 		}
 
 
@@ -191,27 +192,27 @@ namespace JSBSim.Tests
 			Assert.AreEqual(-0.6800, table.GetValue());
 
 			class1.alphaRad = 0.0000;
-			Assert.AreEqual(0.2000, table.GetValue());
+			Assert.AreEqual(0.2000, table.GetValue(), tolerance);
 
 			class1.alphaRad = 0.2300;
-			Assert.AreEqual(1.2000, table.GetValue());
+			Assert.AreEqual(1.2000, table.GetValue(), tolerance);
 
 			class1.alphaRad = 0.6000;
-			Assert.AreEqual(0.6000, table.GetValue());
+			Assert.AreEqual(0.6000, table.GetValue(), tolerance);
 
 			//Checks interpolation
 			class1.alphaRad = (0.6000+0.2300)/2;
-			Assert.AreEqual((0.6000+1.2000)/2, table.GetValue());
+			Assert.AreEqual((0.6000+1.2000)/2, table.GetValue(), tolerance);
 
 			//checks limits
 
 			///Key underneath table
 			class1.alphaRad = -1.0;
-			Assert.AreEqual(-0.6800, table.GetValue());
+			Assert.AreEqual(-0.6800, table.GetValue(), tolerance);
 
 			///Key over table
 			class1.alphaRad = 1.0;
-			Assert.AreEqual(0.6000, table.GetValue());
+			Assert.AreEqual(0.6000, table.GetValue(), tolerance);
 		}
 
 

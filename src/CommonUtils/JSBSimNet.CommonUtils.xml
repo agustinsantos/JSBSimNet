@@ -364,6 +364,16 @@
             <param name="b">The second of two 3D vectors to compare.</param>
             <returns><b>true</b> if the matrices are not equal; otherwise, <b>false</b>.</returns>
         </member>
+        <member name="P:CommonUtils.MathLib.Matrix3D.Item(System.Int32)">
+            <summary>
+            An index accessor.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Matrix3D.Item(System.Int32,System.Int32)">
+            <summary>
+            An index accessor.
+            </summary>
+        </member>
         <member name="M:CommonUtils.MathLib.Matrix3D.op_Multiply(CommonUtils.MathLib.Matrix3D,CommonUtils.MathLib.Matrix3D)">
             <summary>
             Multiplies two matrices.
@@ -395,16 +405,6 @@
             <param name="m1">The first matrix to add.</param>
             <param name="m2">The second matrix to add.</param>
             <returns>Result is ( m1.M11 + m2.M11, m1.M12 + m2.M12, ...)</returns>
-        </member>
-        <member name="P:CommonUtils.MathLib.Matrix3D.Item(System.Int32)">
-            <summary>
-            An index accessor.
-            </summary>
-        </member>
-        <member name="P:CommonUtils.MathLib.Matrix3D.Item(System.Int32,System.Int32)">
-            <summary>
-            An index accessor.
-            </summary>
         </member>
         <!-- Badly formed XML comment ignored for member "T:CommonUtils.MathLib.Quaternion" -->
         <member name="F:CommonUtils.MathLib.Quaternion.W">
@@ -738,6 +738,11 @@
             <param name="b">The quaternions to substract.</param>
             <returns></returns>
         </member>
+        <member name="P:CommonUtils.MathLib.Quaternion.Item(System.Int32)">
+            <summary>
+            An index accessor ( [w, x, y, z] ).
+            </summary>
+        </member>
         <member name="M:CommonUtils.MathLib.Quaternion.op_Explicit(CommonUtils.MathLib.Quaternion)~System.Double[]">
             <summary>
             Converts the vector to an array of double.
@@ -753,11 +758,6 @@
         </member>
         <member name="F:CommonUtils.MathLib.Quaternion.mEulerSines">
             The cached sines and cosines of the euler angles.  
-        </member>
-        <member name="P:CommonUtils.MathLib.Quaternion.Item(System.Int32)">
-            <summary>
-            An index accessor ( [w, x, y, z] ).
-            </summary>
         </member>
         <member name="T:CommonUtils.MathLib.QuaternionNotInvertibleException">
             <exception cref="T:System.ApplicationException">Thrown when trying to invert an uninvertible quaternion.</exception>
@@ -1087,6 +1087,11 @@
             <param name="vec2">The vector to substract.</param>
             <returns>Result is ( vec1.X - vec2.X, vec1.Y - vec2.Y, vec1.Z - vec2.Z )</returns>
         </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.Item(System.Int32)">
+            <summary>
+            An index accessor ( [X, Y, Z] ).
+            </summary>
+        </member>
         <member name="M:CommonUtils.MathLib.Vector3D.op_Explicit(CommonUtils.MathLib.Vector3D)~System.Double[]">
             <summary>
             Converts the vector to an array of doubles.
@@ -1113,11 +1118,6 @@
         </member>
         <member name="M:CommonUtils.MathLib.Vector3D.Entry(System.Int32)">
             TODO. Review this desing. 
-        </member>
-        <member name="P:CommonUtils.MathLib.Vector3D.Item(System.Int32)">
-            <summary>
-            An index accessor ( [X, Y, Z] ).
-            </summary>
         </member>
         <member name="P:CommonUtils.MathLib.Vector3D.eX">
             <summary>

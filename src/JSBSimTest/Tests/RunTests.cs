@@ -31,11 +31,12 @@ namespace JSBSim.Tests
 
 	using JSBSim;
 	using CommonUtils.MathLib;
+    using System.IO;
 
-	/// <summary>
-	/// Some JSBSim models run Tests.
-	/// </summary>
-	[TestFixture]
+    /// <summary>
+    /// Some JSBSim models run Tests.
+    /// </summary>
+    [TestFixture]
 	public class RunTests
 	{
         /// <summary>
@@ -48,18 +49,30 @@ namespace JSBSim.Tests
         /// needing to edit the code.
         /// </summary>
         private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        private const double tolerance = 10E-4;
 
-		private const String aircraft_MK82 = "mk82";
+        private const String aircraft_MK82 = "mk82";
 		private const String aircraft_Ball = "ball";
-		
-		[Test]
+
+        private String AircraftPath = "../../../Models/aircraft";
+        private String EnginePath = "../../../Models/engine";
+
+        [OneTimeSetUp]
+        public void RunBeforeAnyTests()
+        {
+            var dir = TestContext.CurrentContext.TestDirectory;
+            AircraftPath = Path.GetFullPath(dir + AircraftPath);
+            EnginePath = Path.GetFullPath(dir + EnginePath);
+        }
+
+        [Test]
 		public void CheckRun_MK82()
 		{
             FDMExecutive exec = LoadAndRunModel(aircraft_MK82, "reset00");
 			Assert.AreEqual("MK-82", exec.Aircraft.AircraftName);
-            Assert.AreEqual(26.299999999999148, exec.State.SimTime);
-            Assert.AreEqual(757.97926252631783, exec.Auxiliary.VcalibratedFPS);
-            Assert.AreEqual(0.0019131959891723579, exec.Auxiliary.EarthPositionAngle);
+            Assert.AreEqual(26.299999999999148, exec.State.SimTime, tolerance);
+            Assert.AreEqual(757.97926252631783, exec.Auxiliary.VcalibratedFPS, tolerance);
+            Assert.AreEqual(0.0019131959891723579, exec.Auxiliary.EarthPositionAngle, tolerance);
 		}
 
 		[Test]
@@ -70,13 +83,11 @@ namespace JSBSim.Tests
 			Assert.AreEqual("BALL", exec.Aircraft.AircraftName);
 		}
 
-        private const string rootDirectory = "../../../Models";
-
         private FDMExecutive LoadAndRunModel(string modelFileName, string IcFileName)
         {
             FDMExecutive fdm = new FDMExecutive();
-            fdm.AircraftPath = rootDirectory + "/aircraft";
-            fdm.EnginePath = rootDirectory + "/engine";
+            fdm.AircraftPath = AircraftPath;
+            fdm.EnginePath = EnginePath;
 
             fdm.LoadModel(modelFileName, true);
 
@@ -92,7 +103,7 @@ namespace JSBSim.Tests
 
             bool result = fdm.Run();
             int count = 0;
-            while (result && !(fdm.Holding() || fdm.State.IsIntegrationSuspended))
+            while (result && !(fdm.Holding() || fdm.State.IsIntegrationSuspended) && count < 10000)
             {
                 result = fdm.Run();
                 count++;

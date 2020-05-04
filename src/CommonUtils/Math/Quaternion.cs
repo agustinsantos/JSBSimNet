@@ -299,7 +299,7 @@ namespace CommonUtils.MathLib
 		/// <returns>The magnitude of the vector :  Sqrt(W*W + X*X + Y*Y + Z*Z).</returns>
 		public double GetMagnitude()
 		{
-			return (double)System.Math.Sqrt( W*W + X*X + Y*Y + Z*Z );
+			return System.Math.Sqrt(W * W + X * X + Y * Y + Z * Z);
 		}
 		/// <summary>
 		/// Get the squared magnitude of the Quaternion.
@@ -835,7 +835,7 @@ namespace CommonUtils.MathLib
     /// <returns></returns>
     public static Quaternion operator-(Quaternion a, Quaternion b) 
 		{
-			return	new Quaternion( (double)(a.W - b.W), 
+			return	new Quaternion(a.W - b.W, 
 				a.X - b.X, 
 				a.Y - b.Y, 
 				a.Z - b.Z);

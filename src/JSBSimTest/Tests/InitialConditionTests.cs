@@ -42,6 +42,8 @@ namespace JSBSim.Tests
     [TestFixture]
     public class InitialConditionTests
     {
+        private const double tolerance = 10E-12;
+
         /// <summary>
         /// Define a static logger variable so that it references the
         ///	Logger instance.
@@ -95,7 +97,7 @@ namespace JSBSim.Tests
                     </initialize>";
 
             FDMExecutive fdm = new FDMExecutive();
-            
+
             XmlElement elem = BuildXmlConfig(test);
             InitialCondition IC = fdm.GetIC;
             IC.Load(elem, false);
@@ -106,9 +108,9 @@ namespace JSBSim.Tests
             }
 
             //Checks values 
-            Assert.AreEqual(47.0, IC.LatitudeDegIC, "latitude in deg.");
-            Assert.AreEqual(-110.0, IC.LongitudeDegIC, "longitude in deg.");
-            Assert.AreEqual(10000.0, IC.AltitudeFtIC, "Altitude in Ft");
+            Assert.AreEqual(47.0, IC.LatitudeDegIC, tolerance, "latitude in deg.");
+            Assert.AreEqual(-110.0, IC.LongitudeDegIC, tolerance, "longitude in deg.");
+            Assert.AreEqual(10000.0, IC.AltitudeFtIC, tolerance, "Altitude in Ft");
         }
 
         [Test]
@@ -139,9 +141,9 @@ namespace JSBSim.Tests
             }
 
             //Checks values 
-            Assert.AreEqual(10.0, IC.AlphaDegIC, "initial angle of attack");
-            Assert.AreEqual(20.0, IC.BetaDegIC, "initial sideslip angle");
-            Assert.AreEqual(30.0, IC.ThetaDegIC, "initial pitch angle");
+            Assert.AreEqual(10.0, IC.AlphaDegIC, tolerance, "initial angle of attack");
+            Assert.AreEqual(20.0, IC.BetaDegIC, tolerance, "initial sideslip angle");
+            Assert.AreEqual(30.0, IC.ThetaDegIC, tolerance, "initial pitch angle");
         }
 
         [Test]
@@ -171,9 +173,9 @@ namespace JSBSim.Tests
             }
 
             //Checks values 
-            Assert.AreEqual(100.0, IC.UBodyFpsIC);
-            Assert.AreEqual(200.0, IC.VBodyFpsIC);
-            Assert.AreEqual(300.0, IC.WBodyFpsIC);
+            Assert.AreEqual(100.0, IC.UBodyFpsIC, tolerance);
+            Assert.AreEqual(200.0, IC.VBodyFpsIC, tolerance);
+            Assert.AreEqual(300.0, IC.WBodyFpsIC, tolerance);
         }
 
 

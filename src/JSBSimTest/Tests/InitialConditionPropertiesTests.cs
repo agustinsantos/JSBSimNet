@@ -42,6 +42,8 @@ namespace JSBSim.Tests
     [TestFixture]
     public class InitialConditionPropertiesTests
     {
+        private const double tolerance = 10E-12;
+
         /// <summary>
         /// Define a static logger variable so that it references the
         ///	Logger instance.
@@ -116,15 +118,15 @@ namespace JSBSim.Tests
             }
 
             //Checks values 
-            Assert.AreEqual(3.0, IC.LatitudeDegIC, "Cheking latitude in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
-            Assert.AreEqual(7.0, IC.LongitudeDegIC, "Cheking Longitude in deg.If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
-            Assert.AreEqual(29.0, IC.AltitudeFtIC, "Cheking Altitude in Ft.If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
+            Assert.AreEqual(3.0, IC.LatitudeDegIC, tolerance, "Cheking latitude in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
+            Assert.AreEqual(7.0, IC.LongitudeDegIC, tolerance, "Cheking Longitude in deg.If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
+            Assert.AreEqual(29.0, IC.AltitudeFtIC, tolerance, "Cheking Altitude in Ft.If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
 
             XmlElement elemFunction = BuildXmlConfig(testProperties, "function");
             Function func = new Function(fdm.PropertyManager, elemFunction);
 
             //Checks InputOutput 
-            Assert.AreEqual(IC.LatitudeDegIC + IC.LongitudeDegIC + IC.AltitudeFtIC, func.GetValue());
+            Assert.AreEqual(IC.LatitudeDegIC + IC.LongitudeDegIC + IC.AltitudeFtIC, func.GetValue(), tolerance);
         }
 
         [Test]
@@ -168,17 +170,17 @@ namespace JSBSim.Tests
             }
 
             //Checks values 
-            Assert.AreEqual(10.0, IC.AlphaDegIC, "Cheking Alpha in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
-            Assert.AreEqual(20.0, IC.BetaDegIC, "Cheking Beta in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
-            Assert.AreEqual(30.0, IC.ThetaDegIC, "Cheking Theta in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
-            Assert.AreEqual(40.0, IC.PhiDegIC, "Cheking Phi in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
-            Assert.AreEqual(50.0, IC.PsiDegIC, "Cheking Psi in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
+            Assert.AreEqual(10.0, IC.AlphaDegIC, tolerance, "Cheking Alpha in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
+            Assert.AreEqual(20.0, IC.BetaDegIC, tolerance, "Cheking Beta in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
+            Assert.AreEqual(30.0, IC.ThetaDegIC, tolerance, "Cheking Theta in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
+            Assert.AreEqual(40.0, IC.PhiDegIC, tolerance, "Cheking Phi in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
+            Assert.AreEqual(50.0, IC.PsiDegIC, tolerance, "Cheking Psi in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
 
             XmlElement elemFunction = BuildXmlConfig(testProperties, "function");
             Function func = new Function(fdm.PropertyManager, elemFunction);
 
             //Checks InputOutput 
-            Assert.AreEqual(IC.AlphaDegIC + IC.BetaDegIC + IC.ThetaDegIC + IC.PhiDegIC + IC.PsiDegIC, func.GetValue());
+            Assert.AreEqual(IC.AlphaDegIC + IC.BetaDegIC + IC.ThetaDegIC + IC.PhiDegIC + IC.PsiDegIC, func.GetValue(), tolerance);
         }
 
         private XmlElement BuildXmlConfig(string config, string tag)

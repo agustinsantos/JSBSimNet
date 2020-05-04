@@ -24,195 +24,197 @@
 #endregion
 namespace CommonUtils.Tests
 {
-	using System;
+    using System;
 
-	using NUnit.Framework;
+    using NUnit.Framework;
 
-	using CommonUtils.MathLib;
+    using CommonUtils.MathLib;
 
-	/// <summary>
-	/// Summary description for QuaternionTests.
-	/// </summary>
-	[TestFixture]
-	public class QuaternionTests
-	{
-		[Test]
-		public void Construction()
-		{
-			Quaternion q;
+    /// <summary>
+    /// Summary description for QuaternionTests.
+    /// </summary>
+    [TestFixture]
+    public class QuaternionTests
+    {
+        private const double tolerance = 10E-16;
 
-			// Zero vector
-			q = Quaternion.Zero;
-			Assert.AreEqual(0, q.W, "Zero Quaternion - W");
-			Assert.AreEqual(0, q.X, "Zero Quaternion - X");
-			Assert.AreEqual(0, q.Y, "Zero Quaternion - Y");
-			Assert.AreEqual(0, q.Z, "Zero Quaternion - Z");
+        [Test]
+        public void Construction()
+        {
+            Quaternion q;
 
-			// W-Axis vector
-			q = Quaternion.WAxis;
-			Assert.AreEqual(1, q.W, "WAxis Quaternion - W");
-			Assert.AreEqual(0, q.X, "WAxis Quaternion - X");
-			Assert.AreEqual(0, q.Y, "WAxis Quaternion - Y");
-			Assert.AreEqual(0, q.Z, "WAxis Quaternion - Z");
+            // Zero vector
+            q = Quaternion.Zero;
+            Assert.AreEqual(0, q.W, "Zero Quaternion - W");
+            Assert.AreEqual(0, q.X, "Zero Quaternion - X");
+            Assert.AreEqual(0, q.Y, "Zero Quaternion - Y");
+            Assert.AreEqual(0, q.Z, "Zero Quaternion - Z");
 
-			// X-Axis vector
-			q = Quaternion.XAxis;
-			Assert.AreEqual(0, q.W, "XAxis Quaternion - W");
-			Assert.AreEqual(1, q.X, "XAxis Quaternion - X");
-			Assert.AreEqual(0, q.Y, "XAxis Quaternion - Y");
-			Assert.AreEqual(0, q.Z, "XAxis Quaternion - Z");
+            // W-Axis vector
+            q = Quaternion.WAxis;
+            Assert.AreEqual(1, q.W, "WAxis Quaternion - W");
+            Assert.AreEqual(0, q.X, "WAxis Quaternion - X");
+            Assert.AreEqual(0, q.Y, "WAxis Quaternion - Y");
+            Assert.AreEqual(0, q.Z, "WAxis Quaternion - Z");
 
-			// Y-Axis vector
-			q = Quaternion.YAxis;
-			Assert.AreEqual(0, q.W, "YAxis Quaternion - W");
-			Assert.AreEqual(0, q.X, "YAxis Quaternion - X");
-			Assert.AreEqual(1, q.Y, "YAxis Quaternion - Y");
-			Assert.AreEqual(0, q.Z, "YAxis Quaternion - Z");
+            // X-Axis vector
+            q = Quaternion.XAxis;
+            Assert.AreEqual(0, q.W, "XAxis Quaternion - W");
+            Assert.AreEqual(1, q.X, "XAxis Quaternion - X");
+            Assert.AreEqual(0, q.Y, "XAxis Quaternion - Y");
+            Assert.AreEqual(0, q.Z, "XAxis Quaternion - Z");
 
-			// Z-Axis vector
-			q = Quaternion.ZAxis;
-			Assert.AreEqual(0, q.W, "ZAxis Quaternion - W");
-			Assert.AreEqual(0, q.X, "ZAxis Quaternion - X");
-			Assert.AreEqual(0, q.Y, "ZAxis Quaternion - Y");
-			Assert.AreEqual(1, q.Z, "ZAxis Quaternion - Z");
+            // Y-Axis vector
+            q = Quaternion.YAxis;
+            Assert.AreEqual(0, q.W, "YAxis Quaternion - W");
+            Assert.AreEqual(0, q.X, "YAxis Quaternion - X");
+            Assert.AreEqual(1, q.Y, "YAxis Quaternion - Y");
+            Assert.AreEqual(0, q.Z, "YAxis Quaternion - Z");
 
-			// Constructors
-			Quaternion a = new Quaternion(1,2,3,4);
-			Assert.AreEqual(1, a.W, "Constructors Quaternion - W");
-			Assert.AreEqual(2, a.X, "Constructors Quaternion - X");
-			Assert.AreEqual(3, a.Y, "Constructors Quaternion - Y");
-			Assert.AreEqual(4, a.Z, "Constructors Quaternion - Z");
-			
-			Quaternion b = new Quaternion(4,3,2,1);
-			Assert.AreEqual(4, b.W, "Constructors Quaternion - W");
-			Assert.AreEqual(3, b.X, "Constructors Quaternion - X");
-			Assert.AreEqual(2, b.Y, "Constructors Quaternion - Y");
-			Assert.AreEqual(1, b.Z, "Constructors Quaternion - Z");
+            // Z-Axis vector
+            q = Quaternion.ZAxis;
+            Assert.AreEqual(0, q.W, "ZAxis Quaternion - W");
+            Assert.AreEqual(0, q.X, "ZAxis Quaternion - X");
+            Assert.AreEqual(0, q.Y, "ZAxis Quaternion - Y");
+            Assert.AreEqual(1, q.Z, "ZAxis Quaternion - Z");
 
-			double [] fa = { 0.1, 0.2, 0.3, 0.4 };
-			q = new Quaternion(fa);
-			Assert.AreEqual(0.1, q.W, "Constructors Quaternion - W");
-			Assert.AreEqual(0.2, q.X, "Constructors Quaternion - X");
-			Assert.AreEqual(0.3, q.Y, "Constructors Quaternion - Y");
-			Assert.AreEqual(0.4, q.Z, "Constructors Quaternion - Z");
+            // Constructors
+            Quaternion a = new Quaternion(1, 2, 3, 4);
+            Assert.AreEqual(1, a.W, "Constructors Quaternion - W");
+            Assert.AreEqual(2, a.X, "Constructors Quaternion - X");
+            Assert.AreEqual(3, a.Y, "Constructors Quaternion - Y");
+            Assert.AreEqual(4, a.Z, "Constructors Quaternion - Z");
 
-			q = new Quaternion(new Quaternion(0.1, 0.2, 0.3, 0.4));
-			Assert.AreEqual(0.1, q.W, "Constructors Quaternion - W");
-			Assert.AreEqual(0.2, q.X, "Constructors Quaternion - X");
-			Assert.AreEqual(0.3, q.Y, "Constructors Quaternion - Y");
-			Assert.AreEqual(0.4, q.Z, "Constructors Quaternion - Z");
+            Quaternion b = new Quaternion(4, 3, 2, 1);
+            Assert.AreEqual(4, b.W, "Constructors Quaternion - W");
+            Assert.AreEqual(3, b.X, "Constructors Quaternion - X");
+            Assert.AreEqual(2, b.Y, "Constructors Quaternion - Y");
+            Assert.AreEqual(1, b.Z, "Constructors Quaternion - Z");
 
-		}
+            double[] fa = { 0.1, 0.2, 0.3, 0.4 };
+            q = new Quaternion(fa);
+            Assert.AreEqual(0.1, q.W, "Constructors Quaternion - W");
+            Assert.AreEqual(0.2, q.X, "Constructors Quaternion - X");
+            Assert.AreEqual(0.3, q.Y, "Constructors Quaternion - Y");
+            Assert.AreEqual(0.4, q.Z, "Constructors Quaternion - Z");
 
-		[Test]
-		public void ScalarOperators()
-		{
-			Quaternion q = new Quaternion(0.1, 0.2, 0.3, 0.4);
+            q = new Quaternion(new Quaternion(0.1, 0.2, 0.3, 0.4));
+            Assert.AreEqual(0.1, q.W, "Constructors Quaternion - W");
+            Assert.AreEqual(0.2, q.X, "Constructors Quaternion - X");
+            Assert.AreEqual(0.3, q.Y, "Constructors Quaternion - Y");
+            Assert.AreEqual(0.4, q.Z, "Constructors Quaternion - Z");
 
-			q *= 2.0;
-			Assert.AreEqual(0.2, q.W, "ScalarOperators Mult. Quaternion - W");
-			Assert.AreEqual(0.4, q.X, "ScalarOperators Mult. Quaternion - X");
-			Assert.AreEqual(0.6, q.Y, "ScalarOperators Mult. Quaternion - Y");
-			Assert.AreEqual(0.8, q.Z, "ScalarOperators Mult. Quaternion - Z");
+        }
 
-			q /= 2.0f;
-			Assert.AreEqual(0.1, q.W, "ScalarOperators Div. Quaternion - W");
-			Assert.AreEqual(0.2, q.X, "ScalarOperators Div. Quaternion - X");
-			Assert.AreEqual(0.3, q.Y, "ScalarOperators Div. Quaternion - Y");
-			Assert.AreEqual(0.4, q.Z, "ScalarOperators Div. Quaternion - Z");
+        [Test]
+        public void ScalarOperators()
+        {
+            Quaternion q = new Quaternion(0.1, 0.2, 0.3, 0.4);
 
-			q.Multiply(3.0);
-			Assert.AreEqual(0.3, q.W, "ScalarOperators Mult. Quaternion - W");
-			Assert.AreEqual(0.6, q.X, "ScalarOperators Mult. Quaternion - X");
-			Assert.AreEqual(0.9, q.Y, "ScalarOperators Mult. Quaternion - Y");
-			Assert.AreEqual(1.2, q.Z, "ScalarOperators Mult. Quaternion - Z");
+            q *= 2.0;
+            Assert.AreEqual(0.2, q.W, tolerance, "ScalarOperators Mult. Quaternion - W");
+            Assert.AreEqual(0.4, q.X, tolerance, "ScalarOperators Mult. Quaternion - X");
+            Assert.AreEqual(0.6, q.Y, tolerance, "ScalarOperators Mult. Quaternion - Y");
+            Assert.AreEqual(0.8, q.Z, tolerance, "ScalarOperators Mult. Quaternion - Z");
 
-			q.Divide(3.0);
-			Assert.AreEqual(0.1, q.W, "ScalarOperators Div. Quaternion - W");
-			Assert.AreEqual(0.2, q.X, "ScalarOperators Div. Quaternion - X");
-			Assert.AreEqual(0.3, q.Y, "ScalarOperators Div. Quaternion - Y");
-			Assert.AreEqual(0.4, q.Z, "ScalarOperators Div. Quaternion - Z");
+            q /= 2.0f;
+            Assert.AreEqual(0.1, q.W, tolerance, "ScalarOperators Div. Quaternion - W");
+            Assert.AreEqual(0.2, q.X, tolerance, "ScalarOperators Div. Quaternion - X");
+            Assert.AreEqual(0.3, q.Y, tolerance, "ScalarOperators Div. Quaternion - Y");
+            Assert.AreEqual(0.4, q.Z, tolerance, "ScalarOperators Div. Quaternion - Z");
+
+            q.Multiply(3.0);
+            Assert.AreEqual(0.3, q.W, tolerance, "ScalarOperators Mult. Quaternion - W");
+            Assert.AreEqual(0.6, q.X, tolerance, "ScalarOperators Mult. Quaternion - X");
+            Assert.AreEqual(0.9, q.Y, tolerance, "ScalarOperators Mult. Quaternion - Y");
+            Assert.AreEqual(1.2, q.Z, tolerance, "ScalarOperators Mult. Quaternion - Z");
+
+            q.Divide(3.0);
+            Assert.AreEqual(0.1, q.W, tolerance, "ScalarOperators Div. Quaternion - W");
+            Assert.AreEqual(0.2, q.X, tolerance, "ScalarOperators Div. Quaternion - X");
+            Assert.AreEqual(0.3, q.Y, tolerance, "ScalarOperators Div. Quaternion - Y");
+            Assert.AreEqual(0.4, q.Z, tolerance, "ScalarOperators Div. Quaternion - Z");
 
 
-		}
+        }
 
-		[Test]
-		public void QuaternionOperators()
-		{
-			Quaternion a = new Quaternion(0.1, 0.2, 0.3, 0.4);
-			Quaternion b = new Quaternion(0.4, 0.3, 0.2, 0.1);
+        [Test]
+        public void QuaternionOperators()
+        {
+            Quaternion a = new Quaternion(0.1, 0.2, 0.3, 0.4);
+            Quaternion b = new Quaternion(0.4, 0.3, 0.2, 0.1);
 
-			Assert.AreEqual(new Quaternion(0.1, 0.2, 0.3, 0.4), a);
-			Assert.AreEqual(new Quaternion(0.4, 0.3, 0.2, 0.1), b);
+            Assert.AreEqual(new Quaternion(0.1, 0.2, 0.3, 0.4), a);
+            Assert.AreEqual(new Quaternion(0.4, 0.3, 0.2, 0.1), b);
 
-			Quaternion result1 = a + b;
-			Quaternion result2 = a - b;
+            Quaternion result1 = a + b;
+            Quaternion result2 = a - b;
 
-			Assert.AreEqual(0.5, result1.W, "VectorOperators Sum Quaternion - W");
-			Assert.AreEqual(0.5, result1.X, "VectorOperators Sum Quaternion - X");
-			Assert.AreEqual(0.5, result1.Y, "VectorOperators Sum Quaternion - Y");
-			Assert.AreEqual(0.5, result1.Z, "VectorOperators Sum Quaternion - Z");
+            Assert.AreEqual(0.5, result1.W, "VectorOperators Sum Quaternion - W");
+            Assert.AreEqual(0.5, result1.X, "VectorOperators Sum Quaternion - X");
+            Assert.AreEqual(0.5, result1.Y, "VectorOperators Sum Quaternion - Y");
+            Assert.AreEqual(0.5, result1.Z, "VectorOperators Sum Quaternion - Z");
 
-			Assert.AreEqual(-0.3, result2.W, "VectorOperators Subs Quaternion - W");
-			Assert.AreEqual(-0.1, result2.X, "VectorOperators Subs Quaternion - X");
-			Assert.AreEqual(0.1, result2.Y, "VectorOperators Subs Quaternion - Y");
-			Assert.AreEqual(0.3, result2.Z, "VectorOperators Subs Quaternion - Z");
+            Assert.AreEqual(-0.3, result2.W, tolerance, "VectorOperators Subs Quaternion - W");
+            Assert.AreEqual(-0.1, result2.X, tolerance, "VectorOperators Subs Quaternion - X");
+            Assert.AreEqual(0.1, result2.Y, tolerance, "VectorOperators Subs Quaternion - Y");
+            Assert.AreEqual(0.3, result2.Z, tolerance, "VectorOperators Subs Quaternion - Z");
 
-			Assert.AreEqual(result1, a+b);
-			Assert.AreEqual(new Quaternion(0.5, 0.5, 0.5, 0.5), result1);
-			Assert.AreEqual(new Quaternion(0.5, 0.5, 0.5, 0.5), a+b);
+            Assert.AreEqual(result1, a + b);
+            Assert.AreEqual(new Quaternion(0.5, 0.5, 0.5, 0.5), result1);
+            Assert.AreEqual(new Quaternion(0.5, 0.5, 0.5, 0.5), a + b);
 
-			Assert.AreEqual(result2, a-b);
+            Assert.AreEqual(result2, a - b);
 
-			Assert.AreEqual(new Quaternion(-0.3, -0.1, 0.1, 0.3), result2);
-			Assert.AreEqual(new Quaternion(-0.3, -0.1, 0.1, 0.3), a-b);
+            Assert.AreEqual(new Quaternion(-0.3, -0.1, 0.1, 0.3), result2);
+            Assert.AreEqual(new Quaternion(-0.3, -0.1, 0.1, 0.3), a - b);
 
-			Assert.AreEqual(new Quaternion(0.5, 0.5, 0.5, 0.5), a +=b);
-			Assert.AreEqual(new Quaternion(0.1, 0.2, 0.3, 0.4), a -= b);
+            Assert.AreEqual(new Quaternion(0.5, 0.5, 0.5, 0.5), a += b);
+            Assert.AreEqual(new Quaternion(0.1, 0.2, 0.3, 0.4), a -= b);
 
-			a.Add(b);
-			Assert.AreEqual(new Quaternion(0.5, 0.5, 0.5, 0.5), a);
+            a.Add(b);
+            Assert.AreEqual(new Quaternion(0.5, 0.5, 0.5, 0.5), a);
 
-			a.Subtract(b);
-			Assert.AreEqual(new Quaternion(0.1, 0.2, 0.3, 0.4), a);
+            a.Subtract(b);
+            Assert.AreEqual(new Quaternion(0.1, 0.2, 0.3, 0.4), a);
 
-		}
+        }
 
-		[Test]
-		public void QuaternionIndex()
-		{
-			Quaternion q = new Quaternion(0.1, 0.2, 0.3, 0.4);
+        [Test]
+        public void QuaternionIndex()
+        {
+            Quaternion q = new Quaternion(0.1, 0.2, 0.3, 0.4);
 
-			Assert.AreEqual(0.1, q[0], "Quaternion Index - W");
-			Assert.AreEqual(0.2, q[1], "Quaternion Index - X");
-			Assert.AreEqual(0.3, q[2], "Quaternion Index - Y");
-			Assert.AreEqual(0.4, q[3], "Quaternion Index - Z");
+            Assert.AreEqual(0.1, q[0], "Quaternion Index - W");
+            Assert.AreEqual(0.2, q[1], "Quaternion Index - X");
+            Assert.AreEqual(0.3, q[2], "Quaternion Index - Y");
+            Assert.AreEqual(0.4, q[3], "Quaternion Index - Z");
 
-		}
+        }
 
-		[Test]
-		public void QuaternionMultiply()
-		{
-			Assert.AreEqual( new Quaternion(1,0,0,0),  Quaternion.WAxis * Quaternion.WAxis); // quat * quat
-			Assert.AreEqual( new Quaternion(-1,0,0,0), Quaternion.XAxis * Quaternion.XAxis);
-			Assert.AreEqual( new Quaternion(-1,0,0,0), Quaternion.YAxis * Quaternion.YAxis);
-			Assert.AreEqual( new Quaternion(-1,0,0,0), Quaternion.ZAxis * Quaternion.ZAxis);
+        [Test]
+        public void QuaternionMultiply()
+        {
+            Assert.AreEqual(new Quaternion(1, 0, 0, 0), Quaternion.WAxis * Quaternion.WAxis); // quat * quat
+            Assert.AreEqual(new Quaternion(-1, 0, 0, 0), Quaternion.XAxis * Quaternion.XAxis);
+            Assert.AreEqual(new Quaternion(-1, 0, 0, 0), Quaternion.YAxis * Quaternion.YAxis);
+            Assert.AreEqual(new Quaternion(-1, 0, 0, 0), Quaternion.ZAxis * Quaternion.ZAxis);
 
-			Assert.AreEqual( new Quaternion(0,1,0,0),  Quaternion.WAxis * Quaternion.XAxis);
-			Assert.AreEqual( new Quaternion(0,0,1,0),  Quaternion.WAxis * Quaternion.YAxis);
-			Assert.AreEqual( new Quaternion(0,0,0,1),  Quaternion.WAxis * Quaternion.ZAxis);
-			Assert.AreEqual( new Quaternion(0,0,0,1),  Quaternion.XAxis * Quaternion.YAxis);
-			Assert.AreEqual( new Quaternion(0,0,-1,0), Quaternion.XAxis * Quaternion.ZAxis);
-			Assert.AreEqual( new Quaternion(0,1,0,0),  Quaternion.YAxis * Quaternion.ZAxis);
-			Assert.AreEqual( new Quaternion(0,1,0,0),  Quaternion.XAxis * Quaternion.WAxis);
-			Assert.AreEqual( new Quaternion(0,0,1,0),  Quaternion.YAxis * Quaternion.WAxis);
-			Assert.AreEqual( new Quaternion(0,0,0,1),  Quaternion.ZAxis * Quaternion.WAxis);
-			Assert.AreEqual( new Quaternion(0,0,0,-1), Quaternion.YAxis * Quaternion.XAxis);
-			Assert.AreEqual( new Quaternion(0,0,1,0),  Quaternion.ZAxis * Quaternion.XAxis);
-			Assert.AreEqual( new Quaternion(0,-1,0,0), Quaternion.ZAxis * Quaternion.YAxis);
-		}
+            Assert.AreEqual(new Quaternion(0, 1, 0, 0), Quaternion.WAxis * Quaternion.XAxis);
+            Assert.AreEqual(new Quaternion(0, 0, 1, 0), Quaternion.WAxis * Quaternion.YAxis);
+            Assert.AreEqual(new Quaternion(0, 0, 0, 1), Quaternion.WAxis * Quaternion.ZAxis);
+            Assert.AreEqual(new Quaternion(0, 0, 0, 1), Quaternion.XAxis * Quaternion.YAxis);
+            Assert.AreEqual(new Quaternion(0, 0, -1, 0), Quaternion.XAxis * Quaternion.ZAxis);
+            Assert.AreEqual(new Quaternion(0, 1, 0, 0), Quaternion.YAxis * Quaternion.ZAxis);
+            Assert.AreEqual(new Quaternion(0, 1, 0, 0), Quaternion.XAxis * Quaternion.WAxis);
+            Assert.AreEqual(new Quaternion(0, 0, 1, 0), Quaternion.YAxis * Quaternion.WAxis);
+            Assert.AreEqual(new Quaternion(0, 0, 0, 1), Quaternion.ZAxis * Quaternion.WAxis);
+            Assert.AreEqual(new Quaternion(0, 0, 0, -1), Quaternion.YAxis * Quaternion.XAxis);
+            Assert.AreEqual(new Quaternion(0, 0, 1, 0), Quaternion.ZAxis * Quaternion.XAxis);
+            Assert.AreEqual(new Quaternion(0, -1, 0, 0), Quaternion.ZAxis * Quaternion.YAxis);
+        }
 
-		/*
+        /*
 		[Test]
 		public void QuaternionRandom()
 		{
@@ -238,5 +240,5 @@ namespace CommonUtils.Tests
 			}
 		}
 		*/
-	}
+    }
 }

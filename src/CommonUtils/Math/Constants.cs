@@ -24,7 +24,7 @@
 /// original JSBSIM. If you comments out this line or define other name
 /// (i.e. NOTUSEJSBSIM), the simulator will use constants derived from true
 /// expressions.
-#define USEJSBSIM
+//#define USEJSBSIM
 
 #region Identification
 /// $Id:$
