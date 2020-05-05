@@ -1650,7 +1650,7 @@ namespace JSBSim.Models
                     (currentElement.LocalName.Equals("second_order_filter")) ||
                     (currentElement.LocalName.Equals("integrator")))
                     {
-                        Comp.Add(new Filter(this, currentElement));
+                        Comp.Add(new FlightControl.Filter(this, currentElement));
 
                     }
                     else if ((comp_name.Equals("PURE_GAIN")) ||

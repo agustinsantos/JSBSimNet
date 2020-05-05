@@ -597,7 +597,7 @@ namespace CommonUtils.MathLib
 		/// TODO. Review this desing. 
 		//////////////////////////////////////////////
 		
-		private double Entry(int idx) { return this[idx-1];}
+		private double Entry(int idx) { return this[idx];}
 
 		/// <summary>
 		/// X coordinate.

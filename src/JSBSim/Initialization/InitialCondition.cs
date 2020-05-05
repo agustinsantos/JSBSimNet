@@ -24,67 +24,88 @@
 #endregion
 namespace JSBSim
 {
-	using System;
-	using System.IO;
-	using System.Xml;
+    using System;
+    using System.IO;
+    using System.Xml;
 
-	// Import log4net classes.
-	using log4net;
+    // Import log4net classes.
+    using log4net;
 
-	using CommonUtils.MathLib;
-	using CommonUtils.IO;
-	using JSBSim.InputOutput;
+    using CommonUtils.MathLib;
+    using CommonUtils.IO;
+    using JSBSim.InputOutput;
     using JSBSim.Format;
     using JSBSim.Script;
+    using JSBSim.Models;
 
-	public enum SpeedSet{ setvt, setvc, setve, setmach, setuvw, setned, setvg } ;
-	public enum WindSet { setwned, setwmd, setwhc } ;
+    public enum SpeedSet { setvt, setvc, setve, setmach, setuvw, setned, setvg };
+    public enum AltitudeSet { setasl, setagl };
+    public enum LatitudeSet { setgeoc, setgeod };
+    public enum WindSet { setwned, setwmd, setwhc };
 
     /// <summary>
-    /// Takes a set of initial conditions and provide a kinematically consistent set
-    /// of body axis velocity components, euler angles, and altitude.  This class
-    /// does not attempt to trim the model i.e. the sim will most likely start in a
-    /// very dynamic state (unless, of course, you have chosen your IC's wisely)
-    /// even after setting it up with this class.
+    /// Initializes the simulation run.
+    /// Takes a set of initial conditions(IC) and provide a kinematically
+    /// consistent set of body axis velocity components, euler angles, and altitude.
+    /// This class does not attempt to trim the model i.e.the sim will most likely
+    /// start in a very dynamic state(unless, of course, you have chosen your IC's
     /// 
-    /// USAGE NOTES
+    /// wisely, or started on the ground) even after setting it up with this class.
     /// 
-    /// With a valid object of FDMExecutive and an aircraft model loaded
-    /// InitialCondition fgic=new InitialCondition(FDMExec);
-    /// fgic.SetVcalibratedKtsIC()
-    /// fgic.SetAltitudeFtIC();
+    /// <h3>Usage Notes</h3>
     /// 
-    /// to directly into Run
-    /// FDMExec.GetState().Initialize(fgic)
-    /// delete fgic;
-    /// FDMExec.Run()
+    /// With a valid object of FGFDMExec and an aircraft model loaded:
     /// 
-    /// or to loop the sim w/o integrating
-    /// FDMExec.RunIC(fgic)
+    /// @code
+    /// FGInitialCondition* fgic = FDMExec->GetIC();
     /// 
-    /// Speed:
+    /// // Reset the initial conditions and set VCAS and altitude
+    /// fgic->InitializeIC();
+    /// fgic->SetVcalibratedKtsIC(vcas);
+    /// fgic->SetAltitudeAGLFtIC(altitude);
+    /// 
+    /// // directly into Run
+    /// FDMExec.GetPropagate.SetInitialState(fgic);
+    ///  
+    /// FDMExec.Run();
+    /// 
+    /// //or to loop the sim w/o integrating
+    /// FDMExec.RunIC();
+    /// @endcode
+    /// 
+    /// Alternatively, you can load initial conditions from an XML file:
+    /// 
+    /// @code
+    /// FGInitialCondition  fgic = FDMExec.GetIC();
+    /// fgic.Load(IC_file);
+    /// @endcode
+    /// 
+    /// <h3> Speed</h3>
+    /// 
     /// 
     /// Since vc, ve, vt, and mach all represent speed, the remaining
+    /// 
     /// three are recalculated each time one of them is set (using the
-    /// current altitude).  The most recent speed set is remembered so 
-    /// that if and when altitude is reset, the last set speed is used 
-    /// to recalculate the remaining three. Setting any of the body 
+    /// current altitude).  The most recent speed set is remembered so
+    /// that if and when altitude is reset, the last set speed is used
+    /// to recalculate the remaining three.Setting any of the body
     /// components forces a recalculation of vt and vt then becomes the
     /// most recent speed set.
-    ///  
-    /// Alpha,Gamma, and Theta:
+    /// 
+    /// <h3>Alpha, Gamma, and Theta</h3>
     /// 
     /// This class assumes that it will be used to set up the sim for a
-    /// steady, zero pitch rate condition. Since any two of those angles 
-    /// specifies the third gamma (flight path angle) is favored when setting
-    /// alpha and theta and alpha is favored when setting gamma. i.e.
-    ///  
+    /// steady, zero pitch rate condition.Since any two of those angles
+    /// specifies the third gamma(flight path angle) is favored when setting
+    /// alpha and theta and alpha is favored when setting gamma.i.e.
+    /// 
     /// - set alpha : recalculate theta using gamma as currently set
     /// - set theta : recalculate alpha using gamma as currently set
     /// - set gamma : recalculate theta using alpha as currently set
     /// 
-    /// The idea being that gamma is most interesting to pilots (since it 
-    /// is indicative of climb rate). 
+    /// The idea being that gamma is most interesting to pilots(since it
+    /// is indicative of climb rate).
+    /// 
     /// Setting climb rate is, for the purpose of this discussion,
     /// considered equivalent to setting gamma.
     /// 
@@ -93,6 +114,9 @@ namespace JSBSim
     /// - ubody (velocity, ft/sec)
     /// - vbody (velocity, ft/sec)
     /// - wbody (velocity, ft/sec)
+    /// - vnorth (velocity, ft/sec)
+    /// - veast (velocity, ft/sec)
+    /// - vdown (velocity, ft/sec)
     /// - latitude (position, degrees)
     /// - longitude (position, degrees)
     /// - phi (orientation, degrees)
@@ -102,7 +126,10 @@ namespace JSBSim
     /// - beta (angle, degrees)
     /// - gamma (angle, degrees)
     /// - roc (vertical velocity, ft/sec)
-    /// - altitude (altitude, ft)
+    /// - elevation (local terrain elevation, ft)
+    /// - altitude (altitude AGL, ft)
+    /// - altitudeAGL (altitude AGL, ft)
+    /// - altitudeMSL (altitude MSL, ft)
     /// - winddir (wind from-angle, degrees)
     /// - vwind (magnitude wind speed, ft/sec)
     /// - hwind (headwind speed, knots)
@@ -110,14 +137,62 @@ namespace JSBSim
     /// - vc (calibrated airspeed, ft/sec)
     /// - mach (mach)
     /// - vground (ground speed, ft/sec)
-    /// - running (0 or 1)
-    /// Setting climb rate is, for the purpose of this discussion, 
-    /// considered equivalent to setting gamma.
+    /// - trim (0 for no trim, 1 for ground trim, 'Longitudinal', 'Full', 'Ground', 'Pullup', 'Custom', 'Turn')
+    /// - running (-1 for all engines, 0 ... n-1 for specific engines)
+    /// 
+    /// <h3>Properties</h3>
+    /// @property ic/vc-kts (read/write) Calibrated airspeed initial condition in knots
+    /// @property ic/ve-kts (read/write) Knots equivalent airspeed initial condition
+    /// @property ic/vg-kts (read/write) Ground speed initial condition in knots
+    /// @property ic/vt-kts (read/write) True airspeed initial condition in knots
+    /// @property ic/mach (read/write) Mach initial condition
+    /// @property ic/roc-fpm (read/write) Rate of climb initial condition in feet/minute
+    /// @property ic/gamma-deg (read/write) Flightpath angle initial condition in degrees
+    /// @property ic/alpha-deg (read/write) Angle of attack initial condition in degrees
+    /// @property ic/beta-deg (read/write) Angle of sideslip initial condition in degrees
+    /// @property ic/theta-deg (read/write) Pitch angle initial condition in degrees
+    /// @property ic/phi-deg (read/write) Roll angle initial condition in degrees
+    /// @property ic/psi-true-deg (read/write) Heading angle initial condition in degrees
+    /// @property ic/lat-gc-deg (read/write) Latitude initial condition in degrees
+    /// @property ic/long-gc-deg (read/write) Longitude initial condition in degrees
+    /// @property ic/h-sl-ft (read/write) Height above sea level initial condition in feet
+    /// @property ic/h-agl-ft (read/write) Height above ground level initial condition in feet
+    /// @property ic/sea-level-radius-ft (read/write) Radius of planet at sea level in feet
+    /// @property ic/terrain-elevation-ft (read/write) Terrain elevation above sea level in feet
+    /// @property ic/vg-fps (read/write) Ground speed initial condition in feet/second
+    /// @property ic/vt-fps (read/write) True airspeed initial condition in feet/second
+    /// @property ic/vw-bx-fps (read/write) Wind velocity initial condition in Body X frame in feet/second
+    /// @property ic/vw-by-fps (read/write) Wind velocity initial condition in Body Y frame in feet/second
+    /// @property ic/vw-bz-fps (read/write) Wind velocity initial condition in Body Z frame in feet/second
+    /// @property ic/vw-north-fps (read/write) Wind northward velocity initial condition in feet/second
+    /// @property ic/vw-east-fps (read/write) Wind eastward velocity initial condition in feet/second
+    /// @property ic/vw-down-fps (read/write) Wind downward velocity initial condition in feet/second
+    /// @property ic/vw-mag-fps (read/write) Wind velocity magnitude initial condition in feet/sec.
+    /// @property ic/vw-dir-deg (read/write) Wind direction initial condition, in degrees from north
+    /// @property ic/roc-fps (read/write) Rate of climb initial condition, in feet/second
+    /// @property ic/u-fps (read/write) Body frame x-axis velocity initial condition in feet/second
+    /// @property ic/v-fps (read/write) Body frame y-axis velocity initial condition in feet/second
+    /// @property ic/w-fps (read/write) Body frame z-axis velocity initial condition in feet/second
+    /// @property ic/vn-fps (read/write) Local frame x-axis (north) velocity initial condition in feet/second
+    /// @property ic/ve-fps (read/write) Local frame y-axis (east) velocity initial condition in feet/second
+    /// @property ic/vd-fps (read/write) Local frame z-axis (down) velocity initial condition in feet/second
+    /// @property ic/gamma-rad (read/write) Flight path angle initial condition in radians
+    /// @property ic/alpha-rad (read/write) Angle of attack initial condition in radians
+    /// @property ic/theta-rad (read/write) Pitch angle initial condition in radians
+    /// @property ic/beta-rad (read/write) Angle of sideslip initial condition in radians
+    /// @property ic/phi-rad (read/write) Roll angle initial condition in radians
+    /// @property ic/psi-true-rad (read/write) Heading angle initial condition in radians
+    /// @property ic/lat-gc-rad (read/write) Geocentric latitude initial condition in radians
+    /// @property ic/long-gc-rad (read/write) Longitude initial condition in radians
+    /// @property ic/p-rad_sec (read/write) Roll rate initial condition in radians/second
+    /// @property ic/q-rad_sec (read/write) Pitch rate initial condition in radians/second
+    /// @property ic/r-rad_sec (read/write) Yaw rate initial condition in radians/second
+    /// 
     /// @author Tony Peden
     /// 
     /// </summary>
-	public class InitialCondition
-	{
+    public class InitialCondition
+    {
         /// <summary>
         /// Define a static logger variable so that it references the
         ///	Logger instance.
@@ -130,46 +205,59 @@ namespace JSBSim
         private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
 
-		public InitialCondition(FDMExecutive fdmex)
-		{
-			if(fdmex != null ) 
-			{
+        public InitialCondition(FDMExecutive fdmex)
+        {
+            this.fdmex = fdmex;
+            PropertyManager = this.fdmex.PropertyManager;
+            Bind();
 
-				vt=vc=ve=vg=0;
-				mach=0;
-				alpha=beta=gamma=0;
-				theta=phi=psi=0;
-				altitude=hdot=0;
-				latitude=longitude=0;
-				u=v=w=0;
-				p=q=r=0;
-				uw=vw=ww=0;
-				vnorth=veast=vdown=0;
-				wnorth=weast=wdown=0;
-				whead=wcross=0;
-				wdir=wmag=0;
-				lastSpeedSet = SpeedSet.setvt;
-				lastWindSet = WindSet.setwned;
-				sea_level_radius = fdmex.Inertial.RefRadius();
-				radius_to_vehicle = fdmex.Inertial.RefRadius();
-				terrain_altitude = 0;
+            InitializeIC();
 
-				salpha=sbeta=stheta=sphi=spsi=sgamma=0;
-				calpha=cbeta=ctheta=cphi=cpsi=cgamma=1;
+            if (fdmex != null)
+            {
+                Atmosphere = fdmex.Atmosphere;
+                Aircraft = fdmex.Aircraft;
+            }
+            else
+            {
+                if (log.IsErrorEnabled)
+                    log.Error("InitialCondition: This class requires a pointer to a valid FDMExecutive object");
+            }
+        }
 
-				FDMExec=fdmex;
-                FDMExec.Propagate.Altitude = altitude;
-				FDMExec.Atmosphere.Run();
-				PropertyManager=FDMExec.PropertyManager;
-				Bind();
-			}
-			else 
-			{
-				if (log.IsErrorEnabled)
-					log.Error("InitialCondition: This class requires a pointer to a valid FDMExecutive object");
-			}
-		}
+        private void InitializeIC()
+        {
+            alpha = beta = 0.0;
+            epa = 0.0;
+            // FIXME: Since FGDefaultGroundCallback assumes the Earth is spherical, so
+            // must FGLocation. However this should be updated according to the assumption
+            // made by the actual callback.
 
+            // double a = fdmex->GetInertial()->GetSemimajor();
+            // double b = fdmex->GetInertial()->GetSemiminor();
+            double a = fdmex.Inertial.RefRadius();
+            double b = fdmex.Inertial.RefRadius();
+
+            position.SetEllipse(a, b);
+
+            position.SetPositionGeodetic(0.0, 0.0, 0.0);
+
+            orientation = new Quaternion(0.0, 0.0, 0.0);
+            vUVW_NED = new Vector3D();
+            vPQR_body = new Vector3D();
+            vt = 0;
+
+            targetNlfIC = 1.0;
+
+            Tw2b = new Matrix3D(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+            Tb2w = new Matrix3D(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+
+            lastSpeedSet = SpeedSet.setvt;
+            lastAltitudeSet = AltitudeSet.setasl;
+            lastLatitudeSet = LatitudeSet.setgeoc;
+            enginesRunning = 0;
+            trimRequested = TrimMode.None;
+        }
 
         /// <summary>
         /// sets/gets calibrated airspeed initial condition in knots.
@@ -186,8 +274,8 @@ namespace JSBSim
                     //cout << "Mach: " << mach << endl;
                     lastSpeedSet = SpeedSet.setvc;
                     vc = value * Constants.ktstofps;
-                    vt = mach * FDMExec.Atmosphere.SoundSpeed;
-                    ve = vt * Math.Sqrt(FDMExec.Atmosphere.DensityRatio);
+                    vt = mach * fdmex.Atmosphere.SoundSpeed;
+                    ve = vt * Math.Sqrt(fdmex.Atmosphere.DensityRatio);
                     //cout << "Vt: " << vt*fpstokts << " Vc: " << vc*fpstokts << endl;
                 }
                 else
@@ -212,8 +300,8 @@ namespace JSBSim
             {
                 ve = value * Constants.ktstofps;
                 lastSpeedSet = SpeedSet.setve;
-                vt = ve * 1 / Math.Sqrt(FDMExec.Atmosphere.DensityRatio);
-                mach = vt / FDMExec.Atmosphere.SoundSpeed;
+                vt = ve * 1 / Math.Sqrt(fdmex.Atmosphere.DensityRatio);
+                mach = vt / fdmex.Atmosphere.SoundSpeed;
                 vc = calcVcas(mach);
             }
         }
@@ -249,9 +337,9 @@ namespace JSBSim
             {
                 mach = value;
                 lastSpeedSet = SpeedSet.setmach;
-                vt = mach * FDMExec.Atmosphere.SoundSpeed;
+                vt = mach * fdmex.Atmosphere.SoundSpeed;
                 vc = calcVcas(mach);
-                ve = vt * Math.Sqrt(FDMExec.Atmosphere.DensityRatio);
+                ve = vt * Math.Sqrt(fdmex.Atmosphere.DensityRatio);
             }
         }
 
@@ -274,6 +362,7 @@ namespace JSBSim
             get { return beta * Constants.radtodeg; }
             set { BetaRadIC = value * Constants.degtorad; }
         }
+
 
         /// <summary>
         /// sets/gets pitch angle initial condition in degrees.
@@ -304,7 +393,7 @@ namespace JSBSim
             get { return psi * Constants.radtodeg; }
             set { SetTrueHeadingRadIC(value * Constants.degtorad); }
         }
-        
+
         /// <summary>
         /// sets/gets the climb rate initial condition in feet/minute.
         /// </summary>
@@ -335,8 +424,8 @@ namespace JSBSim
             set
             {
                 altitude = value;
-                FDMExec.Propagate.Altitude = altitude;
-                FDMExec.Atmosphere.Run();
+                fdmex.Propagate.Altitude = altitude;
+                fdmex.Atmosphere.Run();
                 //lets try to make sure the user gets what they intended
 
                 switch (lastSpeedSet)
@@ -371,8 +460,8 @@ namespace JSBSim
             get { return altitude - terrain_altitude; }
             set
             {
-                FDMExec.Propagate.DistanceAGL = value;
-                altitude = FDMExec.Propagate.Altitude;
+                fdmex.Propagate.DistanceAGL = value;
+                altitude = fdmex.Propagate.Altitude;
                 AltitudeFtIC = altitude;
             }
 
@@ -408,6 +497,7 @@ namespace JSBSim
             set { latitude = value * Constants.degtorad; }
         }
 
+
         /// <summary>
         /// sets/gets the initial longitude in degrees.
         /// </summary>
@@ -440,9 +530,9 @@ namespace JSBSim
                 vxz = Math.Sqrt(u * u + w * w);
                 if (w != 0) alpha = Math.Atan2(w, u);
                 if (vxz != 0) beta = Math.Atan2(v, vxz);
-                mach = vt / FDMExec.Atmosphere.SoundSpeed;
+                mach = vt / fdmex.Atmosphere.SoundSpeed;
                 vc = calcVcas(mach);
-                ve = vt * Math.Sqrt(FDMExec.Atmosphere.DensityRatio);
+                ve = vt * Math.Sqrt(fdmex.Atmosphere.DensityRatio);
             }
         }
 
@@ -457,9 +547,9 @@ namespace JSBSim
             {
                 vt = value;
                 lastSpeedSet = SpeedSet.setvt;
-                mach = vt / FDMExec.Atmosphere.SoundSpeed;
+                mach = vt / fdmex.Atmosphere.SoundSpeed;
                 vc = calcVcas(mach);
-                ve = vt * Math.Sqrt(FDMExec.Atmosphere.DensityRatio);
+                ve = vt * Math.Sqrt(fdmex.Atmosphere.DensityRatio);
             }
         }
 
@@ -559,37 +649,37 @@ namespace JSBSim
         /// </summary>
         [ScriptAttribute("ic/vw-bx-fps", "(read) Wind velocity initial condition in Body X frame in feet/second")]
         public double WindUFpsIC { get { return uw; } }
-        
+
         /// <summary>
         /// Gets the initial body axis Y wind velocity in feet/second.
         /// </summary>
         [ScriptAttribute("ic/vw-by-fps", "(read) Wind velocity initial condition in Body Y frame in feet/second")]
         public double WindVFpsIC { get { return vw; } }
-        
+
         /// <summary>
         /// Gets the initial body axis Z wind velocity in feet/second.
         /// </summary>
         [ScriptAttribute("ic/vw-bz-fps", "(read) Wind velocity initial condition in Body Z frame in feet/second")]
         public double WindWFpsIC { get { return ww; } }
-        
+
         /// <summary>
         /// sets/gets the initial body axis Z velocity in feet/second.
         /// </summary>
         [ScriptAttribute("ic/vw-north-fps", "(read) Wind northward velocity initial condition in feet/second")]
         public double WindNFpsIC { get { return wnorth; } }
-        
+
         /// <summary>
         /// sets/gets the initial body axis Z velocity in feet/second.
         /// </summary>
         [ScriptAttribute("ic/vw-east-fps", "(read) Wind eastward velocity initial condition in feet/second")]
         public double WindEFpsIC { get { return weast; } }
-        
+
         /// <summary>
         /// sets/gets the initial body axis Z velocity in feet/second.
         /// </summary>
         [ScriptAttribute("ic/vw-down-fps", "(read) Wind downward velocity initial condition in feet/second")]
         public double WindDFpsIC { get { return wdown; } }
-        
+
         /// <summary>
         /// gets the initial total wind velocity in feet/sec.
         /// </summary>
@@ -660,79 +750,79 @@ namespace JSBSim
 
 
 
-  
-		public void SetWindNEDFpsIC(double wN, double wE, double wD)
-		{
-			wnorth = wN; weast = wE; wdown = wD;
-			lastWindSet = WindSet.setwned;
-			calcWindUVW();
-			if(lastSpeedSet == SpeedSet.setvg)
-				VgroundFpsIC = vg;
-		}
- 
-		public void SetWindMagKtsIC(double mag)
-		{
-			wmag=mag*Constants.ktstofps;
-			lastWindSet = WindSet.setwmd;
-			calcWindUVW();
-			if(lastSpeedSet == SpeedSet.setvg)
-				VgroundFpsIC = vg;
-		}
- 
-		public void SetHeadWindKtsIC(double head)
-		{
-			whead=head*Constants.ktstofps;
-			lastWindSet = WindSet.setwhc;
-			calcWindUVW();
-			if(lastSpeedSet == SpeedSet.setvg)
+
+        public void SetWindNEDFpsIC(double wN, double wE, double wD)
+        {
+            wnorth = wN; weast = wE; wdown = wD;
+            lastWindSet = WindSet.setwned;
+            calcWindUVW();
+            if (lastSpeedSet == SpeedSet.setvg)
+                VgroundFpsIC = vg;
+        }
+
+        public void SetWindMagKtsIC(double mag)
+        {
+            wmag = mag * Constants.ktstofps;
+            lastWindSet = WindSet.setwmd;
+            calcWindUVW();
+            if (lastSpeedSet == SpeedSet.setvg)
+                VgroundFpsIC = vg;
+        }
+
+        public void SetHeadWindKtsIC(double head)
+        {
+            whead = head * Constants.ktstofps;
+            lastWindSet = WindSet.setwhc;
+            calcWindUVW();
+            if (lastSpeedSet == SpeedSet.setvg)
                 VgroundFpsIC = vg;
 
-		}
+        }
 
-		public void SetCrossWindKtsIC(double cross) // positive from left
-		{
-			wcross=cross*Constants.ktstofps;
-			lastWindSet = WindSet.setwhc;
-			calcWindUVW();
-			if(lastSpeedSet == SpeedSet.setvg)
-				VgroundFpsIC = vg;
+        public void SetCrossWindKtsIC(double cross) // positive from left
+        {
+            wcross = cross * Constants.ktstofps;
+            lastWindSet = WindSet.setwhc;
+            calcWindUVW();
+            if (lastSpeedSet == SpeedSet.setvg)
+                VgroundFpsIC = vg;
 
-		}
- 
-		public void SetWindDownKtsIC(double wD)
-		{
-			wdown=wD;
-			calcWindUVW();
-			if(lastSpeedSet == SpeedSet.setvg)
-				VgroundFpsIC = vg;
-		}
+        }
 
-
-		public void SetFlightPathAngleRadIC(double tt)
-		{
-			gamma=tt;
-			sgamma=Math.Sin(gamma); cgamma=Math.Cos(gamma);
-			getTheta();
-			hdot=vt*sgamma;
-		}
+        public void SetWindDownKtsIC(double wD)
+        {
+            wdown = wD;
+            calcWindUVW();
+            if (lastSpeedSet == SpeedSet.setvg)
+                VgroundFpsIC = vg;
+        }
 
 
+        public void SetFlightPathAngleRadIC(double tt)
+        {
+            gamma = tt;
+            sgamma = Math.Sin(gamma); cgamma = Math.Cos(gamma);
+            getTheta();
+            hdot = vt * sgamma;
+        }
 
-		public void SetRollAngleRadIC(double tt)
-		{
-			phi=tt;
-			sphi=Math.Sin(phi); cphi=Math.Cos(phi);
-			getTheta();
-		}
 
-		public void SetTrueHeadingRadIC(double tt)
-		{
-			psi=tt;
-			spsi=Math.Sin(psi); cpsi=Math.Cos(psi);
-			calcWindUVW();
-		}
 
-		public double GetFlightPathAngleRadIC() { return gamma; }
+        public void SetRollAngleRadIC(double tt)
+        {
+            phi = tt;
+            sphi = Math.Sin(phi); cphi = Math.Cos(phi);
+            getTheta();
+        }
+
+        public void SetTrueHeadingRadIC(double tt)
+        {
+            psi = tt;
+            spsi = Math.Sin(psi); cpsi = Math.Cos(psi);
+            calcWindUVW();
+        }
+
+        public double GetFlightPathAngleRadIC() { return gamma; }
 
         [ScriptAttribute("ic/alpha-rad", "The initial alpha in radians.")]
         public double AlphaRadIC
@@ -770,9 +860,9 @@ namespace JSBSim
             }
         }
 
-		//public double GetAlphaRadIC() { return alpha; }
-		//public double GetPitchAngleRadIC() { return theta; }
-		//public double GetBetaRadIC() { return beta; }
+        //public double GetAlphaRadIC() { return alpha; }
+        //public double GetPitchAngleRadIC() { return theta; }
+        //public double GetBetaRadIC() { return beta; }
         /*public void SetAlphaRadIC(double tt)
         {
             alpha = tt;
@@ -795,11 +885,11 @@ namespace JSBSim
         }
 */
 
-		public double GetRollAngleRadIC() { return phi; }
-		public double GetHeadingRadIC()  { return psi; }
+        public double GetRollAngleRadIC() { return phi; }
+        public double GetHeadingRadIC() { return psi; }
 
-		//public double GetLatitudeRadIC() { return latitude; }
-		//public double GetLongitudeRadIC() { return longitude; }
+        //public double GetLatitudeRadIC() { return latitude; }
+        //public double GetLongitudeRadIC() { return longitude; }
         //public void SetLatitudeRadIC(double tt) { latitude = tt; }
         //public void SetLongitudeRadIC(double tt) { longitude = tt; }
 
@@ -817,13 +907,13 @@ namespace JSBSim
             set { longitude = value; }
         }
 
-		public double GetThetaRadIC() { return theta; }
-		public double GetPhiRadIC() { return phi; }
-		public double GetPsiRadIC() { return psi; }
+        public double GetThetaRadIC() { return theta; }
+        public double GetPhiRadIC() { return phi; }
+        public double GetPsiRadIC() { return psi; }
 
-		public SpeedSet GetSpeedSet() { return lastSpeedSet; }
-		public WindSet GetWindSet() { return lastWindSet; }
-  
+        public SpeedSet GetSpeedSet() { return lastSpeedSet; }
+        public WindSet GetWindSet() { return lastWindSet; }
+
 
         public void Load(string rstfile, bool useStoredPath)
         {
@@ -832,7 +922,7 @@ namespace JSBSim
 
             if (useStoredPath)
             {
-                acpath = FDMExec.AircraftPath + sep + FDMExec.ModelName;
+                acpath = fdmex.AircraftPath + sep + fdmex.ModelName;
                 resetDef = acpath + sep + rstfile + ".xml";
             }
             else
@@ -989,559 +1079,334 @@ namespace JSBSim
                 }
             }
 
-             if (mustRun) FDMExec.RunIC();
+            if (mustRun) fdmex.RunIC();
         }
 
         public virtual void Bind()
         {
-            FDMExec.PropertyManager.Bind("", this);
+            fdmex.PropertyManager.Bind("", this);
         }
 
         public virtual void Unbind()
         {
-            FDMExec.PropertyManager.Unbind("", this);
+            fdmex.PropertyManager.Unbind("", this);
         }
 
 
-  
-		private double vt,vc,ve,vg;
-		private double mach;
-		private double altitude,hdot;
-		private double latitude,longitude;
-		private double u,v,w;
-		private double p,q,r;
-		private double uw,vw,ww;
-		private double vnorth,veast,vdown;
-		private double wnorth,weast,wdown;
-		private double whead, wcross, wdir, wmag;
-		private double sea_level_radius;
-		private double terrain_altitude;
-		private double radius_to_vehicle;
+        private Vector3D vUVW_NED;
+        private Vector3D vPQR_body;
+        private Location position = new Location();
+        private Quaternion orientation;
+        private double vt;
+        private double targetNlfIC;
 
-		private double  alpha, beta, theta, phi, psi, gamma;
-		private double salpha,sbeta,stheta,sphi,spsi,sgamma;
-		private double calpha,cbeta,ctheta,cphi,cpsi,cgamma;
+        private Matrix3D Tw2b, Tb2w;
+        private double alpha, beta;
+        private double epa;
 
-		private double xlo, xhi,xmin,xmax;
+        private SpeedSet lastSpeedSet;
+        private AltitudeSet lastAltitudeSet;
+        private LatitudeSet lastLatitudeSet;
+        private int enginesRunning;
+        private TrimMode trimRequested;
 
-		private delegate double fp(double x);
-		private fp sfunc;
+        private Atmosphere Atmosphere;
+        private Aircraft Aircraft;
 
-		private SpeedSet lastSpeedSet;
-		private WindSet lastWindSet;
+        private double vc, ve, vg;
+        private double mach;
+        private double altitude, hdot;
+        private double latitude, longitude;
+        private double u, v, w;
+        private double p, q, r;
+        private double uw, vw, ww;
+        private double vnorth, veast, vdown;
+        private double wnorth, weast, wdown;
+        private double whead, wcross, wdir, wmag;
+        private double sea_level_radius;
+        private double terrain_altitude;
+        private double radius_to_vehicle;
 
-		private FDMExecutive FDMExec;
-		private PropertyManager PropertyManager;
+        private double theta, phi, psi, gamma;
+        private double salpha, sbeta, stheta, sphi, spsi, sgamma;
+        private double calpha, cbeta, ctheta, cphi, cpsi, cgamma;
 
-		private bool getAlpha()
-		{
-			bool result=false;
-			double guess=theta-gamma;
+        private double xlo, xhi, xmin, xmax;
 
-			if(vt < 0.01) return false;
+        private delegate double fp(double x);
+        private fp sfunc;
 
-			xlo=xhi=0;
-			xmin=FDMExec.Aerodynamics.AlphaCLMin;
-			xmax=FDMExec.Aerodynamics.AlphaCLMax;
-			sfunc= new fp(GammaEqOfAlpha);
-			if(findInterval(0,guess))
-			{
-				if(solve(ref alpha,0))
-				{
-					result=true;
-					salpha=Math.Sin(alpha);
-					calpha=Math.Cos(alpha);
-				}
-			}
-			calcWindUVW();
-			return result;
-		}
+        private WindSet lastWindSet;
 
-		private bool getTheta() 
-		{
-			bool result=false;
-			double guess=alpha+gamma;
+        private FDMExecutive fdmex;
+        private PropertyManager PropertyManager;
 
-			if(vt < 0.01) return false;
-
-			xlo=xhi=0;
-			xmin=-89;xmax=89;
-			sfunc= new fp(GammaEqOfTheta);
-			if(findInterval(0,guess))
-			{
-				if(solve(ref theta,0))
-				{
-					result=true;
-					stheta=Math.Sin(theta);
-					ctheta=Math.Cos(theta);
-				}
-			}
-			calcWindUVW();
-			return result;
-		}
-
-		private bool getMachFromVcas(ref double Mach,double vcas)
-		{
-
-			bool result=false;
-			double guess=1.5;
-			xlo=xhi=0;
-			xmin=0;xmax=50;
-			sfunc= new fp(calcVcas);
-			if(findInterval(vcas,guess)) 
-			{
-				if(solve(ref mach, vcas))
-					result=true;
-			}
-			return result;
-		}
-
-		private double GammaEqOfTheta(double Theta)
-		{
-			double a,b,c;
-			double sTheta,cTheta;
-
-			//theta=Theta; stheta=Math.Math.Sin(theta); ctheta=Math.Cos(theta);
-			sTheta=Math.Sin(Theta); cTheta=Math.Cos(Theta);
-			calcWindUVW();
-			a=wdown + vt*calpha*cbeta + uw;
-			b=vt*sphi*sbeta + vw*sphi;
-			c=vt*cphi*salpha*cbeta + ww*cphi;
-			return vt*sgamma - ( a*sTheta - (b+c)*cTheta);
-		}
-
-		private double GammaEqOfAlpha(double Alpha)
-		{
-			double a,b,c;
-			double sAlpha,cAlpha;
-			sAlpha=Math.Sin(Alpha); cAlpha=Math.Cos(Alpha);
-			a=wdown + vt*cAlpha*cbeta + uw;
-			b=vt*sphi*sbeta + vw*sphi;
-			c=vt*cphi*sAlpha*cbeta + ww*cphi;
-
-			return vt*sgamma - ( a*stheta - (b+c)*ctheta );
-		}
-
-		private double calcVcas(double Mach)
-		{
-
-			double p     = FDMExec.Atmosphere.Pressure;
-			double psl   = FDMExec.Atmosphere.PressureSeaLevel;
-			double rhosl = FDMExec.Atmosphere.DensitySeaLevel;
-			double pt,A,B,D,vcas;
-			if(Mach < 0) Mach=0;
-			if(Mach < 1)    //calculate total pressure assuming isentropic flow
-				pt=p*Math.Pow((1 + 0.2*Mach*Mach),3.5);
-			else 
-			{
-				// shock in front of pitot tube, we'll assume its normal and use
-				// the Rayleigh Pitot Tube Formula, i.e. the ratio of total
-				// pressure behind the shock to the static pressure in front
-
-
-				//the normal shock assumption should not be a bad one -- most supersonic
-				//aircraft place the pitot probe out front so that it is the forward
-				//most point on the aircraft.  The real shock would, of course, take
-				//on something like the shape of a rounded-off cone but, here again,
-				//the assumption should be good since the opening of the pitot probe
-				//is very small and, therefore, the effects of the shock curvature
-				//should be small as well. AFAIK, this approach is fairly well accepted
-				//within the aerospace community
-
-				B = 5.76*Mach*Mach/(5.6*Mach*Mach - 0.8);
-
-				// The denominator above is zero for Mach ~ 0.38, for which
-				// we'll never be here, so we're safe
-
-				D = (2.8*Mach*Mach-0.4)*0.4167;
-				pt = p*Math.Pow(B,3.5)*D;
-			}
-
-			A = Math.Pow(((pt-p)/psl+1),0.28571);
-			vcas = Math.Sqrt(7*psl/rhosl*(A-1));
-			//cout << "calcVcas: vcas= " << vcas*fpstokts << " mach= " << Mach << " pressure: " << pt << endl;
-			return vcas;
-		}
-
-		private void calcUVWfromNED()
-		{
-			u=vnorth*ctheta*cpsi +
-				veast*ctheta*spsi -
-				vdown*stheta;
-			v=vnorth*( sphi*stheta*cpsi - cphi*spsi ) +
-				veast*( sphi*stheta*spsi + cphi*cpsi ) +
-				vdown*sphi*ctheta;
-			w=vnorth*( cphi*stheta*cpsi + sphi*spsi ) +
-				veast*( cphi*stheta*spsi - sphi*cpsi ) +
-				vdown*cphi*ctheta;
-		}
-
-		private void calcWindUVW()
-		{
-
-			switch(lastWindSet) 
-			{
-				case WindSet.setwmd:
-					wnorth=wmag*Math.Cos(wdir);
-					weast=wmag*Math.Sin(wdir);
-					break;
-				case WindSet.setwhc:
-					wnorth=whead*Math.Cos(psi) + wcross*Math.Cos(psi+Math.PI/2.0);
-					weast=whead*Math.Sin(psi) + wcross*Math.Sin(psi+Math.PI/2.0);
-					break;
-				case WindSet.setwned:
-					break;
-			}
-			uw=wnorth*ctheta*cpsi +
-				weast*ctheta*spsi -
-				wdown*stheta;
-			vw=wnorth*( sphi*stheta*cpsi - cphi*spsi ) +
-				weast*( sphi*stheta*spsi + cphi*cpsi ) +
-				wdown*sphi*ctheta;
-			ww=wnorth*(cphi*stheta*cpsi + sphi*spsi) +
-				weast*(cphi*stheta*spsi - sphi*cpsi) +
-				wdown*cphi*ctheta;
-		}
-
-		private bool findInterval(double x,double guess)
-		{
-			//void find_interval(inter_params &ip,eqfunc f,double y,double constant, int &flag){
-
-			int i=0;
-			bool found = false;
-			double flo,fhi,fguess;
-			double lo,hi,step;
-			step=0.1;
-			fguess = sfunc(guess)-x;
-			lo=hi=guess;
-			do 
-			{
-				step=2*step;
-				lo-=step;
-				hi+=step;
-				if(lo < xmin) lo=xmin;
-				if(hi > xmax) hi=xmax;
-				i++;
-				flo = sfunc(lo)-x;
-				fhi = sfunc(hi)-x;
-				if(flo*fhi <=0) 
-				{  //found interval with root
-					found=true;
-					if(flo*fguess <= 0) 
-					{  //narrow interval down a bit
-						hi=lo+step;    //to pass solver interval that is as
-						//small as possible
-					}
-					else if(fhi*fguess <= 0) 
-					{
-						lo=hi-step;
-					}
-				}
-				//cout << "FindInterval: i=" << i << " Lo= " << lo << " Hi= " << hi << endl;
-			}
-			while((!found) && (i <= 100));
-			xlo=lo;
-			xhi=hi;
-			return found;
-		}
-
-		private const double relax = 0.9;
-		private bool solve(ref double y, double x)
-		{
-			double x1,x2,x3,f1,f2,f3,d,d0;
-			double eps=1E-5;
-			int i;
-			bool success=false;
-
-			//initializations
-			d=1;
-			x2 = 0;
-			x1=xlo;x3=xhi;
-			f1= sfunc(x1)-x;
-			f3= sfunc(x3)-x;
-			d0= Math.Abs(x3-x1);
-
-			//iterations
-			i=0;
-			while ((Math.Abs(d) > eps) && (i < 100)) 
-			{
-				d=(x3-x1)/d0;
-				x2 = x1-d*d0*f1/(f3-f1);
-
-				f2 = sfunc(x2)-x;
-				//cout << "Solve x1,x2,x3: " << x1 << "," << x2 << "," << x3 << endl;
-				//cout << "                " << f1 << "," << f2 << "," << f3 << endl;
-
-				if(Math.Abs(f2) <= 0.001) 
-				{
-					x1=x3=x2;
-				} 
-				else if(f1*f2 <= 0.0) 
-				{
-					x3=x2;
-					f3=f2;
-					f1=relax*f1;
-				} 
-				else if(f2*f3 <= 0) 
-				{
-					x1=x2;
-					f1=f2;
-					f3=relax*f3;
-				}
-				//cout << i << endl;
-				i++;
-			}//end while
-			if(i < 100) 
-			{
-				success=true;
-				y=x2;
-			}
-
-			//cout << "Success= " << success << " Vcas: " << vcas*fpstokts << " Mach: " << x2 << endl;
-			return success;
-		}
-
-        /*
-        public void SetVgroundFpsIC(double tt)
+        private bool getAlpha()
         {
-            double ua, va, wa;
-            double vxz;
+            bool result = false;
+            double guess = theta - gamma;
 
-            vg = tt;
-            lastSpeedSet = SpeedSet.setvg;
-            vnorth = vg * Math.Cos(psi); veast = vg * Math.Sin(psi); vdown = 0;
-            calcUVWfromNED();
-            ua = u + uw; va = v + vw; wa = w + ww;
-            vt = Math.Sqrt(ua * ua + va * va + wa * wa);
-            alpha = beta = 0;
-            vxz = Math.Sqrt(u * u + w * w);
-            if (w != 0) alpha = Math.Atan2(w, u);
-            if (vxz != 0) beta = Math.Atan2(v, vxz);
-            mach = vt / FDMExec.Atmosphere.SoundSpeed;
-            vc = calcVcas(mach);
-            ve = vt * Math.Sqrt(FDMExec.Atmosphere.DensityRatio);
-        }
-        */
-        // DELETE DELETE DELETE
-        //public void SetPitchAngleDegIC(double tt) { ThetaRadIC = tt * Constants.degtorad; }
-        //public  double GetPitchAngleDegIC() { return theta*Constants.radtodeg; }
+            if (vt < 0.01) return false;
 
-        //public void SetClimbRateFpmIC(double tt) { SetClimbRateFpsIC(tt / 60.0); }
-        //public void SetFlightPathAngleDegIC(double tt) { SetFlightPathAngleRadIC(tt * Constants.degtorad); }
-
-
-        //public  double GetLatitudeDegIC() { return latitude*Constants.radtodeg; }
-        //public  double GetLongitudeDegIC() { return longitude*Constants.radtodeg; }
-        //public void SetLatitudeDegIC(double tt) { latitude = tt * Constants.degtorad; }
-        //public void SetLongitudeDegIC(double tt) { longitude = tt * Constants.degtorad; }
-        /*
-            public void SetAltitudeFtIC(double tt)
+            xlo = xhi = 0;
+            xmin = fdmex.Aerodynamics.AlphaCLMin;
+            xmax = fdmex.Aerodynamics.AlphaCLMax;
+            sfunc = new fp(GammaEqOfAlpha);
+            if (findInterval(0, guess))
             {
-                altitude=tt;
-                FDMExec.Propagate.Seth(altitude);
-                FDMExec.Atmosphere.Run();
-                //lets try to make sure the user gets what they intended
-
-                switch(lastSpeedSet) 
+                if (solve(ref alpha, 0))
                 {
-                    case SpeedSet.setned:
-                    case SpeedSet.setuvw:
-                    case SpeedSet.setvt:
-                        VtrueKtsIC = vt*Constants.fpstokts;
-                        break;
-                    case SpeedSet.setvc:
-                        VcalibratedKtsIC = vc*Constants.fpstokts;
-                        break;
-                    case SpeedSet.setve:
-                        VequivalentKtsIC = ve*Constants.fpstokts;
-                        break;
-                    case SpeedSet.setmach:
-                        MachIC = mach;
-                        break;
-                    case SpeedSet.setvg:
-                        SetVgroundFpsIC(vg);
-                        break;
+                    result = true;
+                    salpha = Math.Sin(alpha);
+                    calpha = Math.Cos(alpha);
                 }
             }
-            public void SetAltitudeAGLFtIC(double tt)
-            {
-                FDMExec.Propagate.SetDistanceAGL(tt);
-                altitude=FDMExec.Propagate.Altitude;
-                SetAltitudeFtIC(altitude);
-            }
-            public void SetSeaLevelRadiusFtIC(double tt)
-            {
-                sea_level_radius = tt;
-            }
-
-            public void SetTerrainAltitudeFtIC(double tt)
-            {
-                terrain_altitude=tt;
-            } 
-            */
-
-        //public double GetSeaLevelRadiusFtIC() { return sea_level_radius; }
-        //public double GetTerrainAltitudeFtIC() { return terrain_altitude; }
-        //public  double GetClimbRateFpmIC() { return hdot*60; }
-        //public  double GetFlightPathAngleDegIC() { return gamma*Constants.radtodeg; }
-  
-
-        //public  double GetAltitudeFtIC() { return altitude; }
-        //public  double GetAltitudeAGLFtIC() { return altitude - terrain_altitude; }
-        //public  void SetAlphaDegIC(double tt)      { SetAlphaRadIC(tt*Constants.degtorad); }
-        //public  void SetBetaDegIC(double tt)       { SetBetaRadIC(tt*Constants.degtorad);}
-        //public double GetAlphaDegIC() { return alpha * Constants.radtodeg; }
-        //public double GetBetaDegIC() { return beta * Constants.radtodeg; }
-
-        //public double GetVcalibratedKtsIC() { return vc*Constants.fpstokts; }
-        //public  double GetVequivalentKtsIC() { return ve*Constants.fpstokts; }
-        //public  double GetVgroundKtsIC() { return vg*Constants.fpstokts; }
-        //public  double GetVtrueKtsIC() { return vt*Constants.fpstokts; }
-        //public  double GetMachIC() { return mach; }
-        //public double GetRollAngleDegIC() { return phi * Constants.radtodeg; }
-        //public double GetHeadingDegIC() { return psi * Constants.radtodeg; }
-
-        //public  void SetRollAngleDegIC(double tt)  { SetRollAngleRadIC(tt*Constants.degtorad);}
-        //public  void SetTrueHeadingDegIC(double tt){ SetTrueHeadingRadIC(tt*Constants.degtorad); }
-
-        /*
-                public void SetVcalibratedKtsIC(double tt)
-                {
-
-                    if (getMachFromVcas(ref mach, tt * Constants.ktstofps))
-                    {
-                        //cout << "Mach: " << mach << endl;
-                        lastSpeedSet = SpeedSet.setvc;
-                        vc = tt * Constants.ktstofps;
-                        vt = mach * FDMExec.Atmosphere.SoundSpeed;
-                        ve = vt * Math.Sqrt(FDMExec.Atmosphere.DensityRatio);
-                        //cout << "Vt: " << vt*fpstokts << " Vc: " << vc*fpstokts << endl;
-                    }
-                    else
-                    {
-                        if (log.IsErrorEnabled)
-                        {
-                            log.Error("Failed to get Mach number for given Vc and altitude, Vc unchanged.");
-                            log.Error("Please mail the set of initial conditions used to apeden@earthlink.net");
-                        }
-                    }
-                }
-
-                public void SetVequivalentKtsIC(double tt)
-                {
-                    ve = tt * Constants.ktstofps;
-                    lastSpeedSet = SpeedSet.setve;
-                    vt = ve * 1 / Math.Sqrt(FDMExec.Atmosphere.DensityRatio);
-                    mach = vt / FDMExec.Atmosphere.SoundSpeed;
-                    vc = calcVcas(mach);
-                }
-                public void SetVgroundKtsIC(double tt) { SetVgroundFpsIC(tt * Constants.ktstofps); }
-                public void SetVtrueKtsIC(double tt) { SetVtrueFpsIC(tt * Constants.ktstofps); }
-
-                public void SetMachIC(double tt)
-                {
-                    mach = tt;
-                    lastSpeedSet = SpeedSet.setmach;
-                    vt = mach * FDMExec.Atmosphere.SoundSpeed;
-                    vc = calcVcas(mach);
-                    ve = vt * Math.Sqrt(FDMExec.Atmosphere.DensityRatio);
-                }
-                public double GetUBodyFpsIC()
-                {
-                    if (lastSpeedSet == SpeedSet.setvg)
-                        return u;
-                    else
-                        return vt * calpha * cbeta - uw;
-                }
-                public void SetUBodyFpsIC(double tt)
-                {
-                    u = tt;
-                    vt = Math.Sqrt(u * u + v * v + w * w);
-                    lastSpeedSet = SpeedSet.setuvw;
-                }
-                
-                public double GetVBodyFpsIC()
-                {
-                    if (lastSpeedSet == SpeedSet.setvg)
-                        return v;
-                    else
-                    {
-                        return vt * sbeta - vw;
-                    }
-                }
-                
-                public void SetVBodyFpsIC(double tt)
-                {
-                    v = tt;
-                    vt = Math.Sqrt(u * u + v * v + w * w);
-                    lastSpeedSet = SpeedSet.setuvw;
-                }
-                
-
-                public double GetWBodyFpsIC()
-                {
-                    if (lastSpeedSet == SpeedSet.setvg)
-                        return w;
-                    else
-                        return vt * salpha * cbeta - ww;
-                }
-                public void SetWBodyFpsIC(double tt)
-                {
-                    w = tt;
-                    vt = Math.Sqrt(u * u + v * v + w * w);
-                    lastSpeedSet = SpeedSet.setuvw;
-                }
-                public double GetWindUFpsIC() { return uw; }
-                public double GetWindVFpsIC() { return vw; }
-                public double GetWindWFpsIC() { return ww; }
-                public double GetWindNFpsIC() { return wnorth; }
-                public double GetWindEFpsIC() { return weast; }
-                public double GetWindDFpsIC() { return wdown; }
-                public double GetWindFpsIC() { return Math.Sqrt(wnorth * wnorth + weast * weast); }
-                */
-
-                //public double GetVgroundFpsIC() { return vg; }
-                //public double GetVtrueFpsIC() { return vt; }
-
-        /*
-        public void SetVgroundFpsIC(double tt)
-        {
-            double ua,va,wa;
-            double vxz;
-
-            vg=tt;
-            lastSpeedSet=SpeedSet.setvg;
-            vnorth = vg*Math.Cos(psi); veast = vg*Math.Sin(psi); vdown = 0;
-            calcUVWfromNED();
-            ua = u + uw; va = v + vw; wa = w + ww;
-            vt = Math.Sqrt( ua*ua + va*va + wa*wa );
-            alpha = beta = 0;
-            vxz = Math.Sqrt( u*u + w*w );
-            if( w != 0 ) alpha = Math.Atan2( w, u );
-            if( vxz != 0 ) beta = Math.Atan2( v, vxz );
-            mach=vt/FDMExec.Atmosphere.SoundSpeed;
-            vc=calcVcas(mach);
-            ve=vt*Math.Sqrt(FDMExec.Atmosphere.DensityRatio);
-        }
-        public void SetVtrueFpsIC(double tt)
-        {
-            vt=tt;
-            lastSpeedSet=SpeedSet.setvt;
-            mach=vt/FDMExec.Atmosphere.SoundSpeed;
-            vc=calcVcas(mach);
-            ve=vt*Math.Sqrt(FDMExec.Atmosphere.DensityRatio);
+            calcWindUVW();
+            return result;
         }
 
-        public double GetPRadpsIC() { return p; }
-        public double GetQRadpsIC() { return q; }
-        public double GetRRadpsIC() { return r; }
-        public void SetPRadpsIC(double tt) { p = tt; }
-        public void SetQRadpsIC(double tt) { q = tt; }
-        public void SetRRadpsIC(double tt) { r = tt; }
-        */
+        private bool getTheta()
+        {
+            bool result = false;
+            double guess = alpha + gamma;
+
+            if (vt < 0.01) return false;
+
+            xlo = xhi = 0;
+            xmin = -89; xmax = 89;
+            sfunc = new fp(GammaEqOfTheta);
+            if (findInterval(0, guess))
+            {
+                if (solve(ref theta, 0))
+                {
+                    result = true;
+                    stheta = Math.Sin(theta);
+                    ctheta = Math.Cos(theta);
+                }
+            }
+            calcWindUVW();
+            return result;
+        }
+
+        private bool getMachFromVcas(ref double Mach, double vcas)
+        {
+
+            bool result = false;
+            double guess = 1.5;
+            xlo = xhi = 0;
+            xmin = 0; xmax = 50;
+            sfunc = new fp(calcVcas);
+            if (findInterval(vcas, guess))
+            {
+                if (solve(ref mach, vcas))
+                    result = true;
+            }
+            return result;
+        }
+
+        private double GammaEqOfTheta(double Theta)
+        {
+            double a, b, c;
+            double sTheta, cTheta;
+
+            //theta=Theta; stheta=Math.Math.Sin(theta); ctheta=Math.Cos(theta);
+            sTheta = Math.Sin(Theta); cTheta = Math.Cos(Theta);
+            calcWindUVW();
+            a = wdown + vt * calpha * cbeta + uw;
+            b = vt * sphi * sbeta + vw * sphi;
+            c = vt * cphi * salpha * cbeta + ww * cphi;
+            return vt * sgamma - (a * sTheta - (b + c) * cTheta);
+        }
+
+        private double GammaEqOfAlpha(double Alpha)
+        {
+            double a, b, c;
+            double sAlpha, cAlpha;
+            sAlpha = Math.Sin(Alpha); cAlpha = Math.Cos(Alpha);
+            a = wdown + vt * cAlpha * cbeta + uw;
+            b = vt * sphi * sbeta + vw * sphi;
+            c = vt * cphi * sAlpha * cbeta + ww * cphi;
+
+            return vt * sgamma - (a * stheta - (b + c) * ctheta);
+        }
+
+        private double calcVcas(double Mach)
+        {
+
+            double p = fdmex.Atmosphere.Pressure;
+            double psl = fdmex.Atmosphere.PressureSeaLevel;
+            double rhosl = fdmex.Atmosphere.DensitySeaLevel;
+            double pt, A, B, D, vcas;
+            if (Mach < 0) Mach = 0;
+            if (Mach < 1)    //calculate total pressure assuming isentropic flow
+                pt = p * Math.Pow((1 + 0.2 * Mach * Mach), 3.5);
+            else
+            {
+                // shock in front of pitot tube, we'll assume its normal and use
+                // the Rayleigh Pitot Tube Formula, i.e. the ratio of total
+                // pressure behind the shock to the static pressure in front
 
 
+                //the normal shock assumption should not be a bad one -- most supersonic
+                //aircraft place the pitot probe out front so that it is the forward
+                //most point on the aircraft.  The real shock would, of course, take
+                //on something like the shape of a rounded-off cone but, here again,
+                //the assumption should be good since the opening of the pitot probe
+                //is very small and, therefore, the effects of the shock curvature
+                //should be small as well. AFAIK, this approach is fairly well accepted
+                //within the aerospace community
 
-        private const string IdSrc = "$Id: FGInitialCondition.cpp,v 1.63 2004/04/27 11:37:48 jberndt Exp $";
-	}
+                B = 5.76 * Mach * Mach / (5.6 * Mach * Mach - 0.8);
+
+                // The denominator above is zero for Mach ~ 0.38, for which
+                // we'll never be here, so we're safe
+
+                D = (2.8 * Mach * Mach - 0.4) * 0.4167;
+                pt = p * Math.Pow(B, 3.5) * D;
+            }
+
+            A = Math.Pow(((pt - p) / psl + 1), 0.28571);
+            vcas = Math.Sqrt(7 * psl / rhosl * (A - 1));
+            //cout << "calcVcas: vcas= " << vcas*fpstokts << " mach= " << Mach << " pressure: " << pt << endl;
+            return vcas;
+        }
+
+        private void calcUVWfromNED()
+        {
+            u = vnorth * ctheta * cpsi +
+                veast * ctheta * spsi -
+                vdown * stheta;
+            v = vnorth * (sphi * stheta * cpsi - cphi * spsi) +
+                veast * (sphi * stheta * spsi + cphi * cpsi) +
+                vdown * sphi * ctheta;
+            w = vnorth * (cphi * stheta * cpsi + sphi * spsi) +
+                veast * (cphi * stheta * spsi - sphi * cpsi) +
+                vdown * cphi * ctheta;
+        }
+
+        private void calcWindUVW()
+        {
+
+            switch (lastWindSet)
+            {
+                case WindSet.setwmd:
+                    wnorth = wmag * Math.Cos(wdir);
+                    weast = wmag * Math.Sin(wdir);
+                    break;
+                case WindSet.setwhc:
+                    wnorth = whead * Math.Cos(psi) + wcross * Math.Cos(psi + Math.PI / 2.0);
+                    weast = whead * Math.Sin(psi) + wcross * Math.Sin(psi + Math.PI / 2.0);
+                    break;
+                case WindSet.setwned:
+                    break;
+            }
+            uw = wnorth * ctheta * cpsi +
+                weast * ctheta * spsi -
+                wdown * stheta;
+            vw = wnorth * (sphi * stheta * cpsi - cphi * spsi) +
+                weast * (sphi * stheta * spsi + cphi * cpsi) +
+                wdown * sphi * ctheta;
+            ww = wnorth * (cphi * stheta * cpsi + sphi * spsi) +
+                weast * (cphi * stheta * spsi - sphi * cpsi) +
+                wdown * cphi * ctheta;
+        }
+
+        private bool findInterval(double x, double guess)
+        {
+            //void find_interval(inter_params &ip,eqfunc f,double y,double constant, int &flag){
+
+            int i = 0;
+            bool found = false;
+            double flo, fhi, fguess;
+            double lo, hi, step;
+            step = 0.1;
+            fguess = sfunc(guess) - x;
+            lo = hi = guess;
+            do
+            {
+                step = 2 * step;
+                lo -= step;
+                hi += step;
+                if (lo < xmin) lo = xmin;
+                if (hi > xmax) hi = xmax;
+                i++;
+                flo = sfunc(lo) - x;
+                fhi = sfunc(hi) - x;
+                if (flo * fhi <= 0)
+                {  //found interval with root
+                    found = true;
+                    if (flo * fguess <= 0)
+                    {  //narrow interval down a bit
+                        hi = lo + step;    //to pass solver interval that is as
+                                           //small as possible
+                    }
+                    else if (fhi * fguess <= 0)
+                    {
+                        lo = hi - step;
+                    }
+                }
+                //cout << "FindInterval: i=" << i << " Lo= " << lo << " Hi= " << hi << endl;
+            }
+            while ((!found) && (i <= 100));
+            xlo = lo;
+            xhi = hi;
+            return found;
+        }
+
+        private const double relax = 0.9;
+        private bool solve(ref double y, double x)
+        {
+            double x1, x2, x3, f1, f2, f3, d, d0;
+            double eps = 1E-5;
+            int i;
+            bool success = false;
+
+            //initializations
+            d = 1;
+            x2 = 0;
+            x1 = xlo; x3 = xhi;
+            f1 = sfunc(x1) - x;
+            f3 = sfunc(x3) - x;
+            d0 = Math.Abs(x3 - x1);
+
+            //iterations
+            i = 0;
+            while ((Math.Abs(d) > eps) && (i < 100))
+            {
+                d = (x3 - x1) / d0;
+                x2 = x1 - d * d0 * f1 / (f3 - f1);
+
+                f2 = sfunc(x2) - x;
+                //cout << "Solve x1,x2,x3: " << x1 << "," << x2 << "," << x3 << endl;
+                //cout << "                " << f1 << "," << f2 << "," << f3 << endl;
+
+                if (Math.Abs(f2) <= 0.001)
+                {
+                    x1 = x3 = x2;
+                }
+                else if (f1 * f2 <= 0.0)
+                {
+                    x3 = x2;
+                    f3 = f2;
+                    f1 = relax * f1;
+                }
+                else if (f2 * f3 <= 0)
+                {
+                    x1 = x2;
+                    f1 = f2;
+                    f3 = relax * f3;
+                }
+                //cout << i << endl;
+                i++;
+            }//end while
+            if (i < 100)
+            {
+                success = true;
+                y = x2;
+            }
+
+            //cout << "Success= " << success << " Vcas: " << vcas*fpstokts << " Mach: " << x2 << endl;
+            return success;
+        }
+    }
 }

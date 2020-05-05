@@ -131,6 +131,7 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\LocationTests.cs" />
     <Compile Include="Tests\ConditionTests.cs">
       <SubType>Code</SubType>
     </Compile>
