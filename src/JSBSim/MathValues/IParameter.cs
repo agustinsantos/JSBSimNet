@@ -28,6 +28,7 @@ namespace JSBSim.MathValues
 	/// </summary>
 	public interface IParameter
 	{
-		double GetValue();
-	}
+        double GetValue();
+        //bool IsConstant();
+    }
 }

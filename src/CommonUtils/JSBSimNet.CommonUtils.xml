@@ -59,13 +59,143 @@
             Conversion specifiers
             </summary>
         </member>
+        <member name="T:CommonUtils.MathLib.Conversion">
+            <summary>
+            JSBSim Base class.
+            This class provides universal constants, utility functions, messaging
+            functions, and enumerated constants to JSBSim.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.KelvinToFahrenheit(System.Double)">
+            <summary>
+            Converts from degrees Kelvin to degrees Fahrenheit.
+            </summary>
+            <param name="kelvin">The temperature in degrees Kelvin</param>
+            <returns>The temperature in Fahrenheit</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.CelsiusToRankine(System.Double)">
+            <summary>
+            Converts from degrees Celsius to degrees Rankine.
+            </summary>
+            <param name="celsius">celsius The temperature in degrees Celsius.</param>
+            <returns>The temperature in Rankine.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.RankineToCelsius(System.Double)">
+            <summary>
+            Converts from degrees Rankine to degrees Celsius.
+            </summary>
+            <param name="rankine">rankine The temperature in degrees Rankine.</param>
+            <returns>The temperature in Celsius.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.KelvinToRankine(System.Double)">
+            <summary>
+            Converts from degrees Kelvin to degrees Rankine.
+            </summary>
+            <param name="kelvin">kelvin The temperature in degrees Kelvin.</param>
+            <returns>The temperature in Rankine.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.RankineToKelvin(System.Double)">
+            <summary>
+            Converts from degrees Rankine to degrees Kelvin.
+            </summary>
+            <param name="rankine">rankine The temperature in degrees Rankine.</param>
+            <returns>The temperature in Kelvin.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.FahrenheitToCelsius(System.Double)">
+            <summary>
+            Converts from degrees Fahrenheit to degrees Celsius.
+            </summary>
+            <param name="fahrenheit">The temperature in degrees Fahrenheit.</param>
+            <returns>The temperature in Celsius.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.CelsiusToFahrenheit(System.Double)">
+            <summary>
+            Converts from degrees Celsius to degrees Fahrenheit.
+            </summary>
+            <param name="celsius">The temperature in degrees Celsius.</param>
+            <returns>The temperature in Fahrenheit.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.CelsiusToKelvin(System.Double)">
+            <summary>
+            Converts from degrees Celsius to degrees Kelvin
+            </summary>
+            <param name="celsius">The temperature in degrees Celsius.</param>
+            <returns>The temperature in Kelvin.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.KelvinToCelsius(System.Double)">
+            <summary>
+            Converts from degrees Kelvin to degrees Celsius
+            </summary>
+            <param name="kelvin">The temperature in degrees Kelvin.</param>
+            <returns>The temperature in Celsius.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.FeetToMeters(System.Double)">
+            <summary>
+            Converts from feet to meters
+            </summary>
+            <param name="measure">The length in feet.</param>
+            <returns>The length in meters.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.PitotTotalPressure(System.Double,System.Double)">
+            <summary>
+            Compute the total pressure in front of the Pitot tube. It uses the
+            Rayleigh formula for supersonic speeds(See "Introduction to Aerodynamics
+            of a Compressible Fluid - H.W.Liepmann, A.E.Puckett - Wiley &#38; sons
+            (1947)" §5.4 pp 75-80)
+            </summary>
+            <param name="mach">The Mach number</param>
+            <param name="p">Pressure in psf</param>
+            <returns>The total pressure in front of the Pitot tube in psf</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.MachFromImpactPressure(System.Double,System.Double)">
+            <summary>
+            Compute the Mach number from the differential pressure (qc) and the
+            static pressure. Based on the formulas in the US Air Force Aircraft
+            Performance Flight Testing Manual (AFFTC-TIH-99-01).
+            </summary>
+            <param name="qc">The differential/impact pressure</param>
+            <param name="p">Pressure in psf</param>
+            <returns>The Mach number</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.VcalibratedFromMach(System.Double,System.Double)">
+            <summary>
+            Calculate the calibrated airspeed from the Mach number. Based on the
+            formulas in the US Air Force Aircraft Performance Flight Testing 
+            Manual (AFFTC-TIH-99-01).
+            </summary>
+            <param name="mach">The Mach number</param>
+            <param name="p">Pressure in psf</param>
+            <returns>The calibrated airspeed (CAS) in ft/s</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Conversion.MachFromVcalibrated(System.Double,System.Double)">
+            <summary>
+            Calculate the Mach number from the calibrated airspeed.Based on the
+            formulas in the US Air Force Aircraft Performance Flight Testing 
+            Manual(AFFTC-TIH-99-01).
+            </summary>
+            <param name="vcas">The calibrated airspeed (CAS) in ft/s</param>
+            <param name="p">Pressure in psf</param>
+            <returns>The Mach number</returns>
+        </member>
         <member name="T:CommonUtils.MathLib.MathExt">
             <summary>
             Various constant definitions and math functions.
             </summary>
         </member>
         <member name="F:CommonUtils.MathLib.MathExt.EPSILON">
-            For divide by zero avoidance, this will be close enough to zero 
+            <summary>
+            For divide by zero avoidance, this will be close enough to zero
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.MathExt.DBL_EPSILON">
+            <summary>
+            smallest such that 1.0+DBL_EPSILON != 1.0
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.MathExt.FLT_EPSILON">
+            <summary>
+            smallest such that 1.0+FLT_EPSILON != 1.0
+            </summary>
         </member>
         <member name="M:CommonUtils.MathLib.MathExt.EqualToRoundoff(System.Double,System.Double)">
             <summary>
@@ -99,29 +229,60 @@
             <param name="b">second value to compare</param>
             <returns>if the two values can be considered equal up to roundoff</returns>
         </member>
+        <member name="M:CommonUtils.MathLib.MathExt.Constrain(System.Double,System.Double,System.Double)">
+            <summary>
+            Constrain a value between a minimum and a maximum value.
+            </summary>
+            <param name="min">the min limit</param>
+            <param name="value">the value to constrain</param>
+            <param name="max">the max limit</param>
+            <returns></returns>
+        </member>
+        <member name="T:CommonUtils.MathLib.Filter">
+            <summary>
+            First order, (low pass / lag) filter
+            </summary>
+        </member>
         <member name="T:CommonUtils.MathLib.Constants">
             <summary>
             Summary description for Constants.
             </summary>
         </member>
+        <member name="F:CommonUtils.MathLib.Constants.Reng">
+            <summary>
+            Specific Gas Constant,ft^2/(sec^2*R)
+            </summary>
+        </member>
         <member name="F:CommonUtils.MathLib.Constants.ONE_SECOND">
+            <summary>
             pi/180/60/60, or about 100 feet at earths' equator 
+            </summary>
         </member>
         <member name="F:CommonUtils.MathLib.Constants.EARTH_RAD">
+            <summary>
             Radius of Earth in kilometers at the equator.  Another source had
-            6378.165 but this is probably close enough 
+            6378.165 but this is probably close enough
+            </summary>
         </member>
         <member name="F:CommonUtils.MathLib.Constants.EQUATORIAL_RADIUS_FT">
+            <summary>
             Value of earth radius from LaRCsim (ft) 
+            </summary>
         </member>
         <member name="F:CommonUtils.MathLib.Constants.EQUATORIAL_RADIUS_M">
-            Value of earth radius from LaRCsim (meter) 
+            <summary>
+            Value of earth radius from LaRCsim (meter)
+            </summary>
         </member>
         <member name="F:CommonUtils.MathLib.Constants.EQ_RAD_SQUARE_FT">
-            Radius squared (ft) 
+            <summary>
+            Radius squared (ft)
+            </summary>
         </member>
         <member name="F:CommonUtils.MathLib.Constants.EQ_RAD_SQUARE_M">
-            Radius squared (meter) 
+            <summary>
+            Radius squared (meter)
+            </summary>
         </member>
         <member name="F:CommonUtils.MathLib.Constants.ARCSEC_TO_RAD">
             Arc seconds to radians.  (arcsec*pi)/(3600*180) = rad 
@@ -176,6 +337,19 @@
         </member>
         <member name="F:CommonUtils.MathLib.Constants.INHG_TO_PA">
             Inch Mercury to Pascal 
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.Mair">
+            <summary>
+            Mean molecular weight for air - slug/mol
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.g0">
+            <summary>
+            Sea-level acceleration of gravity - ft/s^2.
+            This constant is defined to compute the International Standard Atmosphere.
+            It is by definition the sea level gravity at a latitude of 45deg.This
+            value is fixed whichever gravity model is used by FGInertial.
+            </summary>
         </member>
         <member name="T:CommonUtils.MathLib.Matrix3D">
             <summary>
@@ -406,7 +580,45 @@
             <param name="m2">The second matrix to add.</param>
             <returns>Result is ( m1.M11 + m2.M11, m1.M12 + m2.M12, ...)</returns>
         </member>
-        <!-- Badly formed XML comment ignored for member "T:CommonUtils.MathLib.Quaternion" -->
+        <member name="T:CommonUtils.MathLib.Quaternion">
+            <summary>
+            <para>This class represents a Quaternion.</para>
+            <para>
+            A quaternion can be thought of as a 4D vector of form:
+            q = [w, x, y, z] = w + xi + yj +zk.
+            </para>
+            <para>
+            A Quaternion is often written as q = s + V where S represents
+            the scalar part (w component) and V is a 3D vector representing
+            the imaginery coefficients (x,y,z components).
+            </para>
+            Models the Quaternion representation of rotations.
+            Quaternion is a representation of an arbitrary rotation through a
+            quaternion. It has vector properties. This class also contains access
+            functions to the euler angle representation of rotations and access to
+            transformation matrices for 3D vectors. Transformations and euler angles are
+            therefore computed once they are requested for the first time. Then they are
+            cached for later usage as long as the class is not accessed trough
+            a nonconst member function.
+            
+            
+            Cooke, Zyda, Pratt, and McGhee, "NPSNET: Flight Simulation Dynamic Modeling
+            Using Quaternions", Presence, Vol. 1, No. 4, pp. 404-420  Naval Postgraduate
+            School, January 1994
+            D. M. Henderson, "Euler Angles, Quaternions, and Transformation Matrices",
+            JSC 12960, July 1977
+            Richard E. McFarland, "A Standard Kinematic Model for Flight Simulation at
+            NASA-Ames", NASA CR-2497, January 1975
+            Barnes W. McCormick, "Aerodynamics, Aeronautics, and Flight Mechanics",
+            Wiley &#38; Sons, 1979 ISBN 0-471-03032-5
+            Bernard Etkin, "Dynamics of Flight, Stability and Control", Wiley &#38; Sons,
+            1982 ISBN 0-471-08936-2		
+            </summary>
+            <remarks>
+            Note: The order of rotations used in this class corresponds to a 3-2-1 sequence,
+            or Y-P-R, or Z-Y-X, if you prefer.
+            </remarks>
+        </member>
         <member name="F:CommonUtils.MathLib.Quaternion.W">
             <summary>
             W coordinate.

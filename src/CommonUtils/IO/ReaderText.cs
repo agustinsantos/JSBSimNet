@@ -19,9 +19,6 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endregion
-#region Identification
-/// $Id: ReaderText.cs 3 2006-05-23 19:41:11Z sxta $
-#endregion
 namespace CommonUtils.IO
 {
     using System;
@@ -44,7 +41,7 @@ namespace CommonUtils.IO
 
 
         // Gets a NumberFormatInfo associated with the en-US culture.
-        static NumberFormatInfo nfi = new CultureInfo("en-US", false).NumberFormat;
+        private static readonly NumberFormatInfo nfi = new CultureInfo("en-US", false).NumberFormat;
 
         public bool Done
         {

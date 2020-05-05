@@ -19,21 +19,16 @@
 //	License along with this library; if not, write to the Free Software
 //	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #endregion
-#region Identification
-/// $Id:$
-#endregion
 namespace CommonUtils.MathLib
 {
-	using System;
-	using System.Diagnostics;
-	using System.Collections;
-	using System.Runtime.Serialization;
-	using System.Security.Permissions;
+    using System;
+    using System.Diagnostics;
+    using System.Runtime.Serialization;
 
-	/// <summary>
-	/// Vector class for 3D.
-	/// </summary>
-	[Serializable]
+    /// <summary>
+    /// Vector class for 3D.
+    /// </summary>
+    [Serializable]
 	public struct Vector3D : ISerializable, ICloneable
 	{
 		#region Public variables
@@ -171,12 +166,11 @@ namespace CommonUtils.MathLib
 		/// <returns></returns>
 		public override bool Equals(object o) 
 		{
-			if( o is Vector3D ) 
-			{
-				Vector3D vec = (Vector3D) o;
-				return ( this.X == vec.X ) && ( this.Y == vec.Y ) && (this.Z == vec.Z);
-			}
-			return false;
+            if (o is Vector3D vec)
+            {
+                return (this.X == vec.X) && (this.Y == vec.Y) && (this.Z == vec.Z);
+            }
+            return false;
 		}
 		/// <summary>
 		/// Convert Vector3D to a string.

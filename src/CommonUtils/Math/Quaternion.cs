@@ -19,9 +19,6 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endregion
-#region Identification
-/// $Id:$
-#endregion
 namespace CommonUtils.MathLib
 {
 	using System;
@@ -29,18 +26,18 @@ namespace CommonUtils.MathLib
 	using System.Runtime.Serialization;
 	using System.Security.Permissions;
 
-	/// <summary>
-	/// <para>This class represents a Quaternion.</para>
-	/// <para>
-	/// A quaternion can be thought of as a 4D vector of form:
-	/// q = [w, x, y, z] = w + xi + yj +zk.
-	/// </para>
-	/// <para>
-	/// A Quaternion is often written as q = s + V where S represents
-	/// the scalar part (w component) and V is a 3D vector representing
-	/// the imaginery coefficients (x,y,z components).
-	/// </para>
-	/// Models the Quaternion representation of rotations.
+    /// <summary>
+    /// <para>This class represents a Quaternion.</para>
+    /// <para>
+    /// A quaternion can be thought of as a 4D vector of form:
+    /// q = [w, x, y, z] = w + xi + yj +zk.
+    /// </para>
+    /// <para>
+    /// A Quaternion is often written as q = s + V where S represents
+    /// the scalar part (w component) and V is a 3D vector representing
+    /// the imaginery coefficients (x,y,z components).
+    /// </para>
+    /// Models the Quaternion representation of rotations.
     /// Quaternion is a representation of an arbitrary rotation through a
     /// quaternion. It has vector properties. This class also contains access
     /// functions to the euler angle representation of rotations and access to
@@ -58,11 +55,11 @@ namespace CommonUtils.MathLib
     /// Richard E. McFarland, "A Standard Kinematic Model for Flight Simulation at
     /// NASA-Ames", NASA CR-2497, January 1975
     /// Barnes W. McCormick, "Aerodynamics, Aeronautics, and Flight Mechanics",
-    /// Wiley & Sons, 1979 ISBN 0-471-03032-5
-    ///	Bernard Etkin, "Dynamics of Flight, Stability and Control", Wiley & Sons,
+    /// Wiley &#38; Sons, 1979 ISBN 0-471-03032-5
+    ///	Bernard Etkin, "Dynamics of Flight, Stability and Control", Wiley &#38; Sons,
     /// 1982 ISBN 0-471-08936-2		
     /// </summary>
-	/// <remarks>
+    /// <remarks>
     /// Note: The order of rotations used in this class corresponds to a 3-2-1 sequence,
     /// or Y-P-R, or Z-Y-X, if you prefer.
     /// </remarks>
@@ -278,16 +275,15 @@ namespace CommonUtils.MathLib
 		/// <returns></returns>
 		public override bool Equals( object o ) 
 		{
-			if( o is Quaternion ) 
-			{
-				Quaternion q = (Quaternion) o;
-				//return ( this.W == q.W ) && ( this.X == q.X ) && ( this.Y == q.Y ) && ( this.Z == q.Z );
-				return ( Math.Abs(this.W - q.W) <= MathExt.DBL_EPSILON ) &&
-					   ( Math.Abs(this.X - q.X) <= MathExt.DBL_EPSILON ) &&
-					   ( Math.Abs(this.Y - q.Y) <= MathExt.DBL_EPSILON ) &&
-					   ( Math.Abs(this.Z - q.Z) <= MathExt.DBL_EPSILON );
-			}
-			return false;
+            if (o is Quaternion q)
+            {
+                //return ( this.W == q.W ) && ( this.X == q.X ) && ( this.Y == q.Y ) && ( this.Z == q.Z );
+                return (Math.Abs(this.W - q.W) <= MathExt.DBL_EPSILON) &&
+                       (Math.Abs(this.X - q.X) <= MathExt.DBL_EPSILON) &&
+                       (Math.Abs(this.Y - q.Y) <= MathExt.DBL_EPSILON) &&
+                       (Math.Abs(this.Z - q.Z) <= MathExt.DBL_EPSILON);
+            }
+            return false;
 		}
 
 		#endregion

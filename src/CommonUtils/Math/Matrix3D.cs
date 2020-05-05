@@ -19,9 +19,6 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endregion
-#region Identification
-/// $Id:$
-#endregion
 namespace CommonUtils.MathLib
 {
 	using System;
@@ -214,26 +211,24 @@ namespace CommonUtils.MathLib
 		/// <returns></returns>
 		public override bool Equals( object o ) 
 		{
-			if( o is Matrix3D ) 
-			{
-				Matrix3D m = (Matrix3D)o;
+            if (o is Matrix3D m)
+            {
+                // Check the matrix elements
+                if (M11 != m.M11) return false;
+                if (M12 != m.M12) return false;
+                if (M13 != m.M13) return false;
 
-				// Check the matrix elements
-				if (M11 != m.M11) return false;
-				if (M12 != m.M12) return false;
-				if (M13 != m.M13) return false;
+                if (M21 != m.M21) return false;
+                if (M22 != m.M22) return false;
+                if (M23 != m.M23) return false;
 
-				if (M21 != m.M21) return false;
-				if (M22 != m.M22) return false;
-				if (M23 != m.M23) return false;
+                if (M31 != m.M31) return false;
+                if (M32 != m.M32) return false;
+                if (M33 != m.M33) return false;
 
-				if (M31 != m.M31) return false;
-				if (M32 != m.M32) return false;
-				if (M33 != m.M33) return false;
-
-				return true;
-			}
-			return false;
+                return true;
+            }
+            return false;
 		}
 		/// <summary>
 		/// Convert Matrix3D to a string.
