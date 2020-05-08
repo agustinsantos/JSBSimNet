@@ -1,5 +1,5 @@
 ﻿#region Copyright(C)  Licensed under GNU GPL.
-/// Copyright (C) 2005-2006 Agustin Santos Mendez
+/// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
 /// David Megginson. 
@@ -18,22 +18,17 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+/// 
+/// Further information about the GNU Lesser General Public License can also be found on
+/// the world wide web at http://www.gnu.org.
 #endregion
-
-namespace JSBSim.Models.FlightControl
+namespace JSBSim.MathValues
 {
-    using System;
-    using System.Xml;
-
+    using JSBSim.InputOutput;
     // Import log4net classes.
     using log4net;
 
-    using JSBSim.InputOutput;
-    using JSBSim.Models;
-    using JSBSim.MathValues;
-    using JSBSim.Format;
-
-    public class FCSFunction : FCSComponent
+    public class FunctionValue : PropertyValue
     {
         /// <summary>
         /// Define a static logger variable so that it references the
@@ -46,34 +41,37 @@ namespace JSBSim.Models.FlightControl
         /// </summary>
         private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        public FCSFunction(FlightControlSystem fcs, XmlElement element)
-            : base(fcs, element)
+        public FunctionValue(PropertyNode propNode, TemplateFunc f)
+            : base(propNode)
         {
-            XmlNodeList childs = element.GetElementsByTagName("function");
-            if (childs != null && childs.Count > 0)
-                function = new Function(null /* TODO fcs.GetPropertyManager()*/, childs[0] as XmlElement);
-
-            base.Bind();
-
-        }
-        public override bool Run()
-        {
-            output = function.Value;
-
-            if (inputNodes.Count > 0)
-            {
-                input = inputNodes[0].GetDouble() * inputSigns[0];
-                output *= input;
-            }
-
-            Clip();
-
-            if (isOutput) SetOutput();
-
-            return true;
-
+            function = f;
         }
 
-        private Function function;
+        public FunctionValue(string propName, PropertyManager propertyManager, TemplateFunc f)
+            : base(propName, propertyManager)
+        {
+            function = f;
+        }
+
+        public override double GetValue() { return function.GetValue(GetNode()); }
+
+        public override string GetName()
+        {
+            return function.GetName() + "(" + base.GetName() + ")";
+        }
+        public override string GetNameWithSign()
+        {
+            return function.GetName() + "(" + base.GetNameWithSign() + ")";
+        }
+        public override string GetPrintableName()
+        {
+            return function.GetName() + "(" + base.GetPrintableName() + ")";
+        }
+        public override string GetFullyQualifiedName()
+        {
+            return function.GetName() + "(" + base.GetFullyQualifiedName() + ")";
+        }
+
+        private TemplateFunc function;
     }
 }

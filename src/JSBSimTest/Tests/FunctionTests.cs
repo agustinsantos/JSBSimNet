@@ -22,26 +22,26 @@
 
 namespace JSBSim.Tests
 {
-	using System;
-	using System.Xml;
-	using System.IO;
-	using System.Text;
+    using System;
+    using System.Xml;
+    using System.IO;
+    using System.Text;
 
-	using NUnit.Framework;
+    using NUnit.Framework;
     // Import log4net classes.
     using log4net;
 
-	using JSBSim;
-	using JSBSim.MathValues;
-	using JSBSim.InputOutput;
-	using JSBSim.Script;
+    using JSBSim;
+    using JSBSim.MathValues;
+    using JSBSim.InputOutput;
+    using JSBSim.Script;
 
-	/// <summary>
-	/// Some Function Tests: load and access.
-	/// </summary>
-	[TestFixture]
-	public class FunctionTests
-	{
+    /// <summary>
+    /// Some Function Tests: load and access.
+    /// </summary>
+    [TestFixture]
+    public class FunctionTests
+    {
         /// <summary>
         /// Define a static logger variable so that it references the
         ///	Logger instance.
@@ -79,10 +79,10 @@ namespace JSBSim.Tests
 
         }
 
-		[Test]
-		public void CheckFunctionProduct()
-		{
-			string test =
+        [Test]
+        public void CheckFunctionProduct()
+        {
+            string test =
                 @"<?xml version=""1.0""?>
                   <?xml-stylesheet href=""JSBSim.xsl"" type=""application/xml""?>
                   <function name=""aero/coefficient/CnDr"">
@@ -99,18 +99,18 @@ namespace JSBSim.Tests
                 </product>
                 </function>";
 
-			PropertyManager propMngr = new PropertyManager();
-            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", propMngr);
+            FDMExecutive fdmex = new FDMExecutive();
+            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", fdmex.PropertyManager);
 
-			XmlElement elem = BuildXmlConfig(test);
-			Function func = new Function(propMngr,elem);
+            XmlElement elem = BuildXmlConfig(test);
+            Function func = new Function(fdmex, elem);
 
             if (log.IsDebugEnabled)
             {
                 log.Debug("Testing JSBSim Functions: Products");
             }
 
-			//Checks values 
+            //Checks values 
             class1.QbarArea = 0.3491;
             class1.BwFt = 1.0000;
             class1.RudderPosDeg = 1.0;
@@ -125,8 +125,8 @@ namespace JSBSim.Tests
             class1.BwFt = 2;
             class1.RudderPosDeg = 3;
             Assert.AreEqual(1 * 2 * 3 * -.1047E-02, func.GetValue());
-		}
-        
+        }
+
         [Test]
         public void CheckFunctionQuotient()
         {
@@ -140,11 +140,11 @@ namespace JSBSim.Tests
                         </quotient>
                     </function>";
 
-            PropertyManager propMngr = new PropertyManager();
-            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", propMngr);
+            FDMExecutive fdmex = new FDMExecutive();
+            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", fdmex.PropertyManager);
 
             XmlElement elem = BuildXmlConfig(test);
-            Function func = new Function(propMngr, elem);
+            Function func = new Function(fdmex, elem);
 
             if (log.IsDebugEnabled)
             {
@@ -166,7 +166,7 @@ namespace JSBSim.Tests
             string test =
                 @"<?xml version=""1.0""?>
                   <?xml-stylesheet href=""JSBSim.xsl"" type=""application/xml""?>
-                    <function NAME=""aero/coefficient/ClDf2"">
+                    <function name=""aero/coefficient/ClDf2"">
                         <description>
                            Airbus A380 SYMETRIC Trailing Edge Flaps                                   
                            Roll Moment Coefficient due to Asymetrical Single Slotted Flap Deflection
@@ -179,11 +179,11 @@ namespace JSBSim.Tests
                         </difference>
                     </function>";
 
-            PropertyManager propMngr = new PropertyManager();
-            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", propMngr);
+            FDMExecutive fdmex = new FDMExecutive();
+            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", fdmex.PropertyManager);
 
             XmlElement elem = BuildXmlConfig(test);
-            Function func = new Function(propMngr, elem);
+            Function func = new Function(fdmex, elem);
 
             if (log.IsDebugEnabled)
             {
@@ -194,7 +194,7 @@ namespace JSBSim.Tests
             class1.aeroCLDf2R = 0.1;
             class1.aeroCLDf2L = 0.2;
             Assert.AreEqual(0.1 - 0.2, func.GetValue());
-        
+
             //Checks values 
             class1.aeroCLDf2R = 0.2;
             class1.aeroCLDf2L = 0.1;
@@ -219,24 +219,24 @@ namespace JSBSim.Tests
                 @"<?xml version=""1.0""?>
                   <?xml-stylesheet href=""JSBSim.xsl"" type=""application/xml""?>
                   <function name=""aero/coefficient/CnDr"">
-                <description>
-                   Yaw Coefficient due to rudder(DATCOM does not calculate)
-                   High value for controllablity, low value
-                   for good dynamic stability
-                </description>
-                <sum>
-                   <property>aero/qbar-area</property>
-                   <property>metrics/bw-ft</property>
-                   <property>fcs/rudder-pos-deg</property>
-                   <value>  -.1047E-02</value>
-                </sum>
+                    <description>
+                       Yaw Coefficient due to rudder(DATCOM does not calculate)
+                       High value for controllablity, low value
+                       for good dynamic stability
+                    </description>
+                    <sum>
+                       <property>aero/qbar-area</property>
+                       <property>metrics/bw-ft</property>
+                       <property>fcs/rudder-pos-deg</property>
+                       <value>  -.1047E-02</value>
+                    </sum>
                 </function>";
 
-            PropertyManager propMngr = new PropertyManager();
-            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", propMngr);
+            FDMExecutive fdmex = new FDMExecutive();
+            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", fdmex.PropertyManager);
 
             XmlElement elem = BuildXmlConfig(test);
-            Function func = new Function(propMngr, elem);
+            Function func = new Function(fdmex, elem);
 
             if (log.IsDebugEnabled)
             {
@@ -266,18 +266,18 @@ namespace JSBSim.Tests
             string test =
                 @"<?xml version=""1.0""?>
                   <?xml-stylesheet href=""JSBSim.xsl"" type=""application/xml""?>
-                    <function NAME=""aero/coefficient/ClDf2"">
+                    <function name=""aero/coefficient/ClDf2"">
                         <pow>
                           <property>aero/coefficient/CLDf2R</property>
                           <property>aero/coefficient/CLDf2L</property>
                         </pow>
                     </function>";
 
-            PropertyManager propMngr = new PropertyManager();
-            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", propMngr);
+            FDMExecutive fdmex = new FDMExecutive();
+            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", fdmex.PropertyManager);
 
             XmlElement elem = BuildXmlConfig(test);
-            Function func = new Function(propMngr, elem);
+            Function func = new Function(fdmex, elem);
 
             if (log.IsDebugEnabled)
             {
@@ -312,17 +312,17 @@ namespace JSBSim.Tests
             string test =
                 @"<?xml version=""1.0""?>
                   <?xml-stylesheet href=""JSBSim.xsl"" type=""application/xml""?>
-                    <function NAME=""aero/coefficient/ClDf2"">
+                    <function name=""aero/coefficient/ClDf2"">
                         <sin>
                           <property>aero/coefficient/CLDf2R</property>
                         </sin>
                     </function>";
 
-            PropertyManager propMngr = new PropertyManager();
-            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", propMngr);
+            FDMExecutive fdmex = new FDMExecutive();
+            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", fdmex.PropertyManager);
 
             XmlElement elem = BuildXmlConfig(test);
-            Function func = new Function(propMngr, elem);
+            Function func = new Function(fdmex, elem);
 
             if (log.IsDebugEnabled)
             {
@@ -332,7 +332,7 @@ namespace JSBSim.Tests
             //Checks values 
             class1.aeroCLDf2R = 0.1;
             Assert.AreEqual(Math.Sin(0.1), func.GetValue());
-  
+
             //Checks values 
             class1.aeroCLDf2R = 0.0;
             Assert.AreEqual(Math.Sin(0.0), func.GetValue());
@@ -344,27 +344,27 @@ namespace JSBSim.Tests
             string test =
                 @"<?xml version=""1.0""?>
                   <?xml-stylesheet href=""JSBSim.xsl"" type=""application/xml""?>
-                    <function NAME=""aero/coefficient/ClDf2"">
-                    <description>
-                       Airbus A380 SYMETRIC Trailing Edge Flaps                                   
-                       Roll Moment Coefficient due to Asymetrical Single Slotted Flap Deflection
-                       calculated as difference between left and right flap lift coef,
-                       times distance from centerline to MAC of surface
-                    </description>
-                    <product>
-                       <value>     33.74</value>
-                       <difference>
-                          <property>aero/coefficient/CLDf2R</property>
-                          <property>aero/coefficient/CLDf2L</property>
-                       </difference>
-                    </product>
+                    <function name=""aero/coefficient/ClDf2"">
+                        <description>
+                           Airbus A380 SYMETRIC Trailing Edge Flaps                                   
+                           Roll Moment Coefficient due to Asymetrical Single Slotted Flap Deflection
+                           calculated as difference between left and right flap lift coef,
+                           times distance from centerline to MAC of surface
+                        </description>
+                        <product>
+                           <value>     33.74</value>
+                           <difference>
+                              <property>aero/coefficient/CLDf2R</property>
+                              <property>aero/coefficient/CLDf2L</property>
+                           </difference>
+                        </product>
                     </function>";
 
-            PropertyManager propMngr = new PropertyManager();
-            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", propMngr);
+            FDMExecutive fdmex = new FDMExecutive();
+            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", fdmex.PropertyManager);
 
             XmlElement elem = BuildXmlConfig(test);
-            Function func = new Function(propMngr, elem);
+            Function func = new Function(fdmex, elem);
 
             if (log.IsDebugEnabled)
             {
@@ -377,7 +377,7 @@ namespace JSBSim.Tests
             Assert.AreEqual(33.74 * (0.3491 - 1.0), func.GetValue());
         }
 
-                [Test]
+        [Test]
         public void CheckFunctionMix2()
         {
             string test =
@@ -396,11 +396,11 @@ namespace JSBSim.Tests
                       </quotient>
                     </function>";
 
-            PropertyManager propMngr = new PropertyManager();
-            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", propMngr);
+            FDMExecutive fdmex = new FDMExecutive();
+            ClassWithPropertiesForFunctions class1 = new ClassWithPropertiesForFunctions("", fdmex.PropertyManager);
 
             XmlElement elem = BuildXmlConfig(test);
-            Function func = new Function(propMngr, elem);
+            Function func = new Function(fdmex, elem);
 
             if (log.IsDebugEnabled)
             {
@@ -410,59 +410,59 @@ namespace JSBSim.Tests
             //Checks values 
             class1.CLDf2R = 0.3491;
             class1.CLDf2L = 1.0000;
-            Assert.AreEqual((25.70 - class1.CLDf2R/833.33) / (100.0), func.GetValue());
+            Assert.AreEqual((25.70 - class1.CLDf2R / 833.33) / (100.0), func.GetValue());
         }
 
         private XmlElement BuildXmlConfig(string config)
-		{
-			XmlDocument doc = new XmlDocument();
-			Stream configStream = new MemoryStream(Encoding.Unicode.GetBytes(config));
+        {
+            XmlDocument doc = new XmlDocument();
+            Stream configStream = new MemoryStream(Encoding.Unicode.GetBytes(config));
 
-            XmlReader xmlReader = new XmlTextReader(configStream);					
-			// load the data into the dom
-			doc.Load(xmlReader);
+            XmlReader xmlReader = new XmlTextReader(configStream);
+            // load the data into the dom
+            doc.Load(xmlReader);
             xmlReader.Close();
 
             XmlNodeList childNodes = doc.GetElementsByTagName("function");
 
-			return childNodes[0] as XmlElement;
-		}
+            return childNodes[0] as XmlElement;
+        }
 
         //TODO
         //To test: Cos, Acos, Asi, etc...
         //function within a function
-	}
-	
-	/// <summary>
+    }
+
+    /// <summary>
     ///  A class with some properties to be tested within function.
-	/// </summary>
-	public class ClassWithPropertiesForFunctions
-	{
+    /// </summary>
+    public class ClassWithPropertiesForFunctions
+    {
         public ClassWithPropertiesForFunctions(string path, PropertyManager propMngr)
-		{
-			propMngr.Bind(path, this);
-		}
+        {
+            propMngr.Bind(path, this);
+        }
 
         [ScriptAttribute("aero/qbar-area", "A test property")]
-		public double QbarArea
-		{
+        public double QbarArea
+        {
             get { return this.qbarArea; }
             set { this.qbarArea = value; }
-		}
+        }
 
         [ScriptAttribute("metrics/bw-ft", "A test property")]
-		public double BwFt
-		{
+        public double BwFt
+        {
             get { return this.bwFt; }
             set { this.bwFt = value; }
-		}
+        }
 
         [ScriptAttribute("fcs/rudder-pos-deg", "A test property")]
-		public double RudderPosDeg
-		{
+        public double RudderPosDeg
+        {
             get { return this.rudderPosDeg; }
             set { this.rudderPosDeg = value; }
-		}
+        }
 
         [ScriptAttribute("aero/coefficient/CLDf2R", "A test property")]
         public double CLDf2R
@@ -483,5 +483,5 @@ namespace JSBSim.Tests
         public double rudderPosDeg = 1.0;
         public double aeroCLDf2R = 1.0;
         public double aeroCLDf2L = 1.0;
-	}
+    }
 }

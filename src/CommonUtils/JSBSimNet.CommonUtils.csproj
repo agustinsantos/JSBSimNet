@@ -120,6 +120,8 @@
     <Compile Include="Math\Matrix3D.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Math\UniformRandom.cs" />
+    <Compile Include="Math\NormalRandom.cs" />
     <Compile Include="Math\Quaternion.cs">
       <SubType>Code</SubType>
     </Compile>

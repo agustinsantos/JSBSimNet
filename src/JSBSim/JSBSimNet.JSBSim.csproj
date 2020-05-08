@@ -139,6 +139,7 @@
     <Compile Include="InputOutput\GroundCallback.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="InputOutput\PathComponent.cs" />
     <Compile Include="InputOutput\PropertyEventArgs.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -169,6 +170,7 @@
     <Compile Include="MathValues\Function.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="MathValues\FunctionValue.cs" />
     <Compile Include="MathValues\IParameter.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -181,6 +183,7 @@
     <Compile Include="MathValues\Table.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="MathValues\TemplateFunc.cs" />
     <Compile Include="Models\Aerodynamics.cs">
       <SubType>Code</SubType>
     </Compile>

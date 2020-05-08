@@ -19,24 +19,17 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endregion
-#region Identification
-/// $Id:$
-#endregion
 namespace JSBSim
 {
     using System;
-    using System.IO;
     using System.Xml;
-
+    using CommonUtils.MathLib;
+    using JSBSim.Format;
+    using JSBSim.InputOutput;
+    using JSBSim.Models;
+    using JSBSim.Script;
     // Import log4net classes.
     using log4net;
-
-    using CommonUtils.MathLib;
-    using CommonUtils.IO;
-    using JSBSim.InputOutput;
-    using JSBSim.Format;
-    using JSBSim.Script;
-    using JSBSim.Models;
 
     public enum SpeedSet { setvt, setvc, setve, setmach, setuvw, setned, setvg };
     public enum AltitudeSet { setasl, setagl };

@@ -35,6 +35,7 @@ namespace JSBSim
     using JSBSim.InputOutput;
     using JSBSim.Models;
     using JSBSim.Models.Propulsion;
+    using JSBSim.MathValues;
 
 
     /// <summary>
@@ -170,6 +171,48 @@ namespace JSBSim
             propManager.TieInt32("simulation/do_trim", null, this.DoTrim);
             constructing = false;
         }
+        /// Default constructor
+        public FDMExecutive(PropertyManager root = null, int[] fdmctr = null)
+        { throw new NotImplementedException(); }
+
+        /// <summary>
+        /// This list of enums is very important! The order in which models are listed
+        /// here determines the order of execution of the models.
+        ///
+        /// There are some conditions that need to be met :
+        /// 1. FCS can request mass geometry changes via the inertia/pointmass-*
+        ///    properties so it must be executed before MassBalance
+        /// 2. MassBalance must be executed before Propulsion, Aerodynamics,
+        ///    GroundReactions, ExternalReactions and BuoyantForces to ensure that
+        ///    their moments are computed with the updated CG position.
+        /// </summary>
+        public enum eModels
+        {
+            ePropagate = 0,
+            eInput,
+            eInertial,
+            eAtmosphere,
+            eWinds,
+            eSystems,
+            eMassBalance,
+            eAuxiliary,
+            ePropulsion,
+            eAerodynamics,
+            eGroundReactions,
+            eExternalReactions,
+            eBuoyantForces,
+            eAircraft,
+            eAccelerations,
+            eOutput,
+            eNumStandardModels
+        };
+
+        /// <summary>
+        /// Unbind all tied JSBSim properties.
+        /// </summary>
+        /// <param name=""></param>
+        //TODO public void Unbind() { instance.Unbind(); }
+
 
         public static string GetVersion()
         {
@@ -281,6 +324,8 @@ namespace JSBSim
         /// modeled aircraft such as C172/, x15/, etc.</param>
         /// <param name="enginePath">path to the directory under which engine config
         /// files are kept, for instance "engine"</param>
+        /// <param name="enginePath">path to the directory under which systems config
+        /// files are kept, for instance "systems"</param>
         /// <param name="model">the name of the aircraft model itself. This file 
         /// will be looked for in the directory specified in the AircraftPath 
         /// variable, and in turn under the directory with the same name as the
@@ -288,8 +333,8 @@ namespace JSBSim
         /// <param name="addModelToPath">set to true to add the model name to the 
         /// aircraftPath, defaults to true</param>
         /// <returns>true if successful</returns>
-        public void LoadModel(string aircraftPath, string enginePath,
-            string model, bool addModelToPath)
+        public void LoadModel(string aircraftPath, string enginePath, string SystemsPath,
+            string model, bool addModelToPath = true)
         {
             AircraftPath = aircraftPath;
             EnginePath = enginePath;
@@ -299,7 +344,7 @@ namespace JSBSim
 
         public void LoadModel(string aircraftPath, string enginePath, string model)
         {
-            LoadModel(aircraftPath, enginePath, model, true);
+            LoadModel(aircraftPath, enginePath, null, model, true);
         }
 
         /// <summary>
@@ -365,6 +410,55 @@ namespace JSBSim
             XmlNodeList childNodes = doc.GetElementsByTagName("fdm_config");
             ReadAircraft(childNodes[0] as XmlElement);
         }
+        /*  Loads a script
+      @param Script The full path name and file name for the script to be loaded.
+      @param deltaT The simulation integration step size, if given.  If no value is supplied
+                    then 0.0 is used and the value is expected to be supplied in
+                    the script file itself.
+      @param initfile The initialization file that will override the initialization file
+                      specified in the script file. If no file name is given on the command line,
+                      the file specified in the script will be used. If an initialization file 
+                      is not given in either place, an error will result.
+      @return true if successfully loads; false otherwise. */
+        public bool LoadScript(string Script, double deltaT = 0.0,
+                  string initfile = "")
+        { throw new NotImplementedException(); }
+
+
+        /* Sets the path to the engine config file directories.
+            @param path path to the directory under which engine config
+            files are kept, for instance "engine"  */
+        public bool SetEnginePath(string path)
+        {
+            EnginePath = GetFullPath(path);
+            return true;
+        }
+        /*  Sets the path to the aircraft config file directories.
+          @param path path to the aircraft directory. For instance:
+          "aircraft". Under aircraft, then, would be directories for various
+          modeled aircraft such as C172/, x15/, etc.  */
+        public bool SetAircraftPath(string path)
+        {
+            AircraftPath = GetFullPath(path);
+            return true;
+        }
+
+        /*  Sets the path to the systems config file directories.
+            @param path path to the directory under which systems config
+            files are kept, for instance "systems"  */
+        public bool SetSystemsPath(string path)
+        {
+            SystemsPath = GetFullPath(path);
+            return true;
+        }
+        /// Retrieves the engine path.
+        public string GetEnginePath() { return EnginePath; }
+        /// Retrieves the aircraft path.
+        public string GetAircraftPath() { return AircraftPath; }
+        /// Retrieves the systems path.
+        public string GetSystemsPath() { return SystemsPath; }
+        /// Retrieves the full aircraft path name.
+        public string GetFullAircraftPath() { return FullAircraftPath; }
 
         private void ReadAircraft(XmlElement element)
         {
@@ -422,7 +516,7 @@ namespace JSBSim
                     }
                     else
                         if (log.IsWarnEnabled)
-                            log.Warn("Found unexpected subsystem:  <" + currentElement.LocalName + ">.");
+                        log.Warn("Found unexpected subsystem:  <" + currentElement.LocalName + ">.");
                 }
             }
         }
@@ -536,7 +630,7 @@ namespace JSBSim
         {
             DoTrim((int)mode);
         }
-        
+
         public void DoTrim(int mode)
         {
             double saved_time;
@@ -570,6 +664,25 @@ namespace JSBSim
         {
             get { return aircraftPath; }
             set { aircraftPath = value; }
+        }
+
+        /// <summary>
+        /// Gets/sets path to the directory under which systems config
+        /// files are kept, for instance "systems"
+        /// </summary>
+        public string SystemsPath
+        {
+            get { return systemsPath; }
+            set { systemsPath = value; }
+        }
+
+        /// <summary>
+        /// Gets/sets the full aircraft path name.
+        /// </summary>
+        public string FullAircraftPath
+        {
+            get { return fullAircraftPath; }
+            set { fullAircraftPath = value; }
         }
 
         //  /// Retrieves the control path.
@@ -623,6 +736,14 @@ namespace JSBSim
         public void UseAtmosphereMars()
         {
             throw new NotImplementedException("UseAtmosphereMars");
+        }
+        public TemplateFunc GetTemplateFunc(string name)
+        {
+            return templateFunctions.ContainsKey(name) ? templateFunctions[name] : null;
+        }
+        public void AddTemplateFunc(string name, XmlElement el)
+        {
+            templateFunctions[name] = new TemplateFunc(this, el);
         }
 
         private bool Allocate()
@@ -797,7 +918,10 @@ namespace JSBSim
         private List<slaveData> SlaveFDMList = new List<slaveData>();
         private string aircraftPath = ".";
         private string enginePath = ".";
+        private string systemsPath = ".";
+        private string fullAircraftPath = ".";
         //  string ControlPath;
+        private string rootDir = "";
 
         private string CFGVersion;
         private string release;
@@ -820,6 +944,8 @@ namespace JSBSim
         private Input input = null;
 
         private InitialCondition ic = null;
+
+        private Dictionary<string, TemplateFunc> templateFunctions = new Dictionary<string, TemplateFunc>();
 
         private const string IdSrc = "$Id: FGFDMExec.cpp,v 1.1.2.5 2005/04/23 17:31:48 jberndt Exp $";
 
@@ -948,10 +1074,20 @@ namespace JSBSim
                 log.Debug("      Roll = " + slave.roll);
             }
         }
-
+        private string GetFullPath(string name)
+        {
+            if (!Path.IsPathRooted(name))
+                return Path.Combine(rootDir, name);
+            else
+                return name;
+        }
         protected const string neededCfgVersion = "2.0";
 
         protected static readonly Version JSBSimVersion = Assembly.GetCallingAssembly().GetName().Version;
 
+        internal Random GetRandomEngine()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

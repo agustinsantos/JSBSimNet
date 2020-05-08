@@ -22,31 +22,33 @@
 /// Further information about the GNU Lesser General Public License can also be found on
 /// the world wide web at http://www.gnu.org.
 #endregion
-namespace JSBSim.MathValues
+
+namespace JSBSim.Tests
 {
     using System;
+    using JSBSim.InputOutput;
+    using JSBSim.MathValues;
+    using NUnit.Framework;
 
     /// <summary>
-    /// Represents various types of parameters.
+    /// Represents a property value which can use late binding.
     /// </summary>
-    public interface IParameter
+    [TestFixture]
+    public class PropertyValueTests
     {
-        double GetValue();
-        string GetName();
-        bool IsConstant();
-    }
+        private const double tolerance = 10E-16;
 
-    /// <summary>
-    /// Represents various types of parameters.
-    /// </summary>
-    public abstract class Parameter : IParameter
-    {
-        public abstract double GetValue();
-        public abstract string GetName();
-        public virtual bool IsConstant() { return false; }
-        
-        // SGPropertyNode impersonation.
-        public double GetDoubleValue( )   { return GetValue();
+        [Test]
+        public void CheckValidValue()
+        {
+            PropertyManager propertyManager = new PropertyManager();
+
+            var propValue = new PropertyValue("Test01", propertyManager);
+            propValue.SetValue(10.0);
+            Assert.AreEqual(0, propValue.GetValue());
+            Assert.AreEqual("constant value 0", propValue.GetName());
+            Assert.AreEqual(true, propValue.IsConstant());
+        }
+
     }
-}
 }

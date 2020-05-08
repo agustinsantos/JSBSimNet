@@ -424,7 +424,7 @@ namespace JSBSim.Models
                         alphahystmax = FormatHelper.ValueAsNumberConvertTo(elems[0] as XmlElement, "DEG", supplied_units);
                     } else if (currentElement.LocalName.Equals("function"))
                     {
-                        variables.Add(new Function(FDMExec.PropertyManager, currentElement));
+                        variables.Add(new Function(FDMExec, currentElement));
                     }
 				}
 			}
@@ -443,7 +443,7 @@ namespace JSBSim.Models
 
                     if (currentElement.LocalName.Equals("function"))
                     {
-                        Function func = new Function(FDMExec.PropertyManager, currentElement);
+                        Function func = new Function(FDMExec, currentElement);
                         ca.Add(func);
                     }
                 }

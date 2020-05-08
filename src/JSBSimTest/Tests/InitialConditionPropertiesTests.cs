@@ -123,7 +123,7 @@ namespace JSBSim.Tests
             Assert.AreEqual(29.0, IC.AltitudeFtIC, tolerance, "Cheking Altitude in Ft.If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
 
             XmlElement elemFunction = BuildXmlConfig(testProperties, "function");
-            Function func = new Function(fdm.PropertyManager, elemFunction);
+            Function func = new Function(fdm, elemFunction);
 
             //Checks InputOutput 
             Assert.AreEqual(IC.LatitudeDegIC + IC.LongitudeDegIC + IC.AltitudeFtIC, func.GetValue(), tolerance);
@@ -177,7 +177,7 @@ namespace JSBSim.Tests
             Assert.AreEqual(50.0, IC.PsiDegIC, tolerance, "Cheking Psi in deg. If you have an error, try to change USEJSBSIM in CommonUtils.MathLib.Constants");
 
             XmlElement elemFunction = BuildXmlConfig(testProperties, "function");
-            Function func = new Function(fdm.PropertyManager, elemFunction);
+            Function func = new Function(fdm, elemFunction);
 
             //Checks InputOutput 
             Assert.AreEqual(IC.AlphaDegIC + IC.BetaDegIC + IC.ThetaDegIC + IC.PhiDegIC + IC.PsiDegIC, func.GetValue(), tolerance);

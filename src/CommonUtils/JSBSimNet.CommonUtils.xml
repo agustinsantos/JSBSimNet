@@ -580,6 +580,20 @@
             <param name="m2">The second matrix to add.</param>
             <returns>Result is ( m1.M11 + m2.M11, m1.M12 + m2.M12, ...)</returns>
         </member>
+        <member name="M:CommonUtils.MathLib.UniformRandom.Next">
+            <summary>
+            Returns a random double number
+            It has an implementation of the Box-Muller transform.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.NormalRandom.Next">
+            <summary>
+            Returns a random double number
+            It has an implementation of the Box-Muller transform.
+            </summary>
+            <returns></returns>
+        </member>
         <member name="T:CommonUtils.MathLib.Quaternion">
             <summary>
             <para>This class represents a Quaternion.</para>

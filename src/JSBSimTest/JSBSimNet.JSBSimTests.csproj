@@ -147,6 +147,8 @@
     <Compile Include="Tests\LoadTests.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\PropertyValueTests.cs" />
+    <Compile Include="Tests\RealValueTests.cs" />
     <Compile Include="Tests\PropertiesTests.cs">
       <SubType>Code</SubType>
     </Compile>

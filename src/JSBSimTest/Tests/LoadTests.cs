@@ -63,7 +63,7 @@ namespace JSBSim.Tests
         {
             FDMExecutive fdm = new FDMExecutive();
 
-            fdm.LoadModel(AircraftPath, EnginePath, aircraft_ball, true);
+            fdm.LoadModel(AircraftPath, EnginePath, null, aircraft_ball, true);
 
             Assert.AreEqual(aircraft_ball, fdm.ModelName);
             Assert.AreEqual("BALL", fdm.Aircraft.AircraftName);
@@ -84,7 +84,7 @@ namespace JSBSim.Tests
         {
             FDMExecutive fdm = new FDMExecutive();
 
-            fdm.LoadModel(AircraftPath, EnginePath, aircraft_737, true);
+            fdm.LoadModel(AircraftPath, EnginePath, null, aircraft_737, true);
 
             Assert.AreEqual(aircraft_737, fdm.ModelName);
             Assert.AreEqual("737", fdm.Aircraft.AircraftName);
@@ -104,7 +104,7 @@ namespace JSBSim.Tests
         public void CheckLoad_747()
         {
             FDMExecutive fdm = new FDMExecutive();
-            fdm.LoadModel(AircraftPath, EnginePath, aircraft_747, true);
+            fdm.LoadModel(AircraftPath, EnginePath, null, aircraft_747, true);
 
             Assert.AreEqual(aircraft_747, fdm.ModelName);
             Assert.AreEqual("1970 Boeing 747 100B", fdm.Aircraft.AircraftName);
@@ -124,7 +124,7 @@ namespace JSBSim.Tests
         public void CheckLoad_f16()
         {
             FDMExecutive fdm = new FDMExecutive();
-            fdm.LoadModel(AircraftPath, EnginePath, aircraft_F16, true);
+            fdm.LoadModel(AircraftPath, EnginePath, null, aircraft_F16, true);
 
             /*
              <metrics>
@@ -170,7 +170,7 @@ namespace JSBSim.Tests
         public void CheckLoad_p51d()
         {
             FDMExecutive fdm = new FDMExecutive();
-            fdm.LoadModel(AircraftPath, EnginePath, aircraft_p51d, true);
+            fdm.LoadModel(AircraftPath, EnginePath, null, aircraft_p51d, true);
 
             Assert.AreEqual(aircraft_p51d, fdm.ModelName);
             Assert.AreEqual("P51D", fdm.Aircraft.AircraftName);
@@ -190,7 +190,7 @@ namespace JSBSim.Tests
         public void CheckLoad_A320()
         {
             FDMExecutive fdm = new FDMExecutive();
-            fdm.LoadModel(AircraftPath, EnginePath, aircraft_A320, true);
+            fdm.LoadModel(AircraftPath, EnginePath, null, aircraft_A320, true);
 
             Assert.AreEqual(aircraft_A320, fdm.ModelName);
             Assert.AreEqual("A320-200", fdm.Aircraft.AircraftName);
@@ -210,7 +210,7 @@ namespace JSBSim.Tests
         public void CheckLoad_C172x()
         {
             FDMExecutive fdm = new FDMExecutive();
-            fdm.LoadModel(AircraftPath, EnginePath, aircraft_c172x, true);
+            fdm.LoadModel(AircraftPath, EnginePath, null, aircraft_c172x, true);
 
             Assert.AreEqual(aircraft_c172x, fdm.ModelName);
             Assert.AreEqual("Cessna C-172 Skyhawk", fdm.Aircraft.AircraftName);
@@ -232,7 +232,7 @@ namespace JSBSim.Tests
         {
             FDMExecutive fdm = new FDMExecutive();
 
-            fdm.LoadModel(AircraftPath, EnginePath, aircraft_MK82, true);
+            fdm.LoadModel(AircraftPath, EnginePath, null, aircraft_MK82, true);
 
             Assert.AreEqual(aircraft_MK82, fdm.ModelName);
             Assert.AreEqual("MK-82", fdm.Aircraft.AircraftName);

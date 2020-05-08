@@ -236,5 +236,53 @@ namespace JSBSim.Tests
             Assert.AreEqual(1, loc.Radius, tolerance);
         }
 
+        [Test]
+        public void CheckAdd01()
+        {
+            Location loc1 = new Location();
+            Location loc2 = new Location();
+
+            Location loc3 = loc1 + loc2;
+
+            Assert.AreEqual(0, loc3.Longitude, tolerance);
+            Assert.AreEqual(0, loc3.Latitude, tolerance);
+            Assert.AreEqual(2, loc3.Radius, tolerance);
+        }
+
+        [Test]
+        public void CheckLongitudeDeg01()
+        {
+            Location loc = new Location();
+
+            loc.Longitude = 0;
+            Assert.AreEqual(0, loc.LongitudeDeg, tolerance);
+        }
+
+        [Test]
+        public void CheckLongitudeDeg02()
+        {
+            Location loc = new Location();
+
+            loc.Longitude = Math.PI / 2;
+            Assert.AreEqual(90, loc.LongitudeDeg, tolerance);
+        }
+        [Test]
+        public void CheckLatitudeDeg01()
+        {
+            Location loc = new Location();
+
+            loc.Latitude = 0;
+            Assert.AreEqual(0, loc.LatitudeDeg, tolerance);
+        }
+
+        [Test]
+        public void CheckLatitudeDeg02()
+        {
+            Location loc = new Location();
+
+            loc.Latitude = Math.PI / 2;
+            Assert.AreEqual(90, loc.LatitudeDeg, tolerance);
+        }
+
     }
 }

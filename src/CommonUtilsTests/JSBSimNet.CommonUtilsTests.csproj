@@ -131,6 +131,8 @@
     <Compile Include="QuaternionTests.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="NormalRandomTests.cs" />
+    <Compile Include="UniformRandomTests.cs" />
     <Compile Include="Vector3DTests.cs">
       <SubType>Code</SubType>
     </Compile>

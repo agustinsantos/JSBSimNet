@@ -1,5 +1,5 @@
 #region Copyright(C)  Licensed under GNU GPL.
-/// Copyright (C) 2005-2006 Agustin Santos Mendez
+/// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
 /// David Megginson. 
@@ -18,6 +18,9 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+/// 
+/// Further information about the GNU Lesser General Public License can also be found on
+/// the world wide web at http://www.gnu.org.
 #endregion
 
 namespace JSBSim.Tests
@@ -29,6 +32,7 @@ namespace JSBSim.Tests
     using JSBSim;
     using JSBSim.InputOutput;
     using JSBSim.Script;
+    using System.Collections.Generic;
 
     /// <summary>
     /// Some JSBSim  properties, parameters, and functions Tests.
@@ -38,6 +42,152 @@ namespace JSBSim.Tests
     {
         private const int maxCnt = 10000000;
         private const double tolerance = 10E-12;
+
+        [Test]
+        public void CheckValidName()
+        {
+            bool isValid = PathComponentUtis.ValidateName("isOk");
+            Assert.IsTrue(isValid);
+
+            isValid = PathComponentUtis.ValidateName("is_Ok");
+            Assert.IsTrue(isValid);
+
+            isValid = PathComponentUtis.ValidateName("is-Ok");
+            Assert.IsTrue(isValid);
+
+            isValid = PathComponentUtis.ValidateName("isOk1");
+            Assert.IsTrue(isValid);
+
+            isValid = PathComponentUtis.ValidateName("is.Ok1");
+            Assert.IsTrue(isValid);
+
+            isValid = PathComponentUtis.ValidateName("_isOk1");
+            Assert.IsTrue(isValid);
+
+            isValid = PathComponentUtis.ValidateName("isOk1Yes");
+            Assert.IsTrue(isValid);
+
+            isValid = PathComponentUtis.ValidateName("is*NotOk");
+            Assert.IsFalse(isValid);
+
+            isValid = PathComponentUtis.ValidateName("isNotOk/");
+            Assert.IsFalse(isValid);
+
+            isValid = PathComponentUtis.ValidateName("2isNotOk");
+            Assert.IsFalse(isValid);
+
+            isValid = PathComponentUtis.ValidateName("-isNotOk");
+            Assert.IsFalse(isValid);
+
+            isValid = PathComponentUtis.ValidateName(".isNotOk");
+            Assert.IsFalse(isValid);
+        }
+
+        [Test]
+        public void CheckParseName()
+        {
+            int i = 0;
+
+            string name = PathComponentUtis.ParseName(".", ref i);
+            Assert.AreEqual(".", name);
+
+            i = 0;
+            name = PathComponentUtis.ParseName("..", ref i);
+            Assert.AreEqual("..", name);
+
+            i = 0;
+            name = PathComponentUtis.ParseName("aName", ref i);
+            Assert.AreEqual("aName", name);
+
+            i = 0;
+            name = PathComponentUtis.ParseName("aName2", ref i);
+            Assert.AreEqual("aName2", name);
+
+            i = 0;
+            name = PathComponentUtis.ParseName("aName-2", ref i);
+            Assert.AreEqual("aName-2", name);
+
+            i = 0;
+            name = PathComponentUtis.ParseName("aName[0]", ref i);
+            Assert.AreEqual("aName", name);
+
+            i = 0;
+            name = PathComponentUtis.ParseName("aName/other", ref i);
+            Assert.AreEqual("aName", name);
+
+            i = 0;
+            name = PathComponentUtis.ParseName("aName[0]/other", ref i);
+            Assert.AreEqual("aName", name);
+        }
+
+        [Test]
+        public void CheckParseIndex()
+        {
+            int i = 0;
+
+            int index = PathComponentUtis.ParseIndex("[10]", ref i);
+            Assert.AreEqual(10, index);
+            Assert.AreEqual(4, i);
+
+            i = 1;
+            index = PathComponentUtis.ParseIndex(" [20]", ref i);
+            Assert.AreEqual(20, index);
+            Assert.AreEqual(5, i);
+
+            i = 2;
+            index = PathComponentUtis.ParseIndex("  [30]", ref i);
+            Assert.AreEqual(30, index);
+            Assert.AreEqual(6, i);
+        }
+
+        [Test]
+        public void CheckParsePath()
+        {
+            List<PathComponent> components = new List<PathComponent>();
+
+            PathComponentUtis.ParsePath("entry", components);
+            Assert.AreEqual(1, components.Count);
+            Assert.AreEqual("entry", components[0].name);
+            Assert.AreEqual(0, components[0].index);
+
+            components.Clear();
+            PathComponentUtis.ParsePath("en-t.r_y", components);
+            Assert.AreEqual(1, components.Count);
+            Assert.AreEqual("en-t.r_y", components[0].name);
+            Assert.AreEqual(0, components[0].index);
+
+            components.Clear();
+            PathComponentUtis.ParsePath("entry[2]", components);
+            Assert.AreEqual(1, components.Count);
+            Assert.AreEqual("entry", components[0].name);
+            Assert.AreEqual(2, components[0].index);
+
+            components.Clear();
+            PathComponentUtis.ParsePath("entry01/entry02/entry03", components);
+            Assert.AreEqual(3, components.Count);
+            Assert.AreEqual("entry01", components[0].name);
+            Assert.AreEqual(0, components[0].index);
+            Assert.AreEqual("entry02", components[1].name);
+            Assert.AreEqual(0, components[1].index);
+            Assert.AreEqual("entry03", components[2].name);
+            Assert.AreEqual(0, components[2].index);
+
+            components.Clear();
+            PathComponentUtis.ParsePath("entry01[5]/entry02[10]", components);
+            Assert.AreEqual(2, components.Count);
+            Assert.AreEqual("entry01", components[0].name);
+            Assert.AreEqual(5, components[0].index);
+            Assert.AreEqual("entry02", components[1].name);
+            Assert.AreEqual(10, components[1].index);
+
+            components.Clear();
+            PathComponentUtis.ParsePath("../entry02[10]", components);
+            Assert.AreEqual(2, components.Count);
+            Assert.AreEqual("..", components[0].name);
+            Assert.AreEqual(-1, components[0].index);
+            Assert.AreEqual("entry02", components[1].name);
+            Assert.AreEqual(10, components[1].index);
+        }
 
         [Test]
         public void CheckPropertyString()
@@ -53,6 +203,24 @@ namespace JSBSim.Tests
         }
 
         [Test]
+        public void CheckPropertyName01()
+        {
+            PropertyManager propertyManager = new PropertyManager();
+
+            ClassWithProperties class1 = new ClassWithProperties();
+            class1.Bind("c1", propertyManager);
+
+            PropertyNode intNode1 = propertyManager.GetPropertyNode("/c1/AnIntProperty");
+            Assert.AreEqual("AnIntProperty", intNode1.GetName());
+            Assert.AreEqual("AnIntProperty", intNode1.GetPrintableName());
+            Assert.AreEqual("/c1/AnIntProperty", intNode1.GetFullyQualifiedName());
+            Assert.AreEqual("AnIntProperty", intNode1.GetDisplayName(true));
+            Assert.AreEqual("AnIntProperty[0]", intNode1.GetDisplayName(false));
+            Assert.AreEqual("/c1/AnIntProperty", intNode1.GetPath(true));
+            Assert.AreEqual("/c1[0]/AnIntProperty[0]", intNode1.GetPath(false));
+        }
+
+        [Test]
         public void CheckPropertyInt()
         {
             PropertyManager propertyManager = new PropertyManager();
@@ -64,7 +232,6 @@ namespace JSBSim.Tests
             intNode1.Set(10);
             Assert.AreEqual(10, intNode1.Get());
         }
-
         [Test]
         public void CheckPropertyDouble()
         {
@@ -105,29 +272,35 @@ namespace JSBSim.Tests
             PropertyNode intNode1 = propertyManager.GetPropertyNode("c1/AnIntProperty");
             PropertyNode doubleNode1 = propertyManager.GetPropertyNode("c1/ADoubleProperty");
             PropertyNode floatNode1 = propertyManager.GetPropertyNode("c1/AFloatProperty");
+            PropertyNode boolNode1 = propertyManager.GetPropertyNode("c1/ABoolProperty");
             stringNode1.Set("Hello World!");
             intNode1.Set(10);
             doubleNode1.Set(10.123);
             floatNode1.Set(10.321f);
+            boolNode1.Set(true);
 
             PropertyNode stringNode2 = propertyManager.GetPropertyNode("c2/AStringProperty");
             PropertyNode intNode2 = propertyManager.GetPropertyNode("c2/AnIntProperty");
             PropertyNode doubleNode2 = propertyManager.GetPropertyNode("c2/ADoubleProperty");
             PropertyNode floatNode2 = propertyManager.GetPropertyNode("c2/AFloatProperty");
+            PropertyNode boolNode2 = propertyManager.GetPropertyNode("c2/ABoolProperty");
             stringNode2.Set("Goodbye World!");
             intNode2.Set(20);
             doubleNode2.Set(20.123);
             floatNode2.Set(20.321f);
+            boolNode2.Set(true);
 
             Assert.AreEqual("Hello World!", stringNode1.Get());
             Assert.AreEqual(10, intNode1.Get());
             Assert.AreEqual(10.123, doubleNode1.Get());
             Assert.AreEqual(10.321f, floatNode1.Get());
+            Assert.AreEqual(true, boolNode1.Get());
 
             Assert.AreEqual("Goodbye World!", stringNode2.Get());
             Assert.AreEqual(20, intNode2.Get());
             Assert.AreEqual(20.123, doubleNode2.Get());
             Assert.AreEqual(20.321f, floatNode2.Get());
+            Assert.AreEqual(true, boolNode2.Get());
 
         }
 
@@ -143,15 +316,18 @@ namespace JSBSim.Tests
             PropertyNode intNode1 = propertyManager.GetPropertyNode("AnIntProperty");
             PropertyNode doubleNode1 = propertyManager.GetPropertyNode("ADoubleProperty");
             PropertyNode floatNode1 = propertyManager.GetPropertyNode("AFloatProperty");
+            PropertyNode boolNode1 = propertyManager.GetPropertyNode("ABoolProperty");
             stringNode1.Set("Hello World!");
             intNode1.Set(10);
             doubleNode1.Set(10.123);
             floatNode1.Set(10.321f);
+            boolNode1.Set(true);
 
             Assert.AreEqual("Hello World!", stringNode1.Get());
             Assert.AreEqual(10, intNode1.Get());
             Assert.AreEqual(10.123, doubleNode1.Get());
             Assert.AreEqual(10.321f, floatNode1.Get());
+            Assert.AreEqual(true, boolNode1.Get());
         }
 
         [Test]
@@ -388,6 +564,13 @@ namespace JSBSim.Tests
             set { this.propertyFloat = value; }
         }
 
+        [ScriptAttribute("ABoolProperty", "A Bool property")]
+        public bool PropertyBool
+        {
+            get { return this.propertyBool; }
+            set { this.propertyBool = value; }
+        }
+
         public int GetPropertyInt()
         {
             return this.propertyInt;
@@ -404,10 +587,11 @@ namespace JSBSim.Tests
         }
 
 
-        public int propertyInt;
+        private int propertyInt;
         private float propertyFloat;
         private double propertyDouble;
         private string propertyString;
+        private bool propertyBool;
     }
 
 

@@ -22,37 +22,37 @@
 
 namespace JSBSim.Tests
 {
-	using System;
-	using System.Xml;
-	using System.IO;
-	using System.Text;
+    using System;
+    using System.Xml;
+    using System.IO;
+    using System.Text;
 
-	using NUnit.Framework;
+    using NUnit.Framework;
 
-	using JSBSim;
-	using JSBSim.MathValues;
-	using JSBSim.InputOutput;
-	using JSBSim.Script;
+    using JSBSim;
+    using JSBSim.MathValues;
+    using JSBSim.InputOutput;
+    using JSBSim.Script;
 
-	/// <summary>
-	/// Some table Tests: load and access.
-	/// </summary>
-	[TestFixture]
-	public class TableTests
-	{
+    /// <summary>
+    /// Some table Tests: load and access.
+    /// </summary>
+    [TestFixture]
+    public class TableTests
+    {
         private const double tolerance = 10E-12;
 
         [Test]
-		public void CheckLoad2D()
-		{
-			string test = 
-				@"<?xml version=""1.0""?>
+        public void CheckLoad2D()
+        {
+            string test =
+                @"<?xml version=""1.0""?>
 				  <?xml-stylesheet href=""JSBSim.xsl"" type=""application/xml""?>
 				  <table>
-					<independentVar lookup=""row"">aero/alpha-rad</independentVar>
-					<independentVar lookup=""column"">fcs/flap-pos-deg</independentVar>
+					<independentVar lookup=""row"">fcs/row-value</independentVar>
+					<independentVar lookup=""column"">fcs/column-value</independentVar>
 					<tableData>
-						0.0000	1.0000	25.0000	40.0000	
+						        0.0000	1.0000	25.0000	40.0000	
 						-0.0873	0.0041	0.0000	0.0005	0.0014	
 						-0.0698	0.0013	0.0004	0.0025	0.0041	
 						-0.0524	0.0001	0.0023	0.0059	0.0084	
@@ -81,99 +81,99 @@ namespace JSBSim.Tests
 						0.3491	0.1097	0.1512	0.1744	0.1966	
 					</tableData>
 				</table>";
-			PropertyManager propMngr = new PropertyManager();
-			ClassWithPropertiesForTables class1 = new ClassWithPropertiesForTables("", propMngr);
+            PropertyManager propMngr = new PropertyManager();
+            ClassWithPropertiesForTables class1 = new ClassWithPropertiesForTables("", propMngr);
 
-			XmlElement elem = BuildXmlConfig(test);
-			Table table = new Table(propMngr,elem);
+            XmlElement elem = BuildXmlConfig(test);
+            Table table = new Table(propMngr, elem);
 
-			//Checks values
-			//0.3491	0.1097	0.1512	0.1744	0.1966
-			class1.alphaRad = 0.3491;
-			class1.flapPosDeg = 0.0000;
-			Assert.AreEqual(0.1097, table.GetValue(), tolerance);
+            //Checks values
+            //0.3491	0.1097	0.1512	0.1744	0.1966
+            class1.rowValue = 0.3491;
+            class1.columnValue = 0.0000;
+            Assert.AreEqual(0.1097, table.GetValue(), tolerance);
 
-			class1.flapPosDeg =	1.0000;
-			Assert.AreEqual(0.1512, table.GetValue(), tolerance);
+            class1.columnValue = 1.0000;
+            Assert.AreEqual(0.1512, table.GetValue(), tolerance);
 
-			class1.flapPosDeg =	25.0000;
-			Assert.AreEqual(0.1744, table.GetValue(), tolerance);
+            class1.columnValue = 25.0000;
+            Assert.AreEqual(0.1744, table.GetValue(), tolerance);
 
-			class1.flapPosDeg = 40.0000;
-			Assert.AreEqual(0.1966, table.GetValue(), tolerance);
+            class1.columnValue = 40.0000;
+            Assert.AreEqual(0.1966, table.GetValue(), tolerance);
 
-			//-0.0873	0.0041	0.0000	0.0005	0.0014
-			class1.alphaRad = -0.0873;
-			class1.flapPosDeg = 0.0000;
-			Assert.AreEqual(0.0041, table.GetValue(), tolerance);
+            //-0.0873	0.0041	0.0000	0.0005	0.0014
+            class1.rowValue = -0.0873;
+            class1.columnValue = 0.0000;
+            Assert.AreEqual(0.0041, table.GetValue(), tolerance);
 
-			class1.flapPosDeg =	1.0000;
-			Assert.AreEqual(0.0000, table.GetValue(), tolerance);
+            class1.columnValue = 1.0000;
+            Assert.AreEqual(0.0000, table.GetValue(), tolerance);
 
-			class1.flapPosDeg =	25.0000;
-			Assert.AreEqual(0.0005, table.GetValue(), tolerance);
+            class1.columnValue = 25.0000;
+            Assert.AreEqual(0.0005, table.GetValue(), tolerance);
 
-			class1.flapPosDeg = 40.0000;
-			Assert.AreEqual(0.0014, table.GetValue(), tolerance);
+            class1.columnValue = 40.0000;
+            Assert.AreEqual(0.0014, table.GetValue(), tolerance);
 
-			//0.1571	0.0962	0.1353	0.1573	0.1790
-			class1.alphaRad = 0.1571;
-			class1.flapPosDeg = 0.0000;
-			Assert.AreEqual(0.0962, table.GetValue(), tolerance);
+            //0.1571	0.0962	0.1353	0.1573	0.1790
+            class1.rowValue = 0.1571;
+            class1.columnValue = 0.0000;
+            Assert.AreEqual(0.0962, table.GetValue(), tolerance);
 
-			class1.flapPosDeg =	1.0000;
-			Assert.AreEqual(0.1353, table.GetValue(), tolerance);
+            class1.columnValue = 1.0000;
+            Assert.AreEqual(0.1353, table.GetValue(), tolerance);
 
-			class1.flapPosDeg =	25.0000;
-			Assert.AreEqual(0.1573, table.GetValue(), tolerance);
+            class1.columnValue = 25.0000;
+            Assert.AreEqual(0.1573, table.GetValue(), tolerance);
 
-			class1.flapPosDeg = 40.0000;
-			Assert.AreEqual(0.1790, table.GetValue(), tolerance);
-			
-			//checks limits
+            class1.columnValue = 40.0000;
+            Assert.AreEqual(0.1790, table.GetValue(), tolerance);
 
-			///Key underneath table
-			class1.alphaRad = -1.0;
-			class1.flapPosDeg = 40.0000;
-			Assert.AreEqual(0.0014, table.GetValue(), tolerance);
+            //checks limits
 
-			///Key over table
-			class1.alphaRad = 1.0;
-			Assert.AreEqual(0.1966, table.GetValue(), tolerance);
+            ///Key underneath table
+            class1.rowValue = -1.0;
+            class1.columnValue = 40.0000;
+            Assert.AreEqual(0.0014, table.GetValue(), tolerance);
 
-			///Key underneath table
-			class1.alphaRad = 0.3491;
-			class1.flapPosDeg = -1.0;
-			Assert.AreEqual(0.1097, table.GetValue(), tolerance);
+            ///Key over table
+            class1.rowValue = 1.0;
+            Assert.AreEqual(0.1966, table.GetValue(), tolerance);
 
-			///Key over table
-			class1.flapPosDeg = 50.0000;
-			Assert.AreEqual(0.1966, table.GetValue(), tolerance);
+            ///Key underneath table
+            class1.rowValue = 0.3491;
+            class1.columnValue = -1.0;
+            Assert.AreEqual(0.1097, table.GetValue(), tolerance);
 
-			//0.1396	0.0860	0.1232	0.1442	0.1654	
-			//0.1571	0.0962	0.1353	0.1573	0.1790
-			class1.alphaRad = (0.1396+0.1571)/2;
-			class1.flapPosDeg = 1.0;
-			Assert.AreEqual((0.1232+0.1353)/2, table.GetValue(), tolerance);
+            ///Key over table
+            class1.columnValue = 50.0000;
+            Assert.AreEqual(0.1966, table.GetValue(), tolerance);
 
-			class1.alphaRad = 0.1396;
-			class1.flapPosDeg = (1.0+25.0)/2;
-			Assert.AreEqual((0.1232+0.1442)/2, table.GetValue(), tolerance);
+            //0.1396	0.0860	0.1232	0.1442	0.1654	
+            //0.1571	0.0962	0.1353	0.1573	0.1790
+            class1.rowValue = (0.1396 + 0.1571) / 2;
+            class1.columnValue = 1.0;
+            Assert.AreEqual((0.1232 + 0.1353) / 2, table.GetValue(), tolerance);
 
-			class1.alphaRad = (0.1396+0.1571)/2;
-			class1.flapPosDeg = (1.0+25.0)/2;
-			Assert.AreEqual((0.1232+0.1442+0.1353+0.1573)/4, table.GetValue(), tolerance);
-		}
+            class1.rowValue = 0.1396;
+            class1.columnValue = (1.0 + 25.0) / 2;
+            Assert.AreEqual((0.1232 + 0.1442) / 2, table.GetValue(), tolerance);
+
+            class1.rowValue = (0.1396 + 0.1571) / 2;
+            class1.columnValue = (1.0 + 25.0) / 2;
+            Assert.AreEqual((0.1232 + 0.1442 + 0.1353 + 0.1573) / 4, table.GetValue(), tolerance);
+        }
 
 
-		[Test]
-		public void CheckLoad1D()
-		{
-			string test = 
-					@"<?xml version=""1.0""?>
+        [Test]
+        public void CheckLoad1D()
+        {
+            string test =
+                    @"<?xml version=""1.0""?>
 					<?xml-stylesheet href=""JSBSim.xsl"" type=""application/xml""?>
 					<table>
-                          <independentVar>aero/alpha-rad</independentVar>
+                          <independentVar>fcs/row-value</independentVar>
                           <tableData>
                               -0.2000	-0.6800	
                               0.0000	0.2000	
@@ -181,47 +181,108 @@ namespace JSBSim.Tests
                               0.6000	0.6000
                           </tableData>
                       </table>";
-			PropertyManager propMngr = new PropertyManager();
-			ClassWithPropertiesForTables class1 = new ClassWithPropertiesForTables("", propMngr);
+            PropertyManager propMngr = new PropertyManager();
+            ClassWithPropertiesForTables class1 = new ClassWithPropertiesForTables("", propMngr);
 
-			XmlElement elem = BuildXmlConfig(test);
-			Table table = new Table(propMngr,elem);
-			
-			//Checks values
-			class1.alphaRad = -0.2000;
-			Assert.AreEqual(-0.6800, table.GetValue());
+            XmlElement elem = BuildXmlConfig(test);
+            Table table = new Table(propMngr, elem);
 
-			class1.alphaRad = 0.0000;
-			Assert.AreEqual(0.2000, table.GetValue(), tolerance);
+            //Checks values
+            class1.rowValue = -0.2000;
+            Assert.AreEqual(-0.6800, table.GetValue());
 
-			class1.alphaRad = 0.2300;
-			Assert.AreEqual(1.2000, table.GetValue(), tolerance);
+            class1.rowValue = 0.0000;
+            Assert.AreEqual(0.2000, table.GetValue(), tolerance);
 
-			class1.alphaRad = 0.6000;
-			Assert.AreEqual(0.6000, table.GetValue(), tolerance);
+            class1.rowValue = 0.2300;
+            Assert.AreEqual(1.2000, table.GetValue(), tolerance);
 
-			//Checks interpolation
-			class1.alphaRad = (0.6000+0.2300)/2;
-			Assert.AreEqual((0.6000+1.2000)/2, table.GetValue(), tolerance);
+            class1.rowValue = 0.6000;
+            Assert.AreEqual(0.6000, table.GetValue(), tolerance);
 
-			//checks limits
+            //Checks interpolation
+            class1.rowValue = (0.6000 + 0.2300) / 2;
+            Assert.AreEqual((0.6000 + 1.2000) / 2, table.GetValue(), tolerance);
 
-			///Key underneath table
-			class1.alphaRad = -1.0;
-			Assert.AreEqual(-0.6800, table.GetValue(), tolerance);
+            //checks limits
 
-			///Key over table
-			class1.alphaRad = 1.0;
-			Assert.AreEqual(0.6000, table.GetValue(), tolerance);
-		}
+            ///Key underneath table
+            class1.rowValue = -1.0;
+            Assert.AreEqual(-0.6800, table.GetValue(), tolerance);
 
-
+            ///Key over table
+            class1.rowValue = 1.0;
+            Assert.AreEqual(0.6000, table.GetValue(), tolerance);
+        }
 
 
+        [Test]
+        public void CheckLoad3D()
+        {
+            string test =
+                    @"<?xml version=""1.0""?>
+					<?xml-stylesheet href=""JSBSim.xsl"" type=""application/xml""?>
+					<table>
+                         <independentVar lookup=""row"">fcs/row-value</independentVar>
+                         <independentVar lookup=""column"">fcs/column-value</independentVar>
+                         <independentVar lookup=""table"">fcs/table-value</independentVar>
+                         <tableData breakPoint=""-1.0"">
+                                  -1.0     1.0
+                           0.0     1.0000  2.0000
+                           1.0     3.0000  4.0000
+                         </tableData>
+                         <tableData breakPoint=""0.0000"">
+                                   0.0     10.0
+                           2.0     1.0000  2.0000
+                           3.0     3.0000  4.0000
+                         </tableData>
+                         <tableData breakPoint=""1.0"">
+                                  0.0     10.0     20.0
+                            2.0   1.0000   2.0000   3.0000
+                            3.0   4.0000   5.0000   6.0000
+                           10.0   7.0000   8.0000   9.0000
+                         </tableData>
+                    </table>";
+            PropertyManager propMngr = new PropertyManager();
+            ClassWithPropertiesForTables class1 = new ClassWithPropertiesForTables("", propMngr);
+
+            XmlElement elem = BuildXmlConfig(test);
+            Table table = new Table(propMngr, elem);
+
+            //Checks values
+            class1.rowValue = -0.2000;
+            class1.rowValue = -0.2000;
+            Assert.AreEqual(-0.6800, table.GetValue());
+
+            class1.rowValue = 0.0000;
+            Assert.AreEqual(0.2000, table.GetValue(), tolerance);
+
+            class1.rowValue = 0.2300;
+            Assert.AreEqual(1.2000, table.GetValue(), tolerance);
+
+            class1.rowValue = 0.6000;
+            Assert.AreEqual(0.6000, table.GetValue(), tolerance);
+
+            //Checks interpolation
+            class1.rowValue = (0.6000 + 0.2300) / 2;
+            Assert.AreEqual((0.6000 + 1.2000) / 2, table.GetValue(), tolerance);
+
+            //checks limits
+
+            ///Key underneath table
+            class1.rowValue = -1.0;
+            Assert.AreEqual(-0.6800, table.GetValue(), tolerance);
+
+            ///Key over table
+            class1.rowValue = 1.0;
+            Assert.AreEqual(0.6000, table.GetValue(), tolerance);
+        }
 
 
-		private XmlElement BuildXmlConfig(string config)
-		{
+
+
+        private XmlElement BuildXmlConfig(string config)
+        {
             XmlDocument doc = new XmlDocument();
             Stream configStream = new MemoryStream(Encoding.Unicode.GetBytes(config));
 
@@ -229,39 +290,46 @@ namespace JSBSim.Tests
             // load the data into the dom
             doc.Load(xmlReader);
             xmlReader.Close();
-            
+
             XmlNodeList childNodes = doc.GetElementsByTagName("table");
 
-			return childNodes[0] as XmlElement;
-		}
-	}
-	
-	/// <summary>
-	///  A class with some properties to be tested within table.
-	/// </summary>
-	public class ClassWithPropertiesForTables
-	{		
-		public ClassWithPropertiesForTables(string path, PropertyManager propMngr)
-		{
-			propMngr.Bind(path, this);
-		}
+            return childNodes[0] as XmlElement;
+        }
+    }
 
-		[ScriptAttribute("aero/alpha-rad", "A test property")]
-		public double AlphaRad
-		{
-			get { return this.alphaRad; }
-			set { this.alphaRad = value; }
-		}
+    /// <summary>
+    ///  A class with some properties to be tested within table.
+    /// </summary>
+    public class ClassWithPropertiesForTables
+    {
+        public ClassWithPropertiesForTables(string path, PropertyManager propMngr)
+        {
+            propMngr.Bind(path, this);
+        }
 
-		[ScriptAttribute("fcs/flap-pos-deg", "A test property")]
-		public double FlapPosDeg
-		{
-			get { return this.flapPosDeg; }
-			set { this.flapPosDeg = value; }
-		}
+        [ScriptAttribute("fcs/row-value", "A test property")]
+        public double RowValue
+        {
+            get { return this.rowValue; }
+            set { this.rowValue = value; }
+        }
 
+        [ScriptAttribute("fcs/column-value", "A test property")]
+        public double ColumnValue
+        {
+            get { return this.columnValue; }
+            set { this.columnValue = value; }
+        }
 
-		public double alphaRad = 1.0;
-		public double flapPosDeg = 1.0;
-	}
+        [ScriptAttribute("fcs/table-value", "A test property")]
+        public double TableValue
+        {
+            get { return this.tableValue; }
+            set { this.tableValue = value; }
+        }
+
+        public double rowValue = 1.0;
+        public double columnValue = 1.0;
+        public double tableValue = 1.0;
+    }
 }

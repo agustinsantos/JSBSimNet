@@ -601,19 +601,19 @@ namespace JSBSim.Models.Propulsion
                         string name = tmpElem.GetAttribute("name");
                         if (name.Equals("IdleThrust"))
                         {
-                            IdleThrustLookup = new Function(exec.PropertyManager, tmpElem, property_prefix);
+                            IdleThrustLookup = new Function(exec, tmpElem, property_prefix);
                         }
                         else if (name.Equals("MilThrust"))
                         {
-                            MilThrustLookup = new Function(exec.PropertyManager, tmpElem, property_prefix);
+                            MilThrustLookup = new Function(exec, tmpElem, property_prefix);
                         }
                         else if (name.Equals("AugThrust"))
                         {
-                            MaxThrustLookup = new Function(exec.PropertyManager, tmpElem, property_prefix);
+                            MaxThrustLookup = new Function(exec, tmpElem, property_prefix);
                         }
                         else if (name.Equals("Injection"))
                         {
-                            InjectionLookup = new Function(exec.PropertyManager, tmpElem, property_prefix);
+                            InjectionLookup = new Function(exec, tmpElem, property_prefix);
                         }
                         else
                         {
