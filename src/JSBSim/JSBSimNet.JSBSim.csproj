@@ -152,6 +152,7 @@
     <Compile Include="InputOutput\PropertyNode.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="InputOutput\PropertyReader.cs" />
     <Compile Include="InputOutput\PropertyTreeNode.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -174,6 +175,7 @@
     <Compile Include="MathValues\IParameter.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="MathValues\ParameterValue.cs" />
     <Compile Include="MathValues\PropertyValue.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -202,6 +204,7 @@
     <Compile Include="Models\Atmosphere\MSISData.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Models\Atmosphere\StandardAtmosphere.cs" />
     <Compile Include="Models\Auxiliary.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -259,6 +262,8 @@
     <Compile Include="Models\Model.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Models\ModelFunctions.cs" />
+    <Compile Include="Models\ModelLoader.cs" />
     <Compile Include="Models\Output.cs">
       <SubType>Code</SubType>
     </Compile>

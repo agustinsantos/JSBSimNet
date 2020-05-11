@@ -89,7 +89,7 @@ namespace JSBSim.Models
 		/// Runs the Aircraft model; called by the Executive
 		/// </summary>
 		/// <returns>false if no error</returns>
-        public override bool Run()
+        public override bool Run(bool Holding)
         {
             if (InternalRun()) return true;
             if (FDMExec.Holding()) return false; // if paused don't execute

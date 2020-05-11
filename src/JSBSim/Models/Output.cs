@@ -106,7 +106,7 @@ namespace JSBSim.Models
 			delimeter = ", ";
 		}
 
-        public override bool Run()
+        public override bool Run(bool Holding)
         {
             //if (log.IsInfoEnabled)
             //    log.Info("Entering Run() for model " + name + "rate =" + rate);
@@ -313,7 +313,7 @@ namespace JSBSim.Models
 			{
 				outstream.Write(delimeter);
 				outstream.Write(FDMExec.Atmosphere.Density.ToString(formatDouble, provider) + delimeter);
-				outstream.Write(FDMExec.Atmosphere.GetWindNED().ToString(formatDouble, provider));
+				//outstream.Write(FDMExec.Atmosphere.GetWindNED().ToString(formatDouble, provider));
 			}
 			if (SubSystems[(int)eSubSystems.MassProps]) 
 			{
@@ -454,7 +454,7 @@ namespace JSBSim.Models
 			{
 				log.Info("Atmosphere");
 				log.Info("Rho :" + FDMExec.Atmosphere.Density);
-				log.Info("NED Wind" + FDMExec.Atmosphere.GetWindNED());
+				//log.Info("NED Wind" + FDMExec.Atmosphere.GetWindNED());
 			}
 			if (SubSystems[(int)eSubSystems.MassProps])
 			{

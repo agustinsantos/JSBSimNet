@@ -1,5 +1,5 @@
 ﻿#region Copyright(C)  Licensed under GNU GPL.
-/// Copyright (C) 2005-2006 Agustin Santos Mendez
+/// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
 /// David Megginson. 
@@ -18,17 +18,18 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+/// 
+/// Further information about the GNU Lesser General Public License can also be found on
+/// the world wide web at http://www.gnu.org.
 #endregion
-
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-// Import log4net classes.
-using log4net;
-
 namespace JSBSim.Models
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Text;
+
+    // Import log4net classes.
+    using log4net;
 
     /// <summary>
     /// Models the MSIS-00 atmosphere.
@@ -68,95 +69,98 @@ namespace JSBSim.Models
             : base(exec)
         {
             Name = "MSIS";
+            for (int i = 0; i < 9; i++) output.d[i] = 0.0;
+            for (int i = 0; i < 2; i++) output.t[i] = 0.0;
+
+            dm04 = dm16 = dm28 = dm32 = dm40 = dm01 = dm14 = dfa = 0.0;
+
+            for (int i = 0; i < 5; i++) meso_tn1[i] = 0.0;
+            for (int i = 0; i < 4; i++) meso_tn2[i] = 0.0;
+            for (int i = 0; i < 5; i++) meso_tn3[i] = 0.0;
+            for (int i = 0; i < 2; i++) meso_tgn1[i] = 0.0;
+            for (int i = 0; i < 2; i++) meso_tgn2[i] = 0.0;
+            for (int i = 0; i < 2; i++) meso_tgn3[i] = 0.0;
+
+            //Debug(0);
         }
 
         /** Runs the MSIS-00 atmosphere model; called by the Executive
       @return false if no error */
-        public override bool Run()
+        public override bool Run(bool Holding)
         {
-            if (InternalRun()) return true;
-            if (FDMExec.Holding()) return false;
+            if (base.Run(Holding)) return true;
+            if (Holding) return false;
 
+            double h = FDMExec.Propagate.GeAltitudeASL();
 
             //do temp, pressure, and density first
-            if (!useExternal)
-            {
-                // get sea-level values
-                Calculate(FDMExec.Auxiliary.GetDayOfYear(),
-                          FDMExec.Auxiliary.GetSecondsInDay(),
-                          0.0,
-                          FDMExec.Propagate.GetLocation().LatitudeDeg,
-                          FDMExec.Propagate.GetLocation().LongitudeDeg);
-                SLtemperature = output.t[1] * 1.8;
-                SLdensity = output.d[5] * 1.940321;
-                SLpressure = 1716.488 * SLdensity * SLtemperature;
-                SLsoundspeed = Math.Sqrt(2403.0832 * SLtemperature);
-                rSLtemperature = 1.0 / SLtemperature;
-                rSLpressure = 1.0 / SLpressure;
-                rSLdensity = 1.0 / SLdensity;
-                rSLsoundspeed = 1.0 / SLsoundspeed;
+            //if (!useExternal) {
+            // get sea-level values
+            Calculate(FDMExec.Auxiliary.GetDayOfYear(),
+                      FDMExec.Auxiliary.GetSecondsInDay(),
+                      0.0,
+                      FDMExec.Propagate.GetLocation().LatitudeDeg,
+                      FDMExec.Propagate.GetLocation().LongitudeDeg);
+            SLtemperature = output.t[1] * 1.8;
+            SLdensity = output.d[5] * 1.940321;
+            SLpressure = 1716.488 * SLdensity * SLtemperature;
+            SLsoundspeed = Math.Sqrt(2403.0832 * SLtemperature);
 
-                // get at-altitude values
-                Calculate(FDMExec.Auxiliary.GetDayOfYear(),
-                          FDMExec.Auxiliary.GetSecondsInDay(),
-                          FDMExec.Propagate.Altitude,
-                          FDMExec.Propagate.GetLocation().LatitudeDeg,
-                          FDMExec.Propagate.GetLocation().LongitudeDeg);
-                internalInfo.Temperature = output.t[1] * 1.8;
-                internalInfo.Density = output.d[5] * 1.940321;
-                internalInfo.Pressure = 1716.488 * internalInfo.Density * internalInfo.Temperature;
-                soundspeed = Math.Sqrt(2403.0832 * internalInfo.Temperature);
-                //cout << "T=" << intTemperature << " D=" << intDensity << " P=";
-                //cout << intPressure << " a=" << soundspeed << endl;
-            }
+            // get at-altitude values
+            Calculate(FDMExec.Auxiliary.GetDayOfYear(),
+                      FDMExec.Auxiliary.GetSecondsInDay(),
+                      h,
+                      FDMExec.Propagate.GetLocation().LatitudeDeg,
+                      FDMExec.Propagate.GetLocation().LongitudeDeg);
+            //intTemperature = output.t[1] * 1.8;
+            //intDensity     = output.d[5] * 1.940321;
+            //intPressure    = 1716.488 * intDensity * intTemperature;
+            //cout << "T=" << intTemperature << " D=" << intDensity << " P=";
+            //cout << intPressure << " a=" << soundspeed << endl;
+            //}
 
-            if (turbType != TurbType.ttNone)
-            {
-                Turbulence();
-                vWindNED += vTurbulence;
-            }
-
-            if (vWindNED[0] != 0.0)
-                psiw = Math.Atan2(vWindNED[1], vWindNED[0]);
-
-            if (psiw < 0) psiw += 2 * Math.PI;
+            // Debug(2);
 
             return false;
         }
 
         public override bool InitModel()
         {
-            base.InitModel();
+            {
+                int i;
 
-            flags.switches[0] = 0;
-            for (int i = 1; i < 24; i++) flags.switches[i] = 1;
+                flags.switches[0] = 0;
+                flags.sw[0] = 0;
+                flags.swc[0] = 0;
+                for (i = 1; i < 24; i++)
+                {
+                    flags.switches[i] = 1;
+                    flags.sw[i] = 1;
+                    flags.swc[i] = 1;
+                }
 
-            for (int i = 0; i < 7; i++) aph.a[i] = 100.0;
+                for (i = 0; i < 7; i++) aph.a[i] = 100.0;
 
-            // set some common magnetic flux values
-            input.f107A = 150.0;
-            input.f107 = 150.0;
-            input.ap = 4.0;
+                // set some common magnetic flux values
+                input.f107A = 150.0;
+                input.f107 = 150.0;
+                input.ap = 4.0;
 
-            SLtemperature = internalInfo.Temperature = 518.0;
-            SLpressure = internalInfo.Pressure = 2116.7;
-            SLdensity = internalInfo.Density = 0.002378;
-            SLsoundspeed = Math.Sqrt(2403.0832 * SLtemperature);
-            rSLtemperature = 1.0 / internalInfo.Temperature;
-            rSLpressure = 1.0 / internalInfo.Pressure;
-            rSLdensity = 1.0 / internalInfo.Density;
-            rSLsoundspeed = 1.0 / SLsoundspeed;
+                //  UseInternal();
 
-            useInfo = internalInfo;
+                //  SLtemperature = intTemperature = 518.0;
+                //  SLpressure    = intPressure = 2116.7;
+                //  SLdensity     = intDensity = 0.002378;
+                //  SLsoundspeed  = sqrt(2403.0832 * SLtemperature);
 
-            useExternal = false;
-
-            return true;
+                return true;
+            }
         }
 
         /// Does nothing. External control is not allowed.
-        public override void UseExternal()
+        public void UseExternal()
         {
+            // do nothing, external control not allowed
         }
 
 
@@ -1622,6 +1626,21 @@ namespace JSBSim.Models
                     output.d[i] = output.d[i] * 1.0E6;
                 output.d[5] = output.d[5] / 1000;
             }
+        }
+
+        public override double GetTemperature(double altitude)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void SetTemperature(double t, double h, eTemperature unit = eTemperature.eFahrenheit)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override double GetPressure(double altitude)
+        {
+            throw new NotImplementedException();
         }
     }
 

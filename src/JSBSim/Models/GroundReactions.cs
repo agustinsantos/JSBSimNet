@@ -62,7 +62,7 @@ namespace JSBSim.Models
 				log.Debug("Instantiated: GroundReactions.");
 		}
 
-        public override bool Run()
+        public override bool Run(bool Holding)
         {
             if (InternalRun()) return true;
             if (FDMExec.Holding()) return false; // if paused don't execute

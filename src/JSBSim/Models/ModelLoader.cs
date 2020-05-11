@@ -22,20 +22,18 @@
 /// Further information about the GNU Lesser General Public License can also be found on
 /// the world wide web at http://www.gnu.org.
 #endregion
-
 namespace JSBSim.Models
 {
     using System;
-    using System.Collections.Generic;
-    using System.Text;
 
     // Import log4net classes.
     using log4net;
+    using JSBSim.InputOutput;
+    using System.Xml;
+    using System.Collections.Generic;
+    using System.IO;
 
-    using JSBSim.Models;
-    using CommonUtils.MathLib;
-
-    public class Mars : Atmosphere
+    public class ModelLoader
     {
         /// <summary>
         /// Define a static logger variable so that it references the
@@ -48,51 +46,60 @@ namespace JSBSim.Models
         /// </summary>
         private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        public Mars(FDMExecutive exec)
-            : base(exec)
-        {
-            Name = "Mars";
-            Reng = 53.5 * 44.01;
 
-            Bind();
-            //Debug(0);
+        public ModelLoader(Model _model)
+        {
+            model = _model;
         }
-
-        public override double GetPressure(double altitude)
+        public XmlElement Open(XmlElement el)
         {
-            throw new NotImplementedException();
-        }
+            XmlElement document = el;
+            string fname = el.GetAttribute("file");
 
-        public override double GetTemperature(double altitude)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void SetTemperature(double t, double h, eTemperature unit = eTemperature.eFahrenheit)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void Calculate(double altitude)
-        {
-            //Calculate reftemp, refpress, and density
-
-            // LIMIT the temperatures so they do not descend below absolute zero.
-
-            if (altitude < 22960.0)
+            if (!string.IsNullOrEmpty(fname))
             {
-                temperature = -25.68 - 0.000548 * altitude; // Deg Fahrenheit
-            }
-            else
-            {
-                temperature = -10.34 - 0.001217 * altitude; // Deg Fahrenheit
-            }
-            pressure = 14.62 * Math.Exp(-0.00003 * altitude); // psf - 14.62 psf =~ 7 millibars
-            density = Pressure / (Reng * Temperature); // slugs/ft^3 (needs deg R. as input
+                string path = fname;
 
-            //cout << "Atmosphere:  h=" << altitude << " rho= " << intDensity << endl;
+                if (!Path.IsPathRooted(path))
+                    path = model.FindFullPathName(path);
+
+                if (cachedFiles.ContainsKey(path))
+                    document = cachedFiles[path];
+                else
+                {
+                    XmlDocument doc = new XmlDocument();
+                    try
+                    {
+                        doc.Load(path);
+                    }
+                    catch
+                    {
+                        log.Error("Could not open file: " + fname);
+                        return null;
+                    }
+                    cachedFiles[path] = document;
+                }
+
+                if (document.Name != el.Name)
+                {
+                    el.AppendChild(document);
+                }
+            }
+
+            return document;
+        }
+        public static string CheckPathName(string path, string filename)
+        {
+            string fullName = Path.Combine(path, filename);
+
+            if (Path.GetExtension(fullName) != "xml")
+                fullName += ".xml";
+
+            return File.Exists(fullName) ? fullName : "";
         }
 
-        //private void Debug(int from);
-    }
+        private Model model;
+        private Dictionary<string, XmlElement> cachedFiles = new Dictionary<string, XmlElement>();
+    };
 }
+

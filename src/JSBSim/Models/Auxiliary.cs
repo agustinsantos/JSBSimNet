@@ -123,7 +123,7 @@ namespace JSBSim.Models
 		/// Runs the Auxiliary routines; called by the Executive
 		/// </summary>
 		/// <returns>false if no error</returns>
-        public override bool Run()
+        public override bool Run(bool Holding)
         {
             double A, B, D, hdot_Vt;
             Vector3D vPQR = FDMExec.Propagate.GetPQR();
@@ -152,11 +152,11 @@ namespace JSBSim.Models
                 vEulerRates.Phi = vPQR.eP + vEulerRates.Psi * sPhi;
             }
 
-            vAeroPQR = vPQR + FDMExec.Atmosphere.TurbPQR;
+          //TODO  vAeroPQR = vPQR + FDMExec.Atmosphere.TurbPQR;
 
             // Translation
 
-            vAeroUVW = vUVW + FDMExec.Propagate.GetTl2b() * FDMExec.Atmosphere.GetWindNED();
+            //vAeroUVW = vUVW + FDMExec.Propagate.GetTl2b() * FDMExec.Atmosphere.GetWindNED();
 
             vt = vAeroUVW.GetMagnitude();
             if (vt > 0.05)
@@ -544,27 +544,33 @@ namespace JSBSim.Models
 
 		public double GetHeadWind()
 		{
-			double psiw,vw;
+#if TODO
+            double psiw,vw;
 
 			psiw = FDMExec.Atmosphere.WindPsi;
 			vw = FDMExec.Atmosphere.GetWindNED().GetMagnitude();
 
 			return vw*Math.Cos(psiw - FDMExec.Propagate.GetEuler((int)EulerAngleType.ePsi));
+#endif 
+            throw new NotImplementedException();
 		}
 
 		public double GetCrossWind()
 		{
-			double psiw,vw;
+#if TODO
+            double psiw,vw;
 
-			psiw = FDMExec.Atmosphere.WindPsi;
-			vw = FDMExec.Atmosphere.GetWindNED().GetMagnitude();
+             psiw = FDMExec.Atmosphere.WindPsi;
+            vw = FDMExec.Atmosphere.GetWindNED().GetMagnitude();
 
-			return  vw*Math.Sin(psiw - FDMExec.Propagate.GetEuler((int)EulerAngleType.ePsi));
-		}
+            return vw *Math.Sin(psiw - FDMExec.Propagate.GetEuler((int)EulerAngleType.ePsi));
+#endif
+            throw new NotImplementedException();
+        }
 
-		// SET functions
+        // SET functions
 
-		public void SetAeroUVW(Vector3D tt) { vAeroUVW = tt; }
+        public void SetAeroUVW(Vector3D tt) { vAeroUVW = tt; }
 
 		public void SetAB    (double t1, double t2) { alpha=t1; beta=t2; }
 

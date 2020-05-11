@@ -126,16 +126,16 @@ namespace JSBSim
 		/// <param name="initCond">an initial conditions object.</param>
 		public void Initialize(InitialCondition initCond)
 		{
+#if TODO
 			sim_time = 0.0;
 
 			FDMExec.Propagate.SetInitialState( initCond );
-
-			FDMExec.Atmosphere.Run();
+            FDMExec.Atmosphere.Run(false);
 			FDMExec.Atmosphere.SetWindNED( initCond.WindNFpsIC,
 				initCond.WindEFpsIC,
 				initCond.WindDFpsIC);
 
-			Vector3D vAeroUVW;
+            Vector3D vAeroUVW;
 			vAeroUVW = FDMExec.Propagate.GetUVW() + FDMExec.Propagate.GetTl2b()*FDMExec.Atmosphere.GetWindNED();
 
 			double alpha, beta;
@@ -158,6 +158,8 @@ namespace JSBSim
 
 			double qbar = 0.5*Vt*Vt*FDMExec.Atmosphere.Density;
 			FDMExec.Auxiliary.Qbar = qbar;
+#endif 
+            throw new NotImplementedException();
 		} 
 
 

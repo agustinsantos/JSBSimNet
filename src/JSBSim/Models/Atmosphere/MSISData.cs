@@ -1,5 +1,5 @@
 ﻿#region Copyright(C)  Licensed under GNU GPL.
-/// Copyright (C) 2005-2006 Agustin Santos Mendez
+/// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
 /// David Megginson. 
@@ -18,12 +18,10 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+/// 
+/// Further information about the GNU Lesser General Public License can also be found on
+/// the world wide web at http://www.gnu.org.
 #endregion
-
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace JSBSim.Models
 {
     /// <summary>
@@ -324,7 +322,7 @@ namespace JSBSim.Models
     -2.22432E-03,-3.93895E-01, 0.00000E+00, 0.00000E+00, 0.00000E+00,
      0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
      0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
-     0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00 
+     0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00
 }, /* HOT O DENSITY */ new double[150]{
      6.04050E-02, 1.57034E+00, 2.99387E-02, 0.00000E+00, 0.00000E+00,
      0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,-1.51018E+00,
@@ -338,7 +336,7 @@ namespace JSBSim.Models
     -9.45934E-02, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
      0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
      0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
-     0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 
+     0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
      0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
      0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
      0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
@@ -397,7 +395,7 @@ namespace JSBSim.Models
      4.63830E+00, 1.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
      0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
      0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
-     0.00000E+00, 0.00000E+00, 1.28840E+00, 3.10302E-02, 1.18339E-01 }, 
+     0.00000E+00, 0.00000E+00, 1.28840E+00, 3.10302E-02, 1.18339E-01 },
    { 1.00000E+00, 7.00000E-01, 1.15020E+00, 3.44689E+00, 1.28840E+00,
      1.00000E+00, 1.08738E+00, 1.22947E+00, 1.10016E+00, 7.34129E-01,
      1.15241E+00, 2.22784E+00, 7.95046E-01, 4.01612E+00, 4.47749E+00,

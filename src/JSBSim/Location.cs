@@ -1,5 +1,5 @@
 ﻿#region Copyright(C)  Licensed under GNU GPL.
-/// Copyright (C) 2005-2006 Agustin Santos Mendez
+/// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
 /// David Megginson. 
@@ -18,6 +18,9 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+/// 
+/// Further information about the GNU Lesser General Public License can also be found on
+/// the world wide web at http://www.gnu.org.
 #endregion
 
 namespace JSBSim
@@ -65,11 +68,9 @@ namespace JSBSim
     /// The cartesian coordinates (X, Y, Z) in the Earth centered frame are the master
     /// values. All other values are computed from these master values and are
     /// cached as long as the location is changed by access through a non-const
-    /// 
     /// member function. Values are cached to improve performance. It is best
     /// practice to work with a natural set of master values.Other parameters that
     /// are derived from these master values are calculated only when needed, and IF
-    ///
     /// they are needed and calculated, then they are cached (stored and remembered)
     /// so they do not need to be re-calculated until the master values they are
     /// derived from are themselves changed(and become stale).
@@ -115,7 +116,7 @@ namespace JSBSim
     /// 
     /// this code is based on FGLocation class written by Jon S. Berndt, Mathias Froehlich
     /// </summary>
-    public class Location
+    public class Location: ICloneable 
     {
         /// <summary>
         /// Define a static logger variable so that it references the
@@ -193,6 +194,39 @@ namespace JSBSim
             mECLoc = new Vector3D(radius * cosLat * cosLon,
                                   radius * cosLat * sinLon,
                                   radius * sinLat);
+        }
+
+        /// <summary>
+        /// Copy constructor.
+        /// </summary>
+        /// <param name="l"></param>
+        public Location(Location l)
+        {
+            mECLoc = l.mECLoc; mCacheValid = l.mCacheValid;
+            a = l.a;
+            e2 = l.e2;
+            c = l.c;
+            ec = l.ec;
+            ec2 = l.ec2;
+            mEllipseSet = l.mEllipseSet;
+
+            /*ag
+             * if the cache is not valid, all of the following values are unset.
+             * They will be calculated once ComputeDerivedUnconditional is called.
+             * If unset, they may possibly contain NaN and could thus trigger floating
+             * point exceptions.
+             */
+            if (!mCacheValid) return;
+
+            mLon = l.mLon;
+            mLat = l.mLat;
+            mRadius = l.mRadius;
+
+            mTl2ec = l.mTl2ec;
+            mTec2l = l.mTec2l;
+
+            mGeodLat = l.mGeodLat;
+            GeodeticAltitude = l.GeodeticAltitude;
         }
 
         /// <summary>
@@ -299,6 +333,14 @@ namespace JSBSim
                 mECLoc.Z = r * Math.Sin(value);
             }
         }
+
+        /// <summary>
+        ///  Get the geodetic latitude.
+        ///  return the geodetic latitude in rad of the location represented with this
+        ///  class instance. The returned values are in the range between
+        ///  -pi/2 <= lon <= pi/2. Latitude is positive north and negative south.
+        /// </summary>
+        public double GeodLatitudeRad { get { ComputeDerived(); return mGeodLat; } }
 
         /// <summary>
         /// Get the latitude
@@ -455,6 +497,30 @@ namespace JSBSim
             c = a * e2;
         }
 
+        /// <summary>
+        /// Read access the entries of the vector.
+        /// Indices are counted starting with 1.
+        /// Note that the index given in the argument is unchecked.
+        /// </summary>
+        /// <param name="index">the component index</param>
+        /// <returns>the value of the matrix entry at the given index.</returns>
+        public double this[int idx]
+        {
+            get { return mECLoc[idx - 1]; }
+            set { mCacheValid = false; mECLoc[idx - 1] = value; }
+        }
+
+        /// <summary>
+        ///  Read access the entries of the vector.
+        ///  Indices are counted starting with 1.
+        ///  used internally to access the elements in a more convenient way.
+        ///  Note that the index given in the argument is unchecked.
+        /// </summary>
+        /// <param name=""></param>
+        /// <param name="idx">idx the component index.</param>
+        /// <returns>the value of the matrix entry at the given index.</returns>
+        public double Entry(int idx) { return mECLoc[idx - 1]; }
+
 
         /// <summary>
         /// Subtract two locations.
@@ -576,7 +642,7 @@ namespace JSBSim
             // it also gives the correct result for a spherical Earth.
             if (mEllipseSet)
             {
-                double s0 = Math.Abs(mECLoc.eZ );
+                double s0 = Math.Abs(mECLoc.eZ);
                 double zc = ec * s0;
                 double c0 = ec * rxy;
                 double c02 = c0 * c0;
@@ -738,11 +804,48 @@ namespace JSBSim
             return location != null &&
                    EqualityComparer<Vector3D>.Default.Equals(mECLoc, location.mECLoc);
         }
+        public static bool operator ==(Location leftSide, Location rightSide)
+        {
+            if (Object.Equals(leftSide, null) == true)
+            {
+                return Object.Equals(rightSide, null);
+            }
 
+            if (Object.Equals(rightSide, null) == true)
+            {
+                return Object.Equals(leftSide, null);
+            }
+
+            return leftSide.mECLoc == rightSide.mECLoc;
+        }
+
+        public static bool operator !=(Location leftSide, Location rightSide)
+        {
+            return !(leftSide == rightSide);
+        }
         public override int GetHashCode()
         {
             return -2012594870 + EqualityComparer<Vector3D>.Default.GetHashCode(mECLoc);
         }
+
+        #region ICloneable Members
+        /// <summary>
+        /// Creates a new object that is a copy of the current instance.
+        /// </summary>
+        /// <returns>A new object that is a copy of this instance.</returns>
+        object ICloneable.Clone()
+        {
+            return new Location(this);
+        }
+        /// <summary>
+        /// Creates a new object that is a copy of the current instance.
+        /// </summary>
+        /// <returns>A new object that is a copy of this instance.</returns>
+        public Location Clone()
+        {
+            return new Location(this);
+        }
+        #endregion
 
         /// <summary>
         /// Converts the Vector3D to a location.

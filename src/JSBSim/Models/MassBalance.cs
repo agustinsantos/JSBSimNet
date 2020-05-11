@@ -58,7 +58,7 @@ namespace JSBSim.Models
 		}
 
 
-        public override bool Run()
+        public override bool Run(bool Holding)
         {
             double denom, k1, k2, k3, k4, k5, k6;
             double Ixx, Iyy, Izz, Ixy, Ixz, Iyz;

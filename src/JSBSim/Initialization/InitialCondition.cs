@@ -418,7 +418,7 @@ namespace JSBSim
             {
                 altitude = value;
                 fdmex.Propagate.Altitude = altitude;
-                fdmex.Atmosphere.Run();
+                fdmex.Atmosphere.Run(false);
                 //lets try to make sure the user gets what they intended
 
                 switch (lastSpeedSet)

@@ -80,7 +80,7 @@ namespace JSBSim.Models.Propulsion
 		/// [Note: Should we be checking the Starved flag here?]
 		/// </summary>
 		/// <returns></returns>
-		public override bool Run()
+		public override bool Run(bool Holding)
 		{
             if (InternalRun()) return true;
             if (FDMExec.Holding()) return false; // if paused don't execute

@@ -378,6 +378,47 @@ namespace CommonUtils.MathLib
 			M33 /= scalar;
 		}
 
+        /// <summary>
+        /// Compute the Euler-angles
+        /// Also see Jack Kuipers, "Quaternions and Rotation Sequences", section 7.8.
+        /// </summary>
+        /// <returns>the Euler-angles</returns>
+        public Vector3D GetEuler()
+        {
+            Vector3D mEulerAngles = new Vector3D();
+            bool GimbalLock = false;
+
+            if (this.M13 <= -1.0)
+            {
+                mEulerAngles.Theta = 0.5 * Math.PI;
+                GimbalLock = true;
+            }
+            else if (1.0 <= this.M13)
+            {
+                mEulerAngles.Theta = -0.5 * Math.PI;
+                GimbalLock = true;
+            }
+            else
+                mEulerAngles.Theta = Math.Asin(-this.M13);
+
+            if (GimbalLock)
+                mEulerAngles.Phi = Math.Atan2(-this.M32, this.M22);
+            else
+                mEulerAngles.Phi = Math.Atan2(this.M23, this.M33);
+
+            if (GimbalLock)
+                mEulerAngles.Psi = 0.0;
+            else
+            {
+                double psi = Math.Atan2(this.M12, this.M11);
+                if (psi < 0.0)
+                    psi += 2 * Math.PI;
+                mEulerAngles.Psi = psi;
+            }
+
+            return mEulerAngles;
+        }
+
 		#endregion
 
 		#region Operators

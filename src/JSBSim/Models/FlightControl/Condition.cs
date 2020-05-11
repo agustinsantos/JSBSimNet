@@ -1,5 +1,5 @@
 ﻿#region Copyright(C)  Licensed under GNU GPL.
-/// Copyright (C) 2005-2006 Agustin Santos Mendez
+/// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
 /// David Megginson. 
@@ -18,6 +18,9 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+/// 
+/// Further information about the GNU Lesser General Public License can also be found on
+/// the world wide web at http://www.gnu.org.
 #endregion
 
 namespace JSBSim.Models.FlightControl
@@ -35,7 +38,11 @@ namespace JSBSim.Models.FlightControl
     using CommonUtils.IO;
     using JSBSim.InputOutput;
     using JSBSim.Format;
+    using JSBSim.MathValues;
 
+    /// <summary>
+    /// Encapsulates a condition, which is used in parts of JSBSim including switches
+    /// </summary>
     public class Condition
     {
         /// <summary>
@@ -49,33 +56,30 @@ namespace JSBSim.Models.FlightControl
         /// </summary>
         private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-
+        /// <summary>
+        /// This constructor is called when tests are inside an element
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="propertyManager"></param>
         public Condition(XmlElement element, PropertyManager propertyManager)
         {
-            string logic;
-            
-            isGroup = true;
-
             InitializeConditionals();
 
-            logic = element.GetAttribute("logic");
-            if (logic.Equals("OR")) 
-                Logic = eLogic.eOR;
-            else if (logic.Equals("AND"))
-                Logic = eLogic.eAND;
+            string logic = element.GetAttribute("logic");
+            if (!string.IsNullOrEmpty(logic))
+                if (logic.Equals("OR"))
+                    Logic = eLogic.eOR;
+                else if (logic.Equals("AND"))
+                    Logic = eLogic.eAND;
+                else
+                {
+                    if (log.IsErrorEnabled)
+                        log.Error("Unrecognized LOGIC token " + logic + " in switch component.");
+                    throw new Exception("Unrecognized LOGIC token " + logic + " in switch component");
+                }
             else
             {
-                if (log.IsErrorEnabled)
-                    log.Error("Unrecognized LOGIC token " + logic + " in switch component.");
-                throw new Exception("Unrecognized LOGIC token " + logic + " in switch component");
-            }
-
-            foreach (XmlNode currentNode in element.ChildNodes)
-            {
-                if (currentNode.NodeType == XmlNodeType.Element)
-                {
-                    conditions.Add(new Condition(currentNode as XmlElement, propertyManager));
-                }
+                Logic = eLogic.eAND; // default
             }
 
             ReaderText rtxt = new ReaderText(new StringReader(element.InnerText));
@@ -84,28 +88,54 @@ namespace JSBSim.Models.FlightControl
                 string tmp = rtxt.ReadLine().Trim();
                 conditions.Add(new Condition(tmp, propertyManager));
             }
+            string elName = element.Name;
+            foreach (XmlNode currentNode in element.ChildNodes)
+            {
+                if (currentNode.NodeType == XmlNodeType.Element)
+                {
+                    XmlElement condition_element = currentNode as XmlElement;
+                    string tagName = condition_element.Name;
+
+                    if (tagName != elName)
+                    {
+                        log.Error("Unrecognized tag <" + tagName + "> in the condition statement.");
+                        throw new Exception("Illegal argument");
+                    }
+                    conditions.Add(new Condition(currentNode as XmlElement, propertyManager));
+                }
+            }
+
+
         }
 
-
-        public Condition(string testStr, PropertyManager propertyManager)
+        /// <summary>
+        /// This constructor is called when there are no nested test groups inside the
+        /// condition
+        /// </summary>
+        /// <param name="testStr"></param>
+        /// <param name="propertyManager"></param>
+        public Condition(string testStr, PropertyManager propertyManager, XmlElement el = null)
         {
-            isGroup = false;
-
             InitializeConditionals();
 
             Match match = testRegex.Match(testStr);
             if (match.Success)
             {
-                TestParam1 = propertyManager.GetPropertyNode(match.Groups["prop1"].Value);
-                conditional = match.Groups["cond"].Value;
-                Comparison = mComparison[conditional];
-                if (match.Groups["prop2"].Value == "")
+                if (!string.IsNullOrEmpty(match.Groups["prop2"].Value) || !string.IsNullOrEmpty(match.Groups["val"].Value))
                 {
-                    TestValue = double.Parse(match.Groups["val"].Value, FormatHelper.numberFormatInfo);
+                    TestParam1 = new PropertyValue(match.Groups["prop1"].Value, propertyManager);
+                    conditional = match.Groups["cond"].Value;
+                    if (!string.IsNullOrEmpty(match.Groups["prop2"].Value))
+                        TestParam2 = new ParameterValue(match.Groups["prop2"].Value, propertyManager);
+                    else
+                        TestParam2 = new ParameterValue(match.Groups["val"].Value, propertyManager);
+
+                    Comparison = mComparison[conditional];
                 }
                 else
                 {
-                    TestParam2 = propertyManager.GetPropertyNode(match.Groups["prop2"].Value);
+                    log.Error("Conditional test is invalid .");
+                    throw new Exception("Error in test condition.");
                 }
             }
             else
@@ -114,63 +144,72 @@ namespace JSBSim.Models.FlightControl
                     log.Error("Error parsing Condition: " + testStr);
                 throw new ArgumentException("Error parsing Condition: " + testStr);
             }
+            if (Comparison == eComparison.ecUndef)
+            {
+                throw new Exception("Comparison operator: \"" + conditional
+                      + "\" does not exist.  Please check the conditional.");
+            }
         }
 
         public bool Evaluate()
         {
             bool pass = false;
-            double compareValue;
 
-            if (Logic == eLogic.eAND)
+            if (TestParam1 == null)
             {
-                pass = true;
-                foreach (Condition iConditions in conditions)
+
+                if (Logic == eLogic.eAND)
                 {
-                    if (!iConditions.Evaluate())
-                        pass = false;
+
+                    pass = true;
+                    foreach (var cond in conditions)
+                    {
+                        if (!cond.Evaluate()) pass = false;
+                    }
+
                 }
-            }
-            else if (Logic == eLogic.eOR)
-            {
-                pass = false;
-                foreach (Condition iConditions in conditions)
-                {
-                    if (iConditions.Evaluate())
-                        pass = true;
+                else
+                { // Logic must be eOR
+
+                    pass = false;
+                    foreach (var cond in conditions)
+                    {
+                        if (cond.Evaluate()) pass = true;
+                    }
+
                 }
+
             }
             else
             {
-                if (TestParam2 != null) compareValue = TestParam2.GetDouble();
-                else compareValue = TestValue;
+
+                double compareValue = TestParam2.GetValue();
 
                 switch (Comparison)
                 {
                     case eComparison.ecUndef:
-                        if (log.IsErrorEnabled)
-                            log.Error("Undefined comparison operator.");
+                        log.Error("Undefined comparison operator.");
                         break;
                     case eComparison.eEQ:
-                        pass = TestParam1.GetDouble() == compareValue;
+                        pass = TestParam1.GetDoubleValue() == compareValue;
                         break;
                     case eComparison.eNE:
-                        pass = TestParam1.GetDouble() != compareValue;
+                        pass = TestParam1.GetDoubleValue() != compareValue;
                         break;
                     case eComparison.eGT:
-                        pass = TestParam1.GetDouble() > compareValue;
+                        pass = TestParam1.GetDoubleValue() > compareValue;
                         break;
                     case eComparison.eGE:
-                        pass = TestParam1.GetDouble() >= compareValue;
+                        pass = TestParam1.GetDoubleValue() >= compareValue;
                         break;
                     case eComparison.eLT:
-                        pass = TestParam1.GetDouble() < compareValue;
+                        pass = TestParam1.GetDoubleValue() < compareValue;
                         break;
                     case eComparison.eLE:
-                        pass = TestParam1.GetDouble() <= compareValue;
+                        pass = TestParam1.GetDoubleValue() <= compareValue;
                         break;
                     default:
-                        if (log.IsErrorEnabled)
-                            log.Error("Unknown comparison operator.");
+                        log.Error("Unknown comparison operator.");
                         break;
                 }
             }
@@ -183,60 +222,58 @@ namespace JSBSim.Models.FlightControl
             if (log.IsInfoEnabled)
                 log.Info(this.ToString());
         }
-
-        public override string ToString()
+        public string ToStringCondition(string indent = "  ")
         {
-            StringBuilder scratch = new StringBuilder();
+            String scratch = "";
 
-            if (isGroup)
+            if (conditions.Count != 0)
             {
+
                 switch (Logic)
                 {
-                    case (eLogic.elUndef):
-                        scratch.Append(" UNSET");
-                        if (log.IsErrorEnabled)
-                            log.Error("unset logic for test condition");
+                    case eLogic.elUndef:
+                        scratch = " UNSET";
+                        log.Error("unset logic for test condition");
                         break;
-                    case (eLogic.eAND):
-                        scratch.Append(" if all of the following are true");
+                    case eLogic.eAND:
+                        scratch = indent + "if all of the following are true: {";
                         break;
-                    case (eLogic.eOR):
-                        scratch.Append(" if any of the following are true:");
+                    case eLogic.eOR:
+                        scratch = indent + "if any of the following are true: {";
                         break;
                     default:
-                        scratch.Append(" UNKNOWN");
-                        if (log.IsErrorEnabled)
-                            log.Error("Unknown logic for test condition");
+                        scratch = " UNKNOWN";
+                        log.Error("Unknown logic for test condition");
                         break;
                 }
+                scratch += "\n";
 
-                scratch.Append("\n");
-                foreach (Condition iConditions in conditions)
+                foreach (var cond in conditions)
                 {
-                    scratch.Append(iConditions.ToString());
+                    scratch += cond.ToStringCondition(indent + "  ");
+                    scratch += "\n";
                 }
+
+                scratch += indent + "}";
+
             }
             else
             {
-                if (TestParam2 != null)
-                    scratch.Append(TestParam1.ShortName + " " + conditional + " " + TestParam2.ShortName);
-                else
-                    scratch.Append(TestParam1.ShortName + " " + conditional + " " + TestValue.ToString(FormatHelper.numberFormatInfo));
+                scratch += indent + TestParam1.GetName() + " " + conditional
+                     + " " + TestParam2.GetName();
             }
-
-            return scratch.ToString();
+            return scratch;
         }
 
         private enum eComparison { ecUndef = 0, eEQ, eNE, eGT, eGE, eLT, eLE };
         private enum eLogic { elUndef = 0, eAND, eOR };
-        
+
         private Dictionary<string, eComparison> mComparison = new Dictionary<string, eComparison>();
         private eLogic Logic = eLogic.elUndef;
 
-        private PropertyNode TestParam1, TestParam2;
-        private double TestValue = 0.0;
+        private PropertyValue TestParam1;
+        private IParameter TestParam2;
         private eComparison Comparison = eComparison.ecUndef;
-        private bool isGroup;
         private string conditional;
 
         private const string testRegExpStr =
@@ -245,8 +282,9 @@ namespace JSBSim.Models.FlightControl
                     "((?<prop2>" + FormatHelper.propertyStr + ")|(?<val>" + FormatHelper.valueStr + ")))";
         private static readonly Regex testRegex = new Regex(testRegExpStr, RegexOptions.Compiled);
 
+        //delete private double TestValue = 0.0;
         private List<Condition> conditions = new List<Condition>();
-        
+
         private void InitializeConditionals()
         {
             mComparison["EQ"] = eComparison.eEQ;

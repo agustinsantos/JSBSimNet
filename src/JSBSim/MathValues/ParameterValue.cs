@@ -22,20 +22,14 @@
 /// Further information about the GNU Lesser General Public License can also be found on
 /// the world wide web at http://www.gnu.org.
 #endregion
-
-namespace JSBSim.Models
+namespace JSBSim.MathValues
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Text;
-
+    using System.Xml;
+    using JSBSim.InputOutput;
     // Import log4net classes.
     using log4net;
 
-    using JSBSim.Models;
-    using CommonUtils.MathLib;
-
-    public class Mars : Atmosphere
+    public class ParameterValue : Parameter
     {
         /// <summary>
         /// Define a static logger variable so that it references the
@@ -48,51 +42,58 @@ namespace JSBSim.Models
         /// </summary>
         private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        public Mars(FDMExecutive exec)
-            : base(exec)
+        public ParameterValue(XmlElement el, PropertyManager pm)
         {
-            Name = "Mars";
-            Reng = 53.5 * 44.01;
+            string value = el.InnerText;
 
-            Bind();
-            //Debug(0);
-        }
-
-        public override double GetPressure(double altitude)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override double GetTemperature(double altitude)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void SetTemperature(double t, double h, eTemperature unit = eTemperature.eFahrenheit)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void Calculate(double altitude)
-        {
-            //Calculate reftemp, refpress, and density
-
-            // LIMIT the temperatures so they do not descend below absolute zero.
-
-            if (altitude < 22960.0)
+            if (string.IsNullOrEmpty(value))
             {
-                temperature = -25.68 - 0.000548 * altitude; // Deg Fahrenheit
+                log.Error("The element <" + el.Name + "> must either contain a value number or a property name.");
+                throw new System.Exception("Illegal argument");
+            }
+
+            Construct(value, pm);
+        }
+
+        public ParameterValue(string value, PropertyManager pm)
+        {
+            Construct(value, pm);
+        }
+
+        public override double GetValue()
+        {
+            return param.GetValue();
+        }
+        public override bool IsConstant() { return param.IsConstant(); }
+
+        public override string GetName()
+        {
+            PropertyValue v = param as PropertyValue;
+            if (v != null)
+                return v.GetNameWithSign();
+            else
+                return param.GetValue().ToString();
+        }
+
+        public bool IsLateBound()
+        {
+            PropertyValue v = param as PropertyValue;
+            return v != null && v.IsLateBound();
+        }
+        private IParameter param;
+
+        private void Construct(string value, PropertyManager pm)
+        {
+            double tmp;
+            if (double.TryParse(value, out tmp))
+            {
+                param = new RealValue(tmp);
             }
             else
             {
-                temperature = -10.34 - 0.001217 * altitude; // Deg Fahrenheit
+                // "value" must be a property if execution passes to here.
+                param = new PropertyValue(value, pm);
             }
-            pressure = 14.62 * Math.Exp(-0.00003 * altitude); // psf - 14.62 psf =~ 7 millibars
-            density = Pressure / (Reng * Temperature); // slugs/ft^3 (needs deg R. as input
-
-            //cout << "Atmosphere:  h=" << altitude << " rho= " << intDensity << endl;
         }
-
-        //private void Debug(int from);
     }
 }

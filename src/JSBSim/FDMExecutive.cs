@@ -269,7 +269,7 @@ namespace JSBSim
 
             while (modelsEnumerator.MoveNext())
             {
-                ((Model)modelsEnumerator.Current).Run();
+                ((Model)modelsEnumerator.Current).Run(false);
 
             }
             frame++;
@@ -749,7 +749,7 @@ namespace JSBSim
         private bool Allocate()
         {
             bool result = true;
-            atmosphere = new Atmosphere(this);
+            atmosphere = new StandardAtmosphere(this);
             propulsion = new Propulsion(this);
             aerodynamics = new Aerodynamics(this);
             FCS = new FlightControlSystem(this);

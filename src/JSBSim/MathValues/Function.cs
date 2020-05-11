@@ -31,7 +31,7 @@ namespace JSBSim.MathValues
     using CommonUtils.MathLib;
     using JSBSim.Format;
     using JSBSim.InputOutput;
-     // Import log4net classes.
+    // Import log4net classes.
     using log4net;
 
     /// <summary>

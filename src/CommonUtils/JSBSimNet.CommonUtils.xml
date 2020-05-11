@@ -9,6 +9,17 @@
             Summary description for ReaderText.
             </summary>
         </member>
+        <member name="F:CommonUtils.IO.XmlExtensions.log">
+            <summary>
+            Define a static logger variable so that it references the
+            Logger instance.
+            
+            NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+            is equivalent to typeof(LoggingExample) but is more portable
+            i.e. you can copy the code directly into another class without
+            needing to edit the code.
+            </summary>
+        </member>
         <member name="T:CommonUtils.MathLib.MomentType">
             <summary>
             Moments L, M, N
@@ -522,6 +533,13 @@
             </summary>
             <param name="scalar">The scalar to divide with.</param>
         </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.GetEuler">
+            <summary>
+            Compute the Euler-angles
+            Also see Jack Kuipers, "Quaternions and Rotation Sequences", section 7.8.
+            </summary>
+            <returns>the Euler-angles</returns>
+        </member>
         <member name="M:CommonUtils.MathLib.Matrix3D.op_Equality(CommonUtils.MathLib.Matrix3D,CommonUtils.MathLib.Matrix3D)">
             <summary>
             Checks if the two given matrices are equal.
@@ -633,6 +651,9 @@
             or Y-P-R, or Z-Y-X, if you prefer.
             </remarks>
         </member>
+        <member name="T:CommonUtils.MathLib.Quaternion.EulerAngles">
+            Euler angles Phi, Theta, Psi
+        </member>
         <member name="F:CommonUtils.MathLib.Quaternion.W">
             <summary>
             W coordinate.
@@ -674,6 +695,15 @@
             <param name="phi">The euler X axis (roll) angle in radians</param>
             <param name="tht">The euler Y axis (attitude) angle in radians</param>
             <param name="psi">The euler Z axis (heading) angle in radians</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.#ctor(CommonUtils.MathLib.Quaternion.EulerAngles,System.Double)">
+            <summary>
+            Initializer by one euler angle.
+             Initialize the quaternion with the single euler angle where its index
+             is given in the first argument.
+            </summary>
+            <param name="idx">Index of the euler angle to initialize</param>
+            <param name="angle">The euler angle in radians</param>
         </member>
         <member name="M:CommonUtils.MathLib.Quaternion.#ctor(System.Double[])">
             <summary>
@@ -849,6 +879,12 @@
             <param name="angle"></param>
             <param name="axis"></param>
             <returns></returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.Normalize">
+            <summary>
+            Normalize the vector to have the Magnitude() == 1.0. If the vector
+            is equal to zero it is left untouched.
+            </summary>
         </member>
         <member name="M:CommonUtils.MathLib.Quaternion.ComputeDerived">
             <summary>

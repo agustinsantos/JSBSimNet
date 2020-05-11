@@ -57,7 +57,7 @@ namespace JSBSim.Models
 				log.Debug("Instantiated: Inertial.");
 		}
 
-		public override bool Run()
+		public override bool Run(bool Holding)
 		{
 			// Fast return if we have nothing to do ...
             if (InternalRun()) return true;

@@ -50,7 +50,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area == 1", cond.ToString());
+            Assert.AreEqual("qbar-area == 1", cond.ToStringCondition(""));
         }
 
         [Test]
@@ -61,7 +61,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area == 1", cond.ToString());
+            Assert.AreEqual("qbar-area == 1", cond.ToStringCondition(""));
         }
 
         [Test]
@@ -72,7 +72,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area == 1", cond.ToString());
+            Assert.AreEqual("qbar-area == 1", cond.ToStringCondition(""));
         }
 
         [Test]
@@ -83,7 +83,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area == 1", cond.ToString());
+            Assert.AreEqual("qbar-area == 1", cond.ToStringCondition(""));
         }
 
         [Test]
@@ -94,7 +94,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area == -0.1", cond.ToString());
+            Assert.AreEqual("qbar-area == -0.1", cond.ToStringCondition(""));
         }
 
         [Test]
@@ -105,7 +105,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area == -1E-20", cond.ToString());
+            Assert.AreEqual("qbar-area == -1E-20", cond.ToStringCondition(""));
         }
 
         [Test]
@@ -116,7 +116,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area == -1E+18", cond.ToString());
+            Assert.AreEqual("qbar-area == -1E+18", cond.ToStringCondition(""));
         }
         [Test]
         public void CheckParser8()
@@ -126,7 +126,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area == 1E+18", cond.ToString());
+            Assert.AreEqual("qbar-area == 1E+18", cond.ToStringCondition(""));
         }
         [Test]
         public void CheckParser9()
@@ -136,7 +136,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area != -1E+18", cond.ToString());
+            Assert.AreEqual("qbar-area != -1E+18", cond.ToStringCondition(""));
         }
 
         [Test]
@@ -147,7 +147,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area NE -1.23456789012346E+18", cond.ToString());
+            Assert.AreEqual("qbar-area NE -1.23456789012346E+18", cond.ToStringCondition(""));
         }
 
         [Test]
@@ -158,7 +158,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area NE metrics/bw-ft", cond.ToString());
+            Assert.AreEqual("qbar-area NE bw-ft", cond.ToStringCondition(""));
         }
 
         [Test]
@@ -169,7 +169,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area gt metrics/bw-ft", cond.ToString());
+            Assert.AreEqual("qbar-area gt bw-ft", cond.ToStringCondition(""));
         }
 
         [Test]
@@ -180,7 +180,7 @@ namespace JSBSim.Tests
             ClassWithPropertiesForConditions class1 = new ClassWithPropertiesForConditions("", propMngr);
 
             Condition cond = new Condition(test1, propMngr);
-            Assert.AreEqual("aero/qbar-area lt metrics/bw-ft", cond.ToString());
+            Assert.AreEqual("qbar-area lt bw-ft", cond.ToStringCondition(""));
         }
 
         //TODO test others parser cases (comparations operators or values)

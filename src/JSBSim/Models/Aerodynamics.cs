@@ -104,7 +104,7 @@ namespace JSBSim.Models
 		/// Runs the Aerodynamics model; called by the Executive
 		/// </summary>
 		/// <returns>false if no error</returns>
-        public override bool Run()
+        public override bool Run(bool Holding)
         {
             double alpha, twovel;
 
