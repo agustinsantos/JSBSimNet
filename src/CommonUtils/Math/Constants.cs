@@ -90,7 +90,7 @@ namespace CommonUtils.MathLib
          /// <summary>
         /// Value of earth radius from LaRCsim (ft) 
         /// </summary>
-        public const double EQUATORIAL_RADIUS_FT = 20925650.0;
+        public const double EQUATORIAL_RADIUS_FT = 20925646.32546;
 
         /// <summary>
         /// Value of earth radius from LaRCsim (meter)

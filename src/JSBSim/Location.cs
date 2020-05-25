@@ -116,7 +116,7 @@ namespace JSBSim
     /// 
     /// this code is based on FGLocation class written by Jon S. Berndt, Mathias Froehlich
     /// </summary>
-    public class Location: ICloneable 
+    public class Location : ICloneable
     {
         /// <summary>
         /// Define a static logger variable so that it references the
@@ -248,10 +248,10 @@ namespace JSBSim
             get { ComputeDerived(); return mLon; }
             set
             {
-                double rtmp = mECLoc.GetMagnitude((int)PositionType.eX, (int)PositionType.eY);
+                double rtmp = mECLoc.GetMagnitude((int)PositionType.eX - 1, (int)PositionType.eY - 1);
                 // Check if we have zero radius.
                 // If so set it to 1, so that we can set a position
-                if (0.0 == mECLoc.GetMagnitude())
+                if (0.0 == mECLoc.Magnitude())
                     rtmp = 1.0;
 
                 // Fast return if we are on the north or south pole ...
@@ -311,14 +311,14 @@ namespace JSBSim
             {
                 mCacheValid = false;
 
-                double r = mECLoc.GetMagnitude();
+                double r = mECLoc.Magnitude();
                 if (r == 0.0)
                 {
                     mECLoc.X = 1.0;
                     r = 1.0;
                 }
 
-                double rtmp = mECLoc.GetMagnitude((int)PositionType.eX, (int)PositionType.eY);
+                double rtmp = mECLoc.GetMagnitude((int)PositionType.eX - 1, (int)PositionType.eY - 1);
                 if (rtmp != 0.0)
                 {
                     double fac = r / rtmp * Math.Cos(value);
@@ -427,7 +427,7 @@ namespace JSBSim
             {
                 mCacheValid = false;
 
-                double rold = mECLoc.GetMagnitude();
+                double rold = mECLoc.Magnitude();
                 if (rold == 0.0)
                     mECLoc.X = value;
                 else
@@ -495,6 +495,37 @@ namespace JSBSim
             ec2 = ec * ec;
             e2 = 1.0 - ec2;
             c = a * e2;
+        }
+
+
+        /// <summary>
+        /// Access the X entry of the vector.
+        /// used internally to access the elements in a more convenient way.
+        /// </summary>
+        public double X
+        {
+            get { return mECLoc.X; }
+            set { mCacheValid = false; mECLoc.X = value; }
+        }
+
+        /// <summary>
+        /// Access the Y entry of the vector.
+        /// used internally to access the elements in a more convenient way.
+        /// </summary>
+        public double Y
+        {
+            get { return mECLoc.Y; }
+            set { mCacheValid = false; mECLoc.Y = value; }
+        }
+
+        /// <summary>
+        /// Access the Z entry of the vector.
+        /// used internally to access the elements in a more convenient way.
+        /// </summary>
+        public double Z
+        {
+            get { return mECLoc.Z; }
+            set { mCacheValid = false; mECLoc.Z = value; }
         }
 
         /// <summary>
@@ -574,7 +605,7 @@ namespace JSBSim
         private void ComputeDerivedUnconditional()
         {
             // The radius is just the Euclidean norm of the vector.
-            mRadius = mECLoc.GetMagnitude();
+            mRadius = mECLoc.Magnitude();
 
             // The distance of the location to the y-axis, which is the axis
             // through the poles.
@@ -858,6 +889,10 @@ namespace JSBSim
             return loc;
         }
 
+        /// <summary>
+        /// Cast to a simple 3d vector
+        /// </summary>
+        /// <param name="x"></param>
         public static explicit operator Vector3D(Location loc)
         {
             return loc.mECLoc;

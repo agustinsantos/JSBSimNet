@@ -91,6 +91,7 @@ namespace JSBSim.Models
 		/// <returns>false if no error</returns>
         public override bool Run(bool Holding)
         {
+#if TODO
             if (InternalRun()) return true;
             if (FDMExec.Holding()) return false; // if paused don't execute
             
@@ -113,12 +114,15 @@ namespace JSBSim.Models
             vNwcg.Z = -1 * vNwcg.Z + 1;
 
             return false;
+#endif
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
+
         }
-  
-		/// <summary>
-		/// Gets/Sets the aircraft name
-		/// </summary>
-		public string AircraftName
+
+        /// <summary>
+        /// Gets/Sets the aircraft name
+        /// </summary>
+        public string AircraftName
 		{
 			get { return aircraftName; }
 			set { aircraftName = value;}

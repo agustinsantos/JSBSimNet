@@ -58,7 +58,7 @@ namespace JSBSim.Models
             //in order for Model derived classes to self-Bind (that is, call
             //their Bind function in the constructor, the PropertyManager pointer
             //must be brought up now.
-            //TODO ?? propertyManager = FDMExec.PropertyManager;
+            propertyManager = FDMExec.PropertyManager;
 
             exe_ctr = 1;
             rate = 1;
@@ -194,6 +194,9 @@ namespace JSBSim.Models
 
             return result;
         }
+
+        protected virtual void Debug(int from)
+        { }
 
         protected int exe_ctr = 1;
         protected int rate = 1;

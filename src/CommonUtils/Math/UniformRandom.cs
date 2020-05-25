@@ -2,8 +2,18 @@
 
 namespace CommonUtils.MathLib
 {
+    /// <summary>
+    /// An uniform random number generator 
+    /// Generated random values will be in the [lower, upper) interval
+    /// </summary>
     public class UniformRandom
     {
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        /// <param name="lower"></param>
+        /// <param name="upper"></param>
+        /// <param name="rand"></param>
         public UniformRandom(double lower, double upper, Random rand)
         {
             this.lower = lower;
@@ -15,8 +25,7 @@ namespace CommonUtils.MathLib
                 this.rand = new Random();
         }
         /// <summary>
-        /// Returns a random double number
-        /// It has an implementation of the Box-Muller transform.
+        /// Returns an uniform random double number
         /// </summary>
         /// <returns></returns>
         public double Next()

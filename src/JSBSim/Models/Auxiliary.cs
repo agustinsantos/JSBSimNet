@@ -125,6 +125,7 @@ namespace JSBSim.Models
 		/// <returns>false if no error</returns>
         public override bool Run(bool Holding)
         {
+#if TODO
             double A, B, D, hdot_Vt;
             Vector3D vPQR = FDMExec.Propagate.GetPQR();
             Vector3D vUVW = FDMExec.Propagate.GetUVW();
@@ -277,12 +278,14 @@ namespace JSBSim.Models
             hoverbmac = (FDMExec.Propagate.DistanceAGL + vMac.Z) / FDMExec.Aircraft.WingSpan;
 
             return false;
+#endif
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
-		// GET functions
+        // GET functions
 
-		// Atmospheric parameters GET functions
-		[ScriptAttribute("velocities/vc-fps", "Atmospheric velocities calibrated in FPS.")]
+        // Atmospheric parameters GET functions
+        [ScriptAttribute("velocities/vc-fps", "Atmospheric velocities calibrated in FPS.")]
 		public double VcalibratedFPS { get { return vcas; }}
 		
 		[ScriptAttribute("velocities/vc-kts", "Atmospheric velocities calibrated in KTS.")]
@@ -368,8 +371,13 @@ namespace JSBSim.Models
 		public Vector3D GetAeroUVW    () { return vAeroUVW;     }
 		public Location GetLocationVRP() { return vLocationVRP; }
 
-		public double GethVRP() { return vLocationVRP.Radius - FDMExec.Propagate.GetSeaLevelRadius(); }
-		public double GetAeroUVW (int idx) { return vAeroUVW[idx]; }
+		public double GethVRP() {
+#if TODO
+            return vLocationVRP.Radius - FDMExec.Propagate.GetSeaLevelRadius();
+#endif
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
+        }
+        public double GetAeroUVW (int idx) { return vAeroUVW[idx]; }
 		public double Getalpha   () { return alpha;      }
 		public double Getbeta    () { return beta;       }
 		
@@ -552,7 +560,7 @@ namespace JSBSim.Models
 
 			return vw*Math.Cos(psiw - FDMExec.Propagate.GetEuler((int)EulerAngleType.ePsi));
 #endif 
-            throw new NotImplementedException();
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
 		}
 
 		public double GetCrossWind()
@@ -565,7 +573,7 @@ namespace JSBSim.Models
 
             return vw *Math.Sin(psiw - FDMExec.Propagate.GetEuler((int)EulerAngleType.ePsi));
 #endif
-            throw new NotImplementedException();
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
         // SET functions

@@ -34,7 +34,7 @@ namespace CommonUtils.Tests
     [TestFixture]
     public class UniformRandomTests
     {
-        public const double tolerance = 0.1;
+        public const double tolerance = 0.5;
         public const int maxNumbers = 10000;
 
         [Test]
@@ -56,7 +56,7 @@ namespace CommonUtils.Tests
             double average = values.Average();
             Assert.AreEqual((lower + upper) / 2, average, tolerance);
             double sumOfSquaresOfDifferences = values.Select(val => (val - average) * (val - average)).Sum();
-            double variance = sumOfSquaresOfDifferences / values.Length ;
+            double variance = sumOfSquaresOfDifferences / values.Length;
             Assert.AreEqual((upper - lower) * (upper - lower) / 12, variance, tolerance);
         }
 
@@ -77,7 +77,7 @@ namespace CommonUtils.Tests
             }
 
             double average = values.Average();
-            Assert.AreEqual((lower + upper) / 2, average, tolerance);
+            Assert.AreEqual((lower + upper) / 2, average, tolerance * 10);
             double sumOfSquaresOfDifferences = values.Select(val => (val - average) * (val - average)).Sum();
             double variance = sumOfSquaresOfDifferences / values.Length;
             Assert.AreEqual((upper - lower) * (upper - lower) / 12, variance, tolerance);
@@ -100,7 +100,7 @@ namespace CommonUtils.Tests
             }
 
             double average = values.Average();
-            Assert.AreEqual((lower + upper) / 2, average, tolerance);
+            Assert.AreEqual((lower + upper) / 2, average, tolerance * 10);
             double sumOfSquaresOfDifferences = values.Select(val => (val - average) * (val - average)).Sum();
             double variance = sumOfSquaresOfDifferences / values.Length;
             Assert.AreEqual((upper - lower) * (upper - lower) / 12, variance, tolerance);

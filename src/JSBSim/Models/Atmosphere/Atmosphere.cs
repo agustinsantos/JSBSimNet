@@ -129,13 +129,13 @@ namespace JSBSim.Models
         /// Returns the temperature in degrees Rankine
         /// </summary>
         [ScriptAttribute("atmosphere/T-R", "Temperature in degrees Rankine")]
-        public double Temperature { get { return Temperature; } }
+        public double Temperature { get { return temperature; } }
 
         /// <summary>
         /// Returns the actual, modeled temperature at the current altitude in degrees Rankine.
         /// </summary>
         /// <returns>Modeled temperature in degrees Rankine.</returns>
-        public virtual double GetTemperature() { return Temperature; }
+        public virtual double GetTemperature() { return temperature; }
 
         /// <summary>
         /// Returns the actual modeled temperature in degrees Rankine at a specified altitude.
@@ -366,25 +366,9 @@ namespace JSBSim.Models
         public void SetExPressure(double p) { externalInfo.Pressure = p; }
 
 
-        ///<summary>
-        /// Gets/sets the temperature deviation at sea-level in degrees Fahrenheit
-        ///</summary>
-        [ScriptAttribute("atmosphere/T-sl-dev-F", "Temperature deviation at sea-level in degrees Fahrenheit")]
-        public double TempDevSeaLevel
-        {
-            get { return T_dev_sl; }
-            set { T_dev_sl = value; }
-        }
 
-        ///<summary>
-        /// Sets/Gets the current delta-T in degrees Fahrenheit
-        ///</summary>
-        [ScriptAttribute("atmosphere/delta-T", "Delta-T in degrees Fahrenheit")]
-        public double DeltaT
-        {
-            set { delta_T = value; }
-            get { return delta_T; }
-        }
+
+
 
 
         ///<summary>

@@ -19,9 +19,6 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endregion
-#region Identification
-/// $Id:$
-#endregion
 namespace JSBSim
 {
     using System;
@@ -227,6 +224,7 @@ namespace JSBSim
 
         public void SetThetaOnGround(double ff)
         {
+#if TODO
             int center, i, intref;
 
             // favor an off-center unit so that the same one can be used for both
@@ -268,10 +266,13 @@ namespace JSBSim
             fgic.ThetaRadIC = ff;
             if (log.IsDebugEnabled)
                 log.Debug("SetThetaOnGround new theta: " + ff);
+#endif
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
         public void SetPhiOnGround(double ff)
         {
+#if TODO
             int i, intref;
 
             i = 0; intref = -1;
@@ -297,7 +298,8 @@ namespace JSBSim
                 fgic.AltitudeAGLFtIC = hagl;
             }
             fgic.SetRollAngleRadIC(ff);
-
+#endif 
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
         public void SetStateTarget(double target) { state_target = target; }
@@ -305,6 +307,7 @@ namespace JSBSim
 
         public bool initTheta()
         {
+#if TODO
             int i, N;
             int iForward = 0;
             int iAft = 1;
@@ -376,6 +379,8 @@ namespace JSBSim
                 return true;
             else
                 return false;
+#endif
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
         public void AxisReport()
@@ -440,6 +445,7 @@ namespace JSBSim
 
         private void getState()
         {
+#if TODO
             switch (state)
             {
                 case StateType.Udot: state_value = fdmex.Propagate.GetUVWdot(0) - state_target; break;
@@ -452,6 +458,8 @@ namespace JSBSim
                 case StateType.Nlf: state_value = fdmex.Aircraft.GetNlf() - state_target; break;
                 case StateType.All: break;
             }
+#endif
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
         private void getControl()
@@ -477,6 +485,7 @@ namespace JSBSim
 
         private void setControl()
         {
+#if TODO
             switch (control)
             {
                 case ControlType.Throttle: setThrottlesPct(); break;
@@ -494,6 +503,8 @@ namespace JSBSim
                 case ControlType.Gamma: fgic.SetFlightPathAngleRadIC(control_value); break;
                 case ControlType.Heading: fgic.SetTrueHeadingRadIC(control_value); break;
             }
+#endif
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
 

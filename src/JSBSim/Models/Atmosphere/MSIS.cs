@@ -88,6 +88,7 @@ namespace JSBSim.Models
       @return false if no error */
         public override bool Run(bool Holding)
         {
+#if TODO
             if (base.Run(Holding)) return true;
             if (Holding) return false;
 
@@ -122,6 +123,8 @@ namespace JSBSim.Models
             // Debug(2);
 
             return false;
+#endif
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
         public override bool InitModel()
@@ -1630,17 +1633,17 @@ namespace JSBSim.Models
 
         public override double GetTemperature(double altitude)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
         public override void SetTemperature(double t, double h, eTemperature unit = eTemperature.eFahrenheit)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
         public override double GetPressure(double altitude)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
     }
 

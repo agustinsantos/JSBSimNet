@@ -159,7 +159,7 @@ namespace JSBSim
 			double qbar = 0.5*Vt*Vt*FDMExec.Atmosphere.Density;
 			FDMExec.Auxiliary.Qbar = qbar;
 #endif 
-            throw new NotImplementedException();
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
 		} 
 
 

@@ -60,17 +60,17 @@ namespace JSBSim.Models
 
         public override double GetPressure(double altitude)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
         public override double GetTemperature(double altitude)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
         public override void SetTemperature(double t, double h, eTemperature unit = eTemperature.eFahrenheit)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
         protected override void Calculate(double altitude)

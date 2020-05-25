@@ -4,6 +4,382 @@
         <name>JSBSimNet.CommonUtils</name>
     </assembly>
     <members>
+        <member name="T:CommonUtils.Collections.CollectionHelpers">
+            <summary>
+            Code from: https://github.com/StephenCleary/Deque
+            </summary>
+        </member>
+        <member name="T:CommonUtils.Collections.Deque`1">
+             <summary>
+             A double-ended queue (deque), which provides O(1) indexed access, O(1) removals from the front and back, amortized O(1) insertions to the front and back, and O(N) insertions and removals anywhere else (with the operations getting slower as the index approaches the middle).
+            
+             Original code from https://github.com/StephenCleary/Deque
+             </summary>
+        </member>
+        <member name="F:CommonUtils.Collections.Deque`1.DefaultCapacity">
+            <summary>
+            The default capacity.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.Collections.Deque`1._buffer">
+            <summary>
+            The circular _buffer that holds the view.
+            </summary>
+        </member>
+        <member name="F:CommonUtils.Collections.Deque`1._offset">
+            <summary>
+            The offset into <see cref="F:CommonUtils.Collections.Deque`1._buffer"/> where the view begins.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.Collections.Deque`1"/> class with the specified capacity.
+            </summary>
+            <param name="capacity">The initial capacity. Must be greater than <c>0</c>.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.#ctor(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.Collections.Deque`1"/> class with the elements 
+            from the specified collection.
+            </summary>
+            <param name="collection">The collection. May not be <c>null</c>.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.Collections.Deque`1"/> class.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.Collections.Deque`1.System#Collections#Generic#ICollection{T}#IsReadOnly">
+            <summary>
+            Gets a value indicating whether this list is read-only. This implementation always returns <c>false</c>.
+            </summary>
+            <returns>true if this list is read-only; otherwise, false.</returns>
+        </member>
+        <member name="P:CommonUtils.Collections.Deque`1.Item(System.Int32)">
+            <summary>
+            Gets or sets the item at the specified index.
+            </summary>
+            <param name="index">The index of the item to get or set.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="index"/> is not a valid index in this list.</exception>
+            <exception cref="T:System.NotSupportedException">This property is set and the list is read-only.</exception>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.Insert(System.Int32,`0)">
+            <summary>
+            Inserts an item to this list at the specified index.
+            </summary>
+            <param name="index">The zero-based index at which <paramref name="item"/> should be inserted.</param>
+            <param name="item">The object to insert into this list.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">
+            <paramref name="index"/> is not a valid index in this list.
+            </exception>
+            <exception cref="T:System.NotSupportedException">
+            This list is read-only.
+            </exception>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.RemoveAt(System.Int32)">
+            <summary>
+            Removes the item at the specified index.
+            </summary>
+            <param name="index">The zero-based index of the item to remove.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">
+            <paramref name="index"/> is not a valid index in this list.
+            </exception>
+            <exception cref="T:System.NotSupportedException">
+            This list is read-only.
+            </exception>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.IndexOf(`0)">
+            <summary>
+            Determines the index of a specific item in this list.
+            </summary>
+            <param name="item">The object to locate in this list.</param>
+            <returns>The index of <paramref name="item"/> if found in this list; otherwise, -1.</returns>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.System#Collections#Generic#ICollection{T}#Add(`0)">
+            <summary>
+            Adds an item to the end of this list.
+            </summary>
+            <param name="item">The object to add to this list.</param>
+            <exception cref="T:System.NotSupportedException">
+            This list is read-only.
+            </exception>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.System#Collections#Generic#ICollection{T}#Contains(`0)">
+            <summary>
+            Determines whether this list contains a specific value.
+            </summary>
+            <param name="item">The object to locate in this list.</param>
+            <returns>
+            true if <paramref name="item"/> is found in this list; otherwise, false.
+            </returns>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.System#Collections#Generic#ICollection{T}#CopyTo(`0[],System.Int32)">
+            <summary>
+            Copies the elements of this list to an <see cref="T:System.Array"/>, starting at a particular <see cref="T:System.Array"/> index.
+            </summary>
+            <param name="array">The one-dimensional <see cref="T:System.Array"/> that is the destination of the elements copied from this slice. The <see cref="T:System.Array"/> must have zero-based indexing.</param>
+            <param name="arrayIndex">The zero-based index in <paramref name="array"/> at which copying begins.</param>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="array"/> is null.
+            </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">
+            <paramref name="arrayIndex"/> is less than 0.
+            </exception>
+            <exception cref="T:System.ArgumentException">
+            <paramref name="arrayIndex"/> is equal to or greater than the length of <paramref name="array"/>.
+            -or-
+            The number of elements in the source <see cref="T:System.Collections.Generic.ICollection`1"/> is greater than the available space from <paramref name="arrayIndex"/> to the end of the destination <paramref name="array"/>.
+            </exception>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.CopyToArray(System.Array,System.Int32)">
+            <summary>
+            Copies the deque elemens into an array. The resulting array always has all the deque elements contiguously.
+            </summary>
+            <param name="array">The destination array.</param>
+            <param name="arrayIndex">The optional index in the destination array at which to begin writing.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.Remove(`0)">
+            <summary>
+            Removes the first occurrence of a specific object from this list.
+            </summary>
+            <param name="item">The object to remove from this list.</param>
+            <returns>
+            true if <paramref name="item"/> was successfully removed from this list; otherwise, false. This method also returns false if <paramref name="item"/> is not found in this list.
+            </returns>
+            <exception cref="T:System.NotSupportedException">
+            This list is read-only.
+            </exception>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the collection.
+            </summary>
+            <returns>
+            A <see cref="T:System.Collections.Generic.IEnumerator`1"/> that can be used to iterate through the collection.
+            </returns>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.System#Collections#IEnumerable#GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through a collection.
+            </summary>
+            <returns>
+            An <see cref="T:System.Collections.IEnumerator"/> object that can be used to iterate through the collection.
+            </returns>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.CheckNewIndexArgument(System.Int32,System.Int32)">
+            <summary>
+            Checks the <paramref name="index"/> argument to see if it refers to a valid insertion point in a source of a given length.
+            </summary>
+            <param name="sourceLength">The length of the source. This parameter is not checked for validity.</param>
+            <param name="index">The index into the source.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="index"/> is not a valid index to an insertion point for the source.</exception>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.CheckExistingIndexArgument(System.Int32,System.Int32)">
+            <summary>
+            Checks the <paramref name="index"/> argument to see if it refers to an existing element in a source of a given length.
+            </summary>
+            <param name="sourceLength">The length of the source. This parameter is not checked for validity.</param>
+            <param name="index">The index into the source.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="index"/> is not a valid index to an existing element for the source.</exception>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.CheckRangeArguments(System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Checks the <paramref name="offset"/> and <paramref name="count"/> arguments for validity when applied to a source of a given length. Allows 0-element ranges, including a 0-element range at the end of the source.
+            </summary>
+            <param name="sourceLength">The length of the source. This parameter is not checked for validity.</param>
+            <param name="offset">The index into source at which the range begins.</param>
+            <param name="count">The number of elements in the range.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">Either <paramref name="offset"/> or <paramref name="count"/> is less than 0.</exception>
+            <exception cref="T:System.ArgumentException">The range [offset, offset + count) is not within the range [0, sourceLength).</exception>
+        </member>
+        <member name="P:CommonUtils.Collections.Deque`1.IsEmpty">
+            <summary>
+            Gets a value indicating whether this instance is empty.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.Collections.Deque`1.IsFull">
+            <summary>
+            Gets a value indicating whether this instance is at full capacity.
+            </summary>
+        </member>
+        <member name="P:CommonUtils.Collections.Deque`1.IsSplit">
+            <summary>
+            Gets a value indicating whether the buffer is "split" (meaning the beginning of the view is at a later index in <see cref="F:CommonUtils.Collections.Deque`1._buffer"/> than the end).
+            </summary>
+        </member>
+        <member name="P:CommonUtils.Collections.Deque`1.Capacity">
+            <summary>
+            Gets or sets the capacity for this deque. This value must always be greater than zero, and this property cannot be set to a value less than <see cref="P:CommonUtils.Collections.Deque`1.Count"/>.
+            </summary>
+            <exception cref="T:System.InvalidOperationException"><c>Capacity</c> cannot be set to a value less than <see cref="P:CommonUtils.Collections.Deque`1.Count"/>.</exception>
+        </member>
+        <member name="P:CommonUtils.Collections.Deque`1.Count">
+            <summary>
+            Gets the number of elements contained in this deque.
+            </summary>
+            <returns>The number of elements contained in this deque.</returns>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.DequeIndexToBufferIndex(System.Int32)">
+            <summary>
+            Applies the offset to <paramref name="index"/>, resulting in a buffer index.
+            </summary>
+            <param name="index">The deque index.</param>
+            <returns>The buffer index.</returns>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.DoGetItem(System.Int32)">
+            <summary>
+            Gets an element at the specified view index.
+            </summary>
+            <param name="index">The zero-based view index of the element to get. This index is guaranteed to be valid.</param>
+            <returns>The element at the specified index.</returns>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.DoSetItem(System.Int32,`0)">
+            <summary>
+            Sets an element at the specified view index.
+            </summary>
+            <param name="index">The zero-based view index of the element to get. This index is guaranteed to be valid.</param>
+            <param name="item">The element to store in the list.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.DoInsert(System.Int32,`0)">
+            <summary>
+            Inserts an element at the specified view index.
+            </summary>
+            <param name="index">The zero-based view index at which the element should be inserted. This index is guaranteed to be valid.</param>
+            <param name="item">The element to store in the list.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.DoRemoveAt(System.Int32)">
+            <summary>
+            Removes an element at the specified view index.
+            </summary>
+            <param name="index">The zero-based view index of the element to remove. This index is guaranteed to be valid.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.PostIncrement(System.Int32)">
+            <summary>
+            Increments <see cref="F:CommonUtils.Collections.Deque`1._offset"/> by <paramref name="value"/> using modulo-<see cref="P:CommonUtils.Collections.Deque`1.Capacity"/> arithmetic.
+            </summary>
+            <param name="value">The value by which to increase <see cref="F:CommonUtils.Collections.Deque`1._offset"/>. May not be negative.</param>
+            <returns>The value of <see cref="F:CommonUtils.Collections.Deque`1._offset"/> after it was incremented.</returns>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.PreDecrement(System.Int32)">
+            <summary>
+            Decrements <see cref="F:CommonUtils.Collections.Deque`1._offset"/> by <paramref name="value"/> using modulo-<see cref="P:CommonUtils.Collections.Deque`1.Capacity"/> arithmetic.
+            </summary>
+            <param name="value">The value by which to reduce <see cref="F:CommonUtils.Collections.Deque`1._offset"/>. May not be negative or greater than <see cref="P:CommonUtils.Collections.Deque`1.Capacity"/>.</param>
+            <returns>The value of <see cref="F:CommonUtils.Collections.Deque`1._offset"/> before it was decremented.</returns>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.DoAddToBack(`0)">
+            <summary>
+            Inserts a single element to the back of the view. <see cref="P:CommonUtils.Collections.Deque`1.IsFull"/> must be false when this method is called.
+            </summary>
+            <param name="value">The element to insert.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.DoAddToFront(`0)">
+            <summary>
+            Inserts a single element to the front of the view. <see cref="P:CommonUtils.Collections.Deque`1.IsFull"/> must be false when this method is called.
+            </summary>
+            <param name="value">The element to insert.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.DoRemoveFromBack">
+            <summary>
+            Removes and returns the last element in the view. <see cref="P:CommonUtils.Collections.Deque`1.IsEmpty"/> must be false when this method is called.
+            </summary>
+            <returns>The former last element.</returns>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.DoRemoveFromFront">
+            <summary>
+            Removes and returns the first element in the view. <see cref="P:CommonUtils.Collections.Deque`1.IsEmpty"/> must be false when this method is called.
+            </summary>
+            <returns>The former first element.</returns>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.DoInsertRange(System.Int32,System.Collections.Generic.IReadOnlyCollection{`0})">
+            <summary>
+            Inserts a range of elements into the view.
+            </summary>
+            <param name="index">The index into the view at which the elements are to be inserted.</param>
+            <param name="collection">The elements to insert. The sum of <c>collection.Count</c> and <see cref="P:CommonUtils.Collections.Deque`1.Count"/> must be less than or equal to <see cref="P:CommonUtils.Collections.Deque`1.Capacity"/>.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.DoRemoveRange(System.Int32,System.Int32)">
+            <summary>
+            Removes a range of elements from the view.
+            </summary>
+            <param name="index">The index into the view at which the range begins.</param>
+            <param name="collectionCount">The number of elements in the range. This must be greater than 0 and less than or equal to <see cref="P:CommonUtils.Collections.Deque`1.Count"/>.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.EnsureCapacityForOneElement">
+            <summary>
+            Doubles the capacity if necessary to make room for one more element. When this method returns, <see cref="P:CommonUtils.Collections.Deque`1.IsFull"/> is false.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.AddToBack(`0)">
+            <summary>
+            Inserts a single element at the back of this deque.
+            </summary>
+            <param name="value">The element to insert.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.AddToFront(`0)">
+            <summary>
+            Inserts a single element at the front of this deque.
+            </summary>
+            <param name="value">The element to insert.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.InsertRange(System.Int32,System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Inserts a collection of elements into this deque.
+            </summary>
+            <param name="index">The index at which the collection is inserted.</param>
+            <param name="collection">The collection of elements to insert.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="index"/> is not a valid index to an insertion point for the source.</exception>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.RemoveRange(System.Int32,System.Int32)">
+            <summary>
+            Removes a range of elements from this deque.
+            </summary>
+            <param name="offset">The index into the deque at which the range begins.</param>
+            <param name="count">The number of elements to remove.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">Either <paramref name="offset"/> or <paramref name="count"/> is less than 0.</exception>
+            <exception cref="T:System.ArgumentException">The range [<paramref name="offset"/>, <paramref name="offset"/> + <paramref name="count"/>) is not within the range [0, <see cref="P:CommonUtils.Collections.Deque`1.Count"/>).</exception>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.RemoveFromBack">
+            <summary>
+            Removes and returns the last element of this deque.
+            </summary>
+            <returns>The former last element.</returns>
+            <exception cref="T:System.InvalidOperationException">The deque is empty.</exception>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.RemoveFromFront">
+            <summary>
+            Removes and returns the first element of this deque.
+            </summary>
+            <returns>The former first element.</returns>
+            <exception cref="T:System.InvalidOperationException">The deque is empty.</exception>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.Clear">
+            <summary>
+            Removes all items from this deque.
+            </summary>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.Resize(System.Int32,`0)">
+            <summary>
+             Resizes the container so that it contains n elements.
+             If the given size is greater than the current size, then new elements are inserted at the end of the deque.
+             If the given size is smaller than the current size, then extra elements are destroyed.
+            </summary>
+            <param name="size">New container size, expressed in number of elements.</param>
+            <param name="value">Object whose content is copied to the added elements in case that n is greater than the current container size.
+            If not specified, the default constructor is used instead.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.Assign(System.Int32,`0)">
+            <summary>
+            Assigns new contents to the deque container, replacing its current contents, and modifying its size accordingly.
+            </summary>
+            <param name="size">New size for the container.</param>
+            <param name="value">Value to fill the container with. Each of the n elements in the container will be initialized to a copy of this value.</param>
+        </member>
+        <member name="M:CommonUtils.Collections.Deque`1.ToArray">
+            <summary>
+            Creates and returns a new array containing the elements in this deque.
+            </summary>
+        </member>
         <member name="T:CommonUtils.IO.ReaderText">
             <summary>
             Summary description for ReaderText.
@@ -515,6 +891,12 @@
             </summary>
             <returns>Returns a trasposed matrix.</returns>
         </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.Transposed">
+            <summary>
+            Gets the transpose of this matrix.
+            </summary>
+            <returns>Returns a trasposed matrix.</returns>
+        </member>
         <member name="M:CommonUtils.MathLib.Matrix3D.Multiply(CommonUtils.MathLib.Matrix3D)">
             <summary>
             Multiplies self by a given matrix.
@@ -532,6 +914,12 @@
             Divides self by a scalar.
             </summary>
             <param name="scalar">The scalar to divide with.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.GetQuaternion">
+            <summary>
+            Returns the quaternion associated with this direction cosine (rotation) matrix.
+            </summary>
+            <returns></returns>
         </member>
         <member name="M:CommonUtils.MathLib.Matrix3D.GetEuler">
             <summary>
@@ -598,10 +986,23 @@
             <param name="m2">The second matrix to add.</param>
             <returns>Result is ( m1.M11 + m2.M11, m1.M12 + m2.M12, ...)</returns>
         </member>
+        <member name="T:CommonUtils.MathLib.UniformRandom">
+            <summary>
+            An uniform random number generator 
+            Generated random values will be in the [lower, upper) interval
+            </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.UniformRandom.#ctor(System.Double,System.Double,System.Random)">
+            <summary>
+            Default constructor
+            </summary>
+            <param name="lower"></param>
+            <param name="upper"></param>
+            <param name="rand"></param>
+        </member>
         <member name="M:CommonUtils.MathLib.UniformRandom.Next">
             <summary>
-            Returns a random double number
-            It has an implementation of the Box-Muller transform.
+            Returns an uniform random double number
             </summary>
             <returns></returns>
         </member>
@@ -705,6 +1106,12 @@
             <param name="idx">Index of the euler angle to initialize</param>
             <param name="angle">The euler angle in radians</param>
         </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.#ctor(CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Quaternion"/> class using the three euler angles.
+            </summary>
+            <param name="vOrient"> A vector with the euler X axis (roll),Y axis (attitude) and Z axis (heading) angles in radians</param>
+        </member>
         <member name="M:CommonUtils.MathLib.Quaternion.#ctor(System.Double[])">
             <summary>
             Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Quaternion"/> class using values from a given array of double.
@@ -807,6 +1214,24 @@
             corresponding to this quaternion rotation
             </returns>
         </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetT">
+            <summary>
+            Transformation matrix
+            </summary>
+            <returns>
+            the transformation/rotation matrix
+            corresponding to this quaternion rotation
+            </returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetTInv">
+            <summary>
+            Backward transformation matrix.
+            </summary>
+            <returns>
+            inverse transformation/rotation matrix
+            corresponding to this quaternion rotation
+            </returns>
+        </member>
         <member name="M:CommonUtils.MathLib.Quaternion.GetInverseTransformationMatrix">
             <summary>
             Inverse transformation matrix
@@ -816,13 +1241,43 @@
             corresponding to this quaternion rotation
             </returns>
         </member>
-        <member name="M:CommonUtils.MathLib.Quaternion.GetEulerAngles">
+        <member name="M:CommonUtils.MathLib.Quaternion.GetEuler">
             <summary>
             Retrieves the Euler angles.
+            units radians.
             </summary>
             <returns>
             the triad of euler angles corresponding to this quaternion rotation.
             units radians
+            </returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetEuler(CommonUtils.MathLib.Quaternion.EulerAngles)">
+            <summary>
+            Retrieves the Euler angles.
+            units radians.
+            </summary>
+            <param name="i">the Euler angle index.</param>
+            <returns>a reference to the i-th euler angles corresponding
+            to this quaternion rotation.
+            </returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetEulerDeg(CommonUtils.MathLib.Quaternion.EulerAngles)">
+            <summary>
+            Retrieves the Euler angles.
+            units degrees
+            </summary>
+            <param name="i">the Euler angle index.</param>
+            <returns>a reference to the i-th euler angles corresponding
+            to this quaternion rotation.
+            </returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetEulerDeg">
+            <summary>
+             Retrieves the Euler angle vector.
+             units degrees
+            </summary>
+            <returns>an Euler angle column vector corresponding
+            to this quaternion rotation.
             </returns>
         </member>
         <member name="M:CommonUtils.MathLib.Quaternion.GetSinEuler">
@@ -834,6 +1289,14 @@
             to this quaternion rotation.
             </returns>
         </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetSinEuler(CommonUtils.MathLib.Quaternion.EulerAngles)">
+            <summary>
+            Retrieves sine of the given euler angle.
+            </summary>
+            <param name="i">the sine of the Euler angle theta (pitch attitude) corresponding
+            to this quaternion rotation.</param>
+            <returns></returns>
+        </member>
         <member name="M:CommonUtils.MathLib.Quaternion.GetCosEuler">
             <summary>
             Retrieves cosine of the euler angles.
@@ -842,6 +1305,14 @@
             the sine of the Euler angle theta (pitch attitude) corresponding
             to this quaternion rotation.
             </returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.GetCosEuler(CommonUtils.MathLib.Quaternion.EulerAngles)">
+            <summary>
+            Retrieves cosine of the given euler angle.
+            </summary>
+            <param name="i">the sine of the Euler angle theta (pitch attitude) corresponding
+             to this quaternion rotation.</param>
+            <returns></returns>
         </member>
         <member name="M:CommonUtils.MathLib.Quaternion.Inverse">
             <summary>
@@ -865,6 +1336,15 @@
             Create a new quaternion that is the transpose of self.
             Note : Can be used only on unit quaternions.
             </summary>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.QExp(CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Quaternion exponential
+            Calculate the unit quaternion which is the result of the exponentiation of
+            the vector 'omega'.
+            </summary>
+            <param name="omega">rotation velocity</param>
+            <returns></returns>
         </member>
         <member name="M:CommonUtils.MathLib.Quaternion.ToRotationMatrix">
             <summary>
@@ -1165,7 +1645,7 @@
             Scale the vector so that the magnitude is 1.
             </summary>
         </member>
-        <member name="M:CommonUtils.MathLib.Vector3D.GetMagnitude">
+        <member name="M:CommonUtils.MathLib.Vector3D.Magnitude">
             <summary>
             Get the magnitude of the vector.
             </summary>
@@ -1224,6 +1704,17 @@
             <returns>The dot product of <paramref name="v1"/> and <paramref name="v2"/>.</returns>
         </member>
         <member name="M:CommonUtils.MathLib.Vector3D.Cross(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
+            <summary>
+            Calculate the cross product (i.e. outer product) of <paramref name="a"/> and <paramref name="b"/>.
+            The cross product is calculated using right-handed rule.
+            When using left-handed rule (which some graphics APIs like DirectX require) the
+            sign of the cross product should be changed.
+            </summary>
+            <param name="a">The first of two 3D vectors to cross.</param>
+            <param name="b">The second of two 3D vectors to cross.</param>
+            <returns>The cross product of the two given vectors.</returns>
+        </member>
+        <member name="M:CommonUtils.MathLib.Vector3D.op_Multiply(CommonUtils.MathLib.Vector3D,CommonUtils.MathLib.Vector3D)">
             <summary>
             Calculate the cross product (i.e. outer product) of <paramref name="a"/> and <paramref name="b"/>.
             The cross product is calculated using right-handed rule.
@@ -1464,6 +1955,17 @@
         <member name="P:CommonUtils.MathLib.Vector3D.W">
             <summary>
             Velocities W
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "P:CommonUtils.MathLib.Vector3D.P" -->
+        <member name="P:CommonUtils.MathLib.Vector3D.Q">
+            <summary>
+            Angular velocity   Q
+            </summary>
+        </member>
+        <member name="P:CommonUtils.MathLib.Vector3D.R">
+            <summary>
+            Angular velocity   R
             </summary>
         </member>
         <member name="P:CommonUtils.MathLib.Vector3D.North">

@@ -126,6 +126,7 @@
     <Compile Include="Matrix3DTests.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DequeTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>

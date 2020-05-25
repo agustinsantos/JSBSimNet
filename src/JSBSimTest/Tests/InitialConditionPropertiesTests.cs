@@ -80,7 +80,7 @@ namespace JSBSim.Tests
             }
 
         }
-
+#if TODO
         [Test]
         public void CheckPositionAttributes()
         {
@@ -182,7 +182,7 @@ namespace JSBSim.Tests
             //Checks InputOutput 
             Assert.AreEqual(IC.AlphaDegIC + IC.BetaDegIC + IC.ThetaDegIC + IC.PhiDegIC + IC.PsiDegIC, func.GetValue(), tolerance);
         }
-
+#endif
         private XmlElement BuildXmlConfig(string config, string tag)
         {
             XmlDocument doc = new XmlDocument();

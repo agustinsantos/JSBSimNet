@@ -180,9 +180,9 @@ namespace JSBSim.Models
             return true;
         }
 
-        protected List<Function> PreFunctions;
-        protected List<Function> PostFunctions;
-        protected PropertyReader LocalProperties;
+        protected List<Function> PreFunctions = new List<Function>();
+        protected List<Function> PostFunctions = new List<Function>();
+        protected PropertyReader LocalProperties = new PropertyReader();
 
 
     }

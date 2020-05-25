@@ -383,7 +383,7 @@ namespace JSBSim.Models
         /// The Force vector for this gear
         public Vector3D Force()
         {
-
+#if TODO
             Vector3D normal, cvel;
             Location contact, gearLoc;
             double t = FDMExec.State.SimTime;
@@ -468,6 +468,8 @@ namespace JSBSim.Models
             CrashDetect();
 
             return vForce;
+#endif
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
 
         public bool IsBogey() {return (sContactType.Equals("BOGEY"));}
@@ -595,8 +597,8 @@ namespace JSBSim.Models
         private void CrashDetect()
         {
             if (compressLength > 500.0 ||
-            vForce.GetMagnitude() > 100000000.0 ||
-            vMoment.GetMagnitude() > 5000000000.0 ||
+            vForce.Magnitude() > 100000000.0 ||
+            vMoment.Magnitude() > 5000000000.0 ||
             SinkRate > 1.4666 * 30)
             {
                 if (log.IsDebugEnabled)
@@ -627,13 +629,13 @@ namespace JSBSim.Models
             {
                 FirstContact = true;
                 SinkRate = compressSpeed;
-                GroundSpeed = FDMExec.Propagate.GetVel().GetMagnitude();
+                GroundSpeed = FDMExec.Propagate.GetVel().Magnitude();
                 TakeoffReported = false;
             }
 
             // If the takeoff run is starting, initialize.
 
-            if ((FDMExec.Propagate.GetVel().GetMagnitude() > 0.1) &&
+            if ((FDMExec.Propagate.GetVel().Magnitude() > 0.1) &&
                 (FDMExec.FlightControlSystem.GetBrake(BrakeGroup.Left) == 0) &&
                 (FDMExec.FlightControlSystem.GetBrake(BrakeGroup.Right) == 0) &&
                 (FDMExec.FlightControlSystem.GetThrottlePos(0) == 1) && !StartedGroundRun)

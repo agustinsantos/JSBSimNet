@@ -1,12 +1,12 @@
 #region Copyright(C)  Licensed under GNU GPL.
-/// Copyright (C) 2005-2006 Agustin Santos Mendez
+/// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
 /// David Megginson. 
 /// Agustin Santos Mendez implemented and maintains this C# version.
 /// 
 /// This program is free software; you can redistribute it and/or
-///  modify it under the terms of the GNU General Public License
+/// modify it under the terms of the GNU General Public License
 /// as published by the Free Software Foundation; either version 2
 /// of the License, or (at your option) any later version.
 ///  
@@ -18,6 +18,9 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+/// 
+/// Further information about the GNU Lesser General Public License can also be found on
+/// the world wide web at http://www.gnu.org.
 #endregion
 namespace CommonUtils.MathLib
 {
@@ -190,6 +193,14 @@ namespace CommonUtils.MathLib
                 this.Y = 0.0;
                 this.Z = Sangle2;
             }
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Quaternion"/> class using the three euler angles.
+        /// </summary>
+        /// <param name="vOrient"> A vector with the euler X axis (roll),Y axis (attitude) and Z axis (heading) angles in radians</param>
+        public Quaternion(Vector3D vOrient) : this(vOrient.Phi, vOrient.Theta, vOrient.Psi)
+        {
         }
 
         /// <summary>
@@ -385,6 +396,24 @@ namespace CommonUtils.MathLib
         }
 
         /// <summary>
+        /// Transformation matrix
+        /// </summary>
+        /// <returns>
+        /// the transformation/rotation matrix
+        /// corresponding to this quaternion rotation
+        /// </returns>
+        public Matrix3D GetT() { ComputeDerived(); return mT; }
+
+        /// <summary>
+        /// Backward transformation matrix.
+        /// </summary>
+        /// <returns>
+        /// inverse transformation/rotation matrix
+        /// corresponding to this quaternion rotation
+        /// </returns>
+        public Matrix3D GetTInv() { ComputeDerived(); return mTInv; }
+
+        /// <summary>
         /// Inverse transformation matrix
         /// </summary>
         /// <returns>
@@ -400,17 +429,58 @@ namespace CommonUtils.MathLib
 
         /// <summary>
         /// Retrieves the Euler angles.
+        /// units radians.
         /// </summary>
         /// <returns>
         /// the triad of euler angles corresponding to this quaternion rotation.
         /// units radians
         /// </returns>
-        public Vector3D GetEulerAngles()
+        public Vector3D GetEuler()
         {
             ComputeDerived();
             return mEulerAngles;
         }
 
+        /// <summary>
+        /// Retrieves the Euler angles.
+        /// units radians.
+        /// </summary>
+        /// <param name="i">the Euler angle index.</param>
+        /// <returns>a reference to the i-th euler angles corresponding
+        /// to this quaternion rotation.
+        /// </returns>
+        public double GetEuler(EulerAngles i)
+        {
+            ComputeDerived();
+            return mEulerAngles[(int)i - 1];
+        }
+
+        /// <summary>
+        /// Retrieves the Euler angles.
+        /// units degrees
+        /// </summary>
+        /// <param name="i">the Euler angle index.</param>
+        /// <returns>a reference to the i-th euler angles corresponding
+        /// to this quaternion rotation.
+        /// </returns>
+        public double GetEulerDeg(EulerAngles i)
+        {
+            ComputeDerived();
+            return Constants.radtodeg * mEulerAngles[(int)i - 1];
+        }
+
+        /// <summary>
+        ///  Retrieves the Euler angle vector.
+        ///  units degrees
+        /// </summary>
+        /// <returns>an Euler angle column vector corresponding
+        /// to this quaternion rotation.
+        /// </returns>
+        public Vector3D GetEulerDeg()
+        {
+            ComputeDerived();
+            return Constants.radtodeg * mEulerAngles;
+        }
 
         /// <summary>
         /// Retrieves sine of the euler angles.
@@ -426,6 +496,18 @@ namespace CommonUtils.MathLib
         }
 
         /// <summary>
+        /// Retrieves sine of the given euler angle.
+        /// </summary>
+        /// <param name="i">the sine of the Euler angle theta (pitch attitude) corresponding
+        /// to this quaternion rotation.</param>
+        /// <returns></returns>
+        public double GetSinEuler(EulerAngles i)
+        {
+            ComputeDerived();
+            return mEulerSines[(int)i - 1];
+        }
+
+        /// <summary>
         /// Retrieves cosine of the euler angles.
         /// </summary>
         /// <returns>
@@ -436,6 +518,18 @@ namespace CommonUtils.MathLib
         {
             ComputeDerived();
             return mEulerCosines;
+        }
+
+        /// <summary>
+        /// Retrieves cosine of the given euler angle.
+        /// </summary>
+        /// <param name="i">the sine of the Euler angle theta (pitch attitude) corresponding
+        ///  to this quaternion rotation.</param>
+        /// <returns></returns>
+        public double GetCosEuler(EulerAngles i)
+        {
+            ComputeDerived();
+            return mEulerCosines[(int)i - 1];
         }
 
         /// <summary>
@@ -490,6 +584,27 @@ namespace CommonUtils.MathLib
             Quaternion q = new Quaternion(this);
             q.UnitInverse();
             return q;
+        }
+
+        /// <summary>
+        /// Quaternion exponential
+        /// Calculate the unit quaternion which is the result of the exponentiation of
+        /// the vector 'omega'.
+        /// </summary>
+        /// <param name="omega">rotation velocity</param>
+        /// <returns></returns>
+        public static Quaternion QExp(Vector3D omega)
+        {
+            Quaternion qexp = new Quaternion();
+            double angle = omega.Magnitude();
+            double sina_a = angle > 0.0 ? Math.Sin(angle) / angle : 1.0;
+
+            qexp.W = Math.Cos(angle);
+            qexp.X = omega.X * sina_a;
+            qexp.Y = omega.Y * sina_a;
+            qexp.Z = omega.Z * sina_a;
+
+            return qexp;
         }
 
         /// <summary>
@@ -607,10 +722,10 @@ namespace CommonUtils.MathLib
             //double q2 = rnorm * X;
             //double q3 = rnorm * Y;
             //double q4 = rnorm * Z;
-            double q1 =  W;
-            double q2 =  X;
-            double q3 =  Y;
-            double q4 =  Z;
+            double q1 = W;
+            double q2 = X;
+            double q3 = Y;
+            double q4 = Z;
 
             // Now compute the transformation matrix.
             double q1q1 = q1 * q1;

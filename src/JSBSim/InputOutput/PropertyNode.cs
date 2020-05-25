@@ -804,7 +804,7 @@ namespace JSBSim.InputOutput
         /// </summary>
         /// <param name="name">The property name.</param>
         /// <param name="state">The state of the archive attribute (defaults to true).</param>
-        public void SetArchivable(string name, bool state = true) { throw new NotImplementedException(); }
+        public void SetArchivable(string name, bool state = true) { throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM"); }
 
         /// <summary>
         /// Set the state of the read attribute for a property.

@@ -1,5 +1,5 @@
 #region Copyright(C)  Licensed under GNU GPL.
-/// Copyright (C) 2005-2006 Agustin Santos Mendez
+/// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
 /// David Megginson. 
@@ -18,6 +18,9 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+/// 
+/// Further information about the GNU Lesser General Public License can also be found on
+/// the world wide web at http://www.gnu.org.
 #endregion
 
 namespace JSBSim
@@ -132,6 +135,11 @@ namespace JSBSim
         {
         }
 
+        internal Inertial GetInertial()
+        {
+            return models[(int)eModels.eInertial] as Inertial;
+        }
+
         /// Default constructor
         public FDMExecutive(PropertyManager root)
         {
@@ -173,7 +181,7 @@ namespace JSBSim
         }
         /// Default constructor
         public FDMExecutive(PropertyManager root = null, int[] fdmctr = null)
-        { throw new NotImplementedException(); }
+        { throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM"); }
 
         /// <summary>
         /// This list of enums is very important! The order in which models are listed
@@ -229,16 +237,23 @@ namespace JSBSim
         /// </summary>
         /// <param name="model">The model being scheduled</param>
         /// <param name="rate">The rate at which to execute the model as described above</param>
+#if DELETEME
         public void Schedule(Model model, int rate)
         {
             model.Rate = rate;
             models.Add(model);
         }
+#endif
 
         ///<summary>
         /// Pauses execution by preventing time from incrementing.
         ///</summary>
         public void Hold() { holding = true; }
+
+        internal bool IntegrationSuspended()
+        {
+            throw new NotImplementedException();
+        }
 
         ///<summary>
         /// Resumes execution from a "Hold".
@@ -256,7 +271,7 @@ namespace JSBSim
         /// <returns>true if successful, false if sim should be ended</returns>
         public bool Run()
         {
-            if (models.Count == 0) return false;
+            if (models.Length == 0) return false;
 
             for (int i = 1; i < SlaveFDMList.Count; i++)
             {
@@ -422,7 +437,7 @@ namespace JSBSim
       @return true if successfully loads; false otherwise. */
         public bool LoadScript(string Script, double deltaT = 0.0,
                   string initfile = "")
-        { throw new NotImplementedException(); }
+        { throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM"); }
 
 
         /* Sets the path to the engine config file directories.
@@ -510,7 +525,7 @@ namespace JSBSim
                     {
                         Output output = new Output(this);
                         output.InitModel();
-                        Schedule(output, 1);
+                        //Schedule(output, 1);
                         output.Load(currentElement);
                         outputs.Add(output);
                     }
@@ -535,48 +550,48 @@ namespace JSBSim
         /// Returns the Atmosphere model
         /// </summary>
         /// <returns></returns>
-        public Atmosphere Atmosphere { get { return atmosphere; } }
+        public Atmosphere Atmosphere { get { return (Atmosphere)models[(int)eModels.eAtmosphere]; } }
 
         /// <summary>
         /// Returns the Aircraft reference.
         /// </summary>
-        public MassBalance MassBalance { get { return massBalance; } }
+        public MassBalance MassBalance { get { return (MassBalance)models[(int)eModels.eMassBalance]; } }
 
         /// <summary>
         /// Returns the Aircraft reference.
         /// </summary>
-        public Aircraft Aircraft { get { return aircraft; } }
+        public Aircraft Aircraft { get { return (Aircraft)models[(int)eModels.eAircraft]; } }
 
         /// <summary>
         /// Returns the Propulsion reference.
         /// </summary>
-        public Propulsion Propulsion { get { return propulsion; } }
+        public Propulsion Propulsion { get { return (Propulsion)models[(int)eModels.ePropulsion]; } }
 
         /// <summary>
         /// Returns the Aerodynamics reference
         /// </summary>
-        public Aerodynamics Aerodynamics { get { return aerodynamics; } }
+        public Aerodynamics Aerodynamics { get { return (Aerodynamics)models[(int)eModels.eAerodynamics]; } }
 
         /// <summary>
         /// Returns the FlightControlSystem model.
         /// </summary>
         /// <returns></returns>
-        public FlightControlSystem FlightControlSystem { get { return FCS; } }
+        public FlightControlSystem FlightControlSystem { get { return (FlightControlSystem)models[(int)eModels.eSystems]; ; } }
 
         /// <summary>
         /// Returns the GroundReactions reference.
         /// </summary>
-        public GroundReactions GroundReactions { get { return groundReactions; } }
+        public GroundReactions GroundReactions { get { return (GroundReactions)models[(int)eModels.eGroundReactions]; } }
 
         /// <summary>
         /// Returns the Input reference.
         /// </summary>
-        public Input Input { get { return input; } }
+        public Input Input { get { return (Input)models[(int)eModels.eInput]; ; } }
 
         /// <summary>
         /// Returns the Inertial reference.
         /// </summary>
-        public Inertial Inertial { get { return inertial; } }
+        public Inertial Inertial { get { return (Inertial)models[(int)eModels.eInertial]; } }
 
         /// <summary>
         /// Returns the Output reference.
@@ -591,12 +606,12 @@ namespace JSBSim
         /// <summary>
         /// Returns the Auxiliary reference.
         /// </summary>
-        public Auxiliary Auxiliary { get { return auxiliary; } }
+        public Auxiliary Auxiliary { get { return (Auxiliary)models[(int)eModels.eAuxiliary]; } }
 
         /// <summary>
         /// Returns the Propagate reference.
         /// </summary>
-        public Propagate Propagate { get { return propagate; } }
+        public Propagate Propagate { get { return (Propagate)models[(int)eModels.ePropagate]; } }
 
         public void DisableOutput()
         {
@@ -749,19 +764,79 @@ namespace JSBSim
         private bool Allocate()
         {
             bool result = true;
-            atmosphere = new StandardAtmosphere(this);
-            propulsion = new Propulsion(this);
-            aerodynamics = new Aerodynamics(this);
-            FCS = new FlightControlSystem(this);
-            groundReactions = new GroundReactions(this);
-            inertial = new Inertial(this);
+
+            models = new Model[(int)eModels.eNumStandardModels];
+
+            // First build the inertial model since some other models are relying on
+            // the inertial model and the ground callback to build themselves.
+            // Note that this does not affect the order in which the models will be
+            // executed later.
+            models[(int)eModels.eInertial] = new Inertial(this);
+
+            // See the eModels enum specification in the header file. The order of the
+            // enums specifies the order of execution. The Models[] vector is the primary
+            // storage array for the list of models.
+            models[(int)eModels.ePropagate] = new Propagate(this);
+            models[(int)eModels.eInput] = new Input(this);
+            models[(int)eModels.eAtmosphere] = new StandardAtmosphere(this);
+            //PENDING new JSBSIM models[(int)eModels.eWinds] = new Winds(this);
+            models[(int)eModels.eSystems] = new FlightControlSystem(this);
+            models[(int)eModels.eMassBalance] = new MassBalance(this);
+            models[(int)eModels.eAuxiliary] = new Auxiliary(this);
+            models[(int)eModels.ePropulsion] = new Propulsion(this);
+            models[(int)eModels.eAerodynamics] = new Aerodynamics(this);
+            models[(int)eModels.eGroundReactions] = new GroundReactions(this);
+            //PENDING new JSBSIM models[(int)eModels.eExternalReactions] = new ExternalReactions(this);
+            //PENDING new JSBSIM models[(int)eModels.eBuoyantForces] = new BuoyantForces(this);
+            models[(int)eModels.eAircraft] = new Aircraft(this);
+            //PENDING new JSBSIM models[(int)eModels.eAccelerations] = new Accelerations(this);
+            models[(int)eModels.eOutput] = new Output(this);
+
+            // Assign the Model shortcuts for internal executive use only.
+            propagate = (Propagate)models[(int)eModels.ePropagate];
+            inertial = (Inertial)models[(int)eModels.eInertial];
+            atmosphere = (Atmosphere)models[(int)eModels.eAtmosphere];
+            //PENDING new JSBSIM winds = (Winds)models[(int)eModels.eWinds];
+            FCS = (FlightControlSystem)models[(int)eModels.eSystems];
+            massBalance = (MassBalance)models[(int)eModels.eMassBalance];
+            auxiliary = (Auxiliary)models[(int)eModels.eAuxiliary];
+            propulsion = (Propulsion)models[(int)eModels.ePropulsion];
+            aerodynamics = (Aerodynamics)models[(int)eModels.eAerodynamics];
+            groundReactions = (GroundReactions)models[(int)eModels.eGroundReactions];
+            //PENDING new JSBSIM  externalReactions = (ExternalReactions)models[(int)eModels.eExternalReactions];
+            //PENDING new JSBSIM buoyantForces = (BuoyantForces)models[(int)eModels.eBuoyantForces];
+            aircraft = (Aircraft)models[(int)eModels.eAircraft];
+            //PENDING new JSBSIM accelerations = (Accelerations)models[(int)eModels.eAccelerations];
+            //PENDING new JSBSIM output = (Output)models[(int)eModels.eOutput];
+
+            // Initialize planet (environment) constants
+            LoadPlanetConstants();
+
+            // Initialize models
+            for (int i = 0; i < models.Length; i++)
+            {
+                // The Input/Output models must not be initialized prior to IC loading
+                if (i == (int)eModels.eInput || i == (int)eModels.eOutput) continue;
+
+                //PENDING new JSBSIM LoadInputs(i);
+                if (models[i] != null)
+                    models[i].InitModel();
+            }
+
+            ic = new InitialCondition(this);
+            ic.Bind(instance);
+
+            modelLoaded = false;
+
+            return result;
+
+            //---------------------- old code pending 
+#if DELETEME
+            bool result = true;
             massBalance = new MassBalance(this);
-            propagate = new Propagate(this);
-            auxiliary = new Auxiliary(this);
-            aircraft = new Aircraft(this);
             //output = new Output(this);
             input = new Input(this);
-            groundCallback = new GroundCallback();
+            //TODO groundCallback = new DefaultGroundCallback();
             state = new State(this); // This must be done here, as the State
             // class needs valid pointers to the above model classes
 
@@ -848,6 +923,7 @@ namespace JSBSim
 
             modelLoaded = false;
             return result;
+#endif
         }
 
         private bool DeAllocate()
@@ -889,9 +965,16 @@ namespace JSBSim
             return modelLoaded;
         }
 
-
+        private void LoadPlanetConstants()
+        {
+            propagate.inputs.vOmegaPlanet = Inertial.GetOmegaPlanet();
+            //accelerations.inputs.vOmegaPlanet = Inertial.GetOmegaPlanet();
+            propagate.inputs.SemiMajor = Inertial.GetSemimajor();
+            propagate.inputs.SemiMinor = Inertial.GetSemiminor();
+            //auxiliary.inputs.StandardGravity = Inertial.GetStandardGravity();
+        }
         //TODO private Model FirstModel = null;
-        private List<Model> models = new List<Model>();
+        private Model[] models;
 
         //TODO delete?? private bool terminate = false;
         private bool holding = false;
@@ -926,6 +1009,8 @@ namespace JSBSim
         private string CFGVersion;
         private string release;
 
+        // Standard Model references - shortcuts for internal executive use only.
+        private Propagate propagate = null;
         private GroundCallback groundCallback = null;
         private State state = null;
         private Auxiliary auxiliary = null;
@@ -938,16 +1023,25 @@ namespace JSBSim
         private FlightControlSystem FCS = null;
         private GroundReactions groundReactions = null;
         private Trim Trim = null;
-        private Propagate propagate = null;
         //private Output output = null;
         private List<Output> outputs = new List<Output>();
         private Input input = null;
 
+        private bool trim_status;
+        private int ta_mode;
+        private int ResetMode;
+        private int trim_completed;
+
+        //private Script Script;
         private InitialCondition ic = null;
+        private Trim trim;
+
+        private PropertyManager Root;
+        private bool StandAlone;
+        private PropertyManager instance;
+
 
         private Dictionary<string, TemplateFunc> templateFunctions = new Dictionary<string, TemplateFunc>();
-
-        private const string IdSrc = "$Id: FGFDMExec.cpp,v 1.1.2.5 2005/04/23 17:31:48 jberndt Exp $";
 
         private const string CONFIG_FDM_NAME2 = "name";
         private const string CONFIG_FDM_VERSION2 = "version";
@@ -1087,7 +1181,7 @@ namespace JSBSim
 
         internal Random GetRandomEngine()
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
         }
     }
 }

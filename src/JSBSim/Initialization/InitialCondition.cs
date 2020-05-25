@@ -1,12 +1,12 @@
 #region Copyright(C)  Licensed under GNU GPL.
-/// Copyright (C) 2005-2006 Agustin Santos Mendez
+/// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
 /// David Megginson. 
 /// Agustin Santos Mendez implemented and maintains this C# version.
 /// 
 /// This program is free software; you can redistribute it and/or
-///  modify it under the terms of the GNU General Public License
+/// modify it under the terms of the GNU General Public License
 /// as published by the Free Software Foundation; either version 2
 /// of the License, or (at your option) any later version.
 ///  
@@ -18,11 +18,16 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+/// 
+/// Further information about the GNU Lesser General Public License can also be found on
+/// the world wide web at http://www.gnu.org.
 #endregion
 namespace JSBSim
 {
     using System;
+    using System.IO;
     using System.Xml;
+    using CommonUtils.IO;
     using CommonUtils.MathLib;
     using JSBSim.Format;
     using JSBSim.InputOutput;
@@ -50,12 +55,12 @@ namespace JSBSim
     /// With a valid object of FGFDMExec and an aircraft model loaded:
     /// 
     /// @code
-    /// FGInitialCondition* fgic = FDMExec->GetIC();
+    /// FGInitialCondition* fgic = FDMExec.GetIC();
     /// 
     /// // Reset the initial conditions and set VCAS and altitude
-    /// fgic->InitializeIC();
-    /// fgic->SetVcalibratedKtsIC(vcas);
-    /// fgic->SetAltitudeAGLFtIC(altitude);
+    /// fgic.InitializeIC();
+    /// fgic.SetVcalibratedKtsIC(vcas);
+    /// fgic.SetAltitudeAGLFtIC(altitude);
     /// 
     /// // directly into Run
     /// FDMExec.GetPropagate.SetInitialState(fgic);
@@ -201,8 +206,6 @@ namespace JSBSim
         public InitialCondition(FDMExecutive fdmex)
         {
             this.fdmex = fdmex;
-            PropertyManager = this.fdmex.PropertyManager;
-            Bind();
 
             InitializeIC();
 
@@ -218,39 +221,1156 @@ namespace JSBSim
             }
         }
 
-        private void InitializeIC()
+        /// <summary>
+        /// Set calibrated airspeed initial condition in knots.
+        /// </summary>
+        /// <param name="vcas">Calibrated airspeed in knots</param>
+        public void SetVcalibratedKtsIC(double vcas)
         {
-            alpha = beta = 0.0;
-            epa = 0.0;
-            // FIXME: Since FGDefaultGroundCallback assumes the Earth is spherical, so
-            // must FGLocation. However this should be updated according to the assumption
-            // made by the actual callback.
+            double altitudeASL = position.GeodAltitude;
+            double pressure = Atmosphere.GetPressure(altitudeASL);
+            double mach = Conversion.MachFromVcalibrated(Math.Abs(vcas) * Constants.ktstofps, pressure);
+            double soundSpeed = Atmosphere.GetSoundSpeed(altitudeASL);
 
-            // double a = fdmex->GetInertial()->GetSemimajor();
-            // double b = fdmex->GetInertial()->GetSemiminor();
-            double a = fdmex.Inertial.RefRadius();
-            double b = fdmex.Inertial.RefRadius();
+            SetVtrueFpsIC(mach * soundSpeed);
+            lastSpeedSet = SpeedSet.setvc;
+        }
 
-            position.SetEllipse(a, b);
+        /// <summary>
+        /// Set equivalent airspeed initial condition in knots.
+        /// </summary>
+        /// <param name="ve">Equivalent airspeed in knots</param>
+        public void SetVequivalentKtsIC(double ve)
+        {
+            double altitudeASL = position.GeodAltitude;
+            double rho = Atmosphere.GetDensity(altitudeASL);
+            double rhoSL = Atmosphere.GetDensitySL();
+            SetVtrueFpsIC(ve * Constants.ktstofps * Math.Sqrt(rhoSL / rho));
+            lastSpeedSet = SpeedSet.setve;
+        }
 
-            position.SetPositionGeodetic(0.0, 0.0, 0.0);
+        /// <summary>
+        /// Set true airspeed initial condition in knots.
+        /// </summary>
+        /// <param name="vtrue">True airspeed in knots</param>
+        public void SetVtrueKtsIC(double vtrue) { SetVtrueFpsIC(vtrue * Constants.ktstofps); }
 
-            orientation = new Quaternion(0.0, 0.0, 0.0);
-            vUVW_NED = new Vector3D();
-            vPQR_body = new Vector3D();
-            vt = 0;
+        /// <summary>
+        ///  Set ground speed initial condition in knots.
+        /// </summary>
+        /// <param name="vg">Ground speed in knots</param>
+        public void SetVgroundKtsIC(double vg) { SetVgroundFpsIC(vg * Constants.ktstofps); }
 
-            targetNlfIC = 1.0;
+        /// <summary>
+        ///  Set mach initial condition.
+        /// </summary>
+        /// <param name="mach">Mach number</param>
+        public void SetMachIC(double mach)
+        {
+            double altitudeASL = position.GeodAltitude;
+            double soundSpeed = Atmosphere.GetSoundSpeed(altitudeASL);
+            SetVtrueFpsIC(mach * soundSpeed);
+            lastSpeedSet = SpeedSet.setmach;
+        }
 
-            Tw2b = new Matrix3D(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
-            Tb2w = new Matrix3D(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+        /// <summary>
+        /// Sets angle of attack initial condition in degrees.
+        /// </summary>
+        /// <param name="a">Alpha in degrees</param>
+        public void SetAlphaDegIC(double a) { SetAlphaRadIC(a * Constants.degtorad); }
+
+        /// <summary>
+        /// Sets angle of sideslip initial condition in degrees.
+        /// </summary>
+        /// <param name="b">Beta in degrees</param>
+        public void SetBetaDegIC(double b) { SetBetaRadIC(b * Constants.degtorad); }
+
+        /// <summary>
+        /// Sets pitch angle initial condition in degrees.
+        /// </summary>
+        /// <param name="theta">Theta (pitch) angle in degrees</param>
+        public void SetThetaDegIC(double theta) { SetThetaRadIC(theta * Constants.degtorad); }
+
+        /// <summary>
+        /// Resets the IC data structure to new values
+        /// </summary>
+        public void ResetIC(double u0, double v0, double w0,
+                                 double p0, double q0, double r0,
+                                 double alpha0, double beta0,
+                                 double phi0, double theta0, double psi0,
+                                 double latRad0, double lonRad0, double altAGLFt0,
+                                 double gamma0)
+        {
+            double calpha = Math.Cos(alpha0), cbeta = Math.Cos(beta0);
+            double salpha = Math.Sin(alpha0), sbeta = Math.Sin(beta0);
+
+            InitializeIC();
+
+            vPQR_body = new Vector3D(p0, q0, r0);
+            alpha = alpha0; beta = beta0;
+
+            position.Longitude = lonRad0;
+            position.Latitude = latRad0;
+            fdmex.GetInertial().SetAltitudeAGL(position, altAGLFt0);
+            lastLatitudeSet = LatitudeSet.setgeoc;
+            lastAltitudeSet = AltitudeSet.setagl;
+
+            orientation = new Quaternion(phi0, theta0, psi0);
+            Matrix3D Tb2l = orientation.GetTInv();
+
+            vUVW_NED = Tb2l * new Vector3D(u0, v0, w0);
+            vt = vUVW_NED.Magnitude();
+            lastSpeedSet = SpeedSet.setuvw;
+
+            Tw2b = new Matrix3D(
+                            calpha * cbeta, -calpha * sbeta, -salpha,
+                            sbeta, cbeta, 0.0,
+                            salpha * cbeta, -salpha * sbeta, calpha);
+            Tb2w = Tw2b.Transposed();
+
+            SetFlightPathAngleRadIC(gamma0);
+        }
+
+        /// <summary>
+        /// Sets the roll angle initial condition in degrees.
+        /// </summary>
+        /// <param name="phi">roll angle in degrees</param>
+        public void SetPhiDegIC(double phi) { SetPhiRadIC(phi * Constants.degtorad); }
+
+        /// <summary>
+        /// Sets the heading angle initial condition in degrees.
+        /// </summary>
+        /// <param name="psi">Heading angle in degrees</param>
+        public void SetPsiDegIC(double psi) { SetPsiRadIC(psi * Constants.degtorad); }
+
+        /// <summary>
+        /// Sets the climb rate initial condition in feet/minute.
+        /// </summary>
+        /// <param name="roc">Rate of Climb in feet/minute</param>
+        public void SetClimbRateFpmIC(double roc) { SetClimbRateFpsIC(roc / 60.0); }
+
+        /// <summary>
+        /// Sets the flight path angle initial condition in degrees.
+        /// </summary>
+        /// <param name="gamma">Flight path angle in degrees</param>
+        public void SetFlightPathAngleDegIC(double gamma)
+        { SetClimbRateFpsIC(vt * Math.Sin(gamma * Constants.degtorad)); }
+
+        /// <summary>
+        /// Sets the altitude above sea level initial condition in feet.
+        /// If the airspeed has been previously set with parameters
+        /// that are atmosphere dependent (Mach, VCAS, VEAS) then the true airspeed is
+        /// modified to keep the last set speed to its previous value.
+        /// </summary>
+        /// <param name="alt">Altitude above sea level in feet</param>
+        public void SetAltitudeASLFtIC(double alt)
+        {
+            double altitudeASL = position.GeodAltitude;
+            double pressure = Atmosphere.GetPressure(altitudeASL);
+            double soundSpeed = Atmosphere.GetSoundSpeed(altitudeASL);
+            double rho = Atmosphere.GetDensity(altitudeASL);
+            double rhoSL = Atmosphere.GetDensitySL();
+
+            double mach0 = vt / soundSpeed;
+            double vc0 = Conversion.VcalibratedFromMach(mach0, pressure);
+            double ve0 = vt * Math.Sqrt(rho / rhoSL);
+
+            double geodLatitude = position.GeodLatitudeRad;
+            double longitude = position.Longitude;
+            altitudeASL = alt;
+            position.SetPositionGeodetic(longitude, geodLatitude, alt);
+
+            soundSpeed = Atmosphere.GetSoundSpeed(altitudeASL);
+            rho = Atmosphere.GetDensity(altitudeASL);
+            pressure = Atmosphere.GetPressure(altitudeASL);
+
+            switch (lastSpeedSet)
+            {
+                case SpeedSet.setvc:
+                    mach0 = Conversion.MachFromVcalibrated(vc0, pressure);
+                    SetVtrueFpsIC(mach0 * soundSpeed);
+                    break;
+                case SpeedSet.setmach:
+                    SetVtrueFpsIC(mach0 * soundSpeed);
+                    break;
+                case SpeedSet.setve:
+                    SetVtrueFpsIC(ve0 * Math.Sqrt(rhoSL / rho));
+                    break;
+                default: // Make the compiler stop complaining about missing enums
+                    break;
+            }
+
+            lastAltitudeSet = AltitudeSet.setasl;
+        }
+
+        /// <summary>
+        /// Sets the initial Altitude above ground level.
+        /// </summary>
+        /// <param name="agl">Altitude above ground level in feet</param>
+        public void SetAltitudeAGLFtIC(double agl)
+        {
+            fdmex.GetInertial().SetAltitudeAGL(position, agl);
+            lastAltitudeSet = AltitudeSet.setagl;
+        }
+
+        /// <summary>
+        /// Sets the initial terrain elevation.
+        /// </summary>
+        /// <param name="elev">Initial terrain elevation in feet</param>
+        public void SetTerrainElevationFtIC(double elev)
+        {
+            double agl = GetAltitudeAGLFtIC();
+            fdmex.GetInertial().SetTerrainElevation(elev);
+
+            if (lastAltitudeSet == AltitudeSet.setagl)
+                SetAltitudeAGLFtIC(agl);
+        }
+
+        /// <summary>
+        /// Sets the initial latitude.
+        /// </summary>
+        /// <param name="lat">Initial latitude in degrees</param>
+        public void SetLatitudeDegIC(double lat) { SetLatitudeRadIC(lat * Constants.degtorad); }
+
+        /// <summary>
+        /// Sets the initial geodetic latitude.
+        /// This method modifies the geodetic altitude in order to keep the altitude
+        /// above sea level unchanged.
+        /// </summary>
+        /// <param name="glat">Initial geodetic latitude in degrees</param>
+        public void SetGeodLatitudeDegIC(double glat)
+        { SetGeodLatitudeRadIC(glat * Constants.degtorad); }
+
+        /// <summary>
+        /// Sets the initial longitude.
+        /// </summary>
+        /// <param name="lon">Initial longitude in degrees</param>
+        public void SetLongitudeDegIC(double lon) { SetLongitudeRadIC(lon * Constants.degtorad); }
+
+        /// <summary>
+        /// Gets the initial calibrated airspeed.
+        /// </summary>
+        /// <returns>Initial calibrated airspeed in knots</returns>
+        public double GetVcalibratedKtsIC()
+        {
+            double altitudeASL = position.GeodAltitude;
+            double pressure = Atmosphere.GetPressure(altitudeASL);
+            double soundSpeed = Atmosphere.GetSoundSpeed(altitudeASL);
+            double mach = vt / soundSpeed;
+
+            return Constants.fpstokts * Conversion.VcalibratedFromMach(mach, pressure);
+        }
+
+        /// <summary>
+        /// Gets the initial equivalent airspeed.
+        /// </summary>
+        /// <returns>Initial equivalent airspeed in knots</returns>
+        public double GetVequivalentKtsIC()
+        {
+            double altitudeASL = position.GeodAltitude;
+            double rho = Atmosphere.GetDensity(altitudeASL);
+            double rhoSL = Atmosphere.GetDensitySL();
+            return Constants.fpstokts * vt * Math.Sqrt(rho / rhoSL);
+        }
+
+        /// <summary>
+        /// Gets the initial ground speed.
+        /// </summary>
+        /// <returns>Initial ground speed in knots</returns>
+        public double GetVgroundKtsIC() { return GetVgroundFpsIC() * Constants.fpstokts; }
+
+        /// <summary>
+        /// Gets the initial true velocity.
+        /// </summary>
+        /// <returns>Initial true airspeed in knots.</returns>
+        public double GetVtrueKtsIC()
+        {
+            return vt * Constants.fpstokts;
+        }
+
+        /// <summary>
+        /// Gets the initial mach.
+        /// </summary>
+        /// <returns>Initial mach number</returns>
+        public double GetMachIC()
+        {
+            double altitudeASL = position.GeodAltitude;
+            double soundSpeed = Atmosphere.GetSoundSpeed(altitudeASL);
+            return vt / soundSpeed;
+        }
+
+        /// <summary>
+        /// Gets the initial climb rate.
+        /// </summary>
+        /// <returns>Initial climb rate in feet/minute</returns>
+        public double GetClimbRateFpmIC()
+        { return GetClimbRateFpsIC() * 60; }
+
+        /// <summary>
+        /// Gets the initial flight path angle
+        /// </summary>
+        /// <returns>Initial flight path angle in degrees</returns>
+        public double GetFlightPathAngleDegIC()
+        { return GetFlightPathAngleRadIC() * Constants.radtodeg; }
+
+        /// <summary>
+        /// Gets the initial angle of attack.
+        /// </summary>
+        /// <returns>Initial alpha in degrees</returns>
+        public double GetAlphaDegIC() { return alpha * Constants.radtodeg; }
+
+        /// <summary>
+        /// Gets the initial sideslip angle.
+        /// </summary>
+        /// <returns>Initial beta in degrees</returns>
+        public double GetBetaDegIC() { return beta * Constants.radtodeg; }
+
+        /// <summary>
+        /// Gets the initial pitch angle.
+        /// </summary>
+        /// <returns>Initial pitch angle in degrees</returns>
+        public double GetThetaDegIC() { return orientation.GetEulerDeg(Quaternion.EulerAngles.eTht); }
+
+        /// <summary>
+        /// Gets the initial roll angle.
+        /// </summary>
+        /// <returns>Initial phi in degrees</returns>
+        public double GetPhiDegIC() { return orientation.GetEulerDeg(Quaternion.EulerAngles.ePhi); }
+
+        /// <summary>
+        /// Gets the initial heading angle.
+        /// </summary>
+        /// <returns>Initial psi in degrees</returns>
+        public double GetPsiDegIC() { return orientation.GetEulerDeg(Quaternion.EulerAngles.ePsi); }
+
+        /// <summary>
+        /// Gets the initial latitude.
+        /// </summary>
+        /// <returns>Initial geocentric latitude in degrees</returns>
+        public double GetLatitudeDegIC() { return position.LatitudeDeg; }
+
+        /// <summary>
+        /// Gets the initial geodetic latitude.
+        /// </summary>
+        /// <returns>Initial geodetic latitude in degrees</returns>
+        public double GetGeodLatitudeDegIC()
+        { return position.GeodLatitudeDeg; }
+
+        /// <summary>
+        /// Gets the initial longitude.
+        /// </summary>
+        /// <returns>Initial longitude in degrees</returns>
+        public double GetLongitudeDegIC() { return position.LongitudeDeg; }
+
+        /// <summary>
+        /// Gets the initial altitude above sea level.
+        /// </summary>
+        /// <returns>Initial altitude in feet.</returns>
+        public double GetAltitudeASLFtIC()
+        {
+            return position.GeodAltitude;
+        }
+
+        /// <summary>
+        /// Gets the initial altitude above ground level.
+        /// </summary>
+        /// <returns>Initial altitude AGL in feet</returns>
+        public double GetAltitudeAGLFtIC()
+        {
+            return fdmex.GetInertial().GetAltitudeAGL(position);
+        }
+
+        /// <summary>
+        /// Gets the initial terrain elevation.
+        /// </summary>
+        /// <returns>Initial terrain elevation in feet</returns>
+        public double GetTerrainElevationFtIC()
+        {
+            Location contact;
+            Vector3D normal, v, w;
+            fdmex.GetInertial().GetContactPoint(position, out contact, out normal, out v, out w);
+            return contact.GeodAltitude;
+        }
+
+        /// <summary>
+        /// Gets the initial Earth position angle. 
+        /// Caution it sets the vertical velocity to zero to
+        /// keep backward compatibility.
+        /// </summary>
+        /// <returns>Initial Earth position angle in radians.</returns>
+        public double GetEarthPositionAngleIC() { return epa; }
+
+        /// <summary>
+        ///  Sets the initial ground speed.
+        /// </summary>
+        /// <param name="vg">Initial ground speed in feet/second</param>
+        public void SetVgroundFpsIC(double vg)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vWIND_NED = _vt_NED - vUVW_NED;
+
+            vUVW_NED.U = vg * orientation.GetCosEuler(Quaternion.EulerAngles.ePsi);
+            vUVW_NED.V = vg * orientation.GetSinEuler(Quaternion.EulerAngles.ePsi);
+            vUVW_NED.W = 0.0;
+            _vt_NED = vUVW_NED + _vWIND_NED;
+            vt = _vt_NED.Magnitude();
+
+            calcAeroAngles(_vt_NED);
+
+            lastSpeedSet = SpeedSet.setvg;
+        }
+
+        /// <summary>
+        /// Sets the initial true airspeed.
+        /// The amplitude of the airspeed is modified but its
+        /// direction is kept unchanged. If there is no wind, the same is true for the
+        /// ground velocity. If there is some wind, the airspeed direction is unchanged
+        /// but this may result in the ground velocity direction being altered. This is
+        /// for backward compatibility.
+        /// </summary>
+        /// <param name="vtrue">Initial true airspeed in feet/second</param>
+        public void SetVtrueFpsIC(double vtrue)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vWIND_NED = _vt_NED - vUVW_NED;
+
+            if (vt > 0.1)
+                _vt_NED *= vtrue / vt;
+            else
+                _vt_NED = Tb2l * Tw2b * new Vector3D(vtrue, 0.0, 0.0);
+
+            vt = vtrue;
+            vUVW_NED = _vt_NED - _vWIND_NED;
+
+            calcAeroAngles(_vt_NED);
 
             lastSpeedSet = SpeedSet.setvt;
-            lastAltitudeSet = AltitudeSet.setasl;
-            lastLatitudeSet = LatitudeSet.setgeoc;
-            enginesRunning = 0;
-            trimRequested = TrimMode.None;
         }
+
+        /// <summary>
+        /// Sets the initial body axis X velocity.
+        /// </summary>
+        /// <param name="ubody">Initial X velocity in feet/second</param>
+        public void SetUBodyFpsIC(double ubody) { SetBodyVelFpsIC(VelocityType.eU, ubody); }
+
+
+        /// <summary>
+        /// /* Sets the initial body axis Y velocity.
+        /// </summary>
+        /// <param name="vbody">Initial Y velocity in feet/second</param>
+        public void SetVBodyFpsIC(double vbody) { SetBodyVelFpsIC(VelocityType.eV, vbody); }
+
+        /// <summary>
+        /// Sets the initial body axis Z velocity.
+        /// </summary>
+        /// <param name="wbody">Initial Z velocity in feet/second</param>
+        public void SetWBodyFpsIC(double wbody) { SetBodyVelFpsIC(VelocityType.eW, wbody); }
+
+        /// <summary>
+        /// Initial Z velocity in feet/second
+        /// </summary>
+        /// <param name="vn">Initial north velocity in feet/second</param>
+        public void SetVNorthFpsIC(double vn) { SetNEDVelFpsIC(VelocityType.eU, vn); }
+
+        /// <summary>
+        /// Sets the initial local axis east velocity.
+        /// </summary>
+        /// <param name="ve">Initial east velocity in feet/second</param>
+        public void SetVEastFpsIC(double ve) { SetNEDVelFpsIC(VelocityType.eV, ve); }
+
+        /// <summary>Sets the initial local axis down velocity.
+        /// </summary>
+        /// <param name="vd">Initial down velocity in feet/second</param>
+        public void SetVDownFpsIC(double vd) { SetNEDVelFpsIC(VelocityType.eW, vd); }
+
+        /// <summary>
+        /// Sets the initial body axis roll rate.
+        /// </summary>
+        /// <param name="P">Initial roll rate in radians/second</param>
+        public void SetPRadpsIC(double P) { vPQR_body.P = P; }
+
+        /// <summary>
+        /// Sets the initial body axis pitch rate.
+        /// </summary>
+        /// <param name="Q">Initial pitch rate in radians/second</param>
+        public void SetQRadpsIC(double Q) { vPQR_body.Q = Q; }
+
+        /// <summary>
+        /// Sets the initial body axis yaw rate.
+        /// </summary>
+        /// <param name="R">initial yaw rate in radians/second</param>
+        public void SetRRadpsIC(double R) { vPQR_body.R = R; }
+
+        /// <summary>
+        /// Sets the initial wind velocity.
+        /// The aircraft velocity
+        /// with respect to the ground is not changed but the true airspeed is.
+        /// </summary>
+        /// <param name="wN">Initial wind velocity in local north direction, feet/second</param>
+        /// <param name="wE">Initial wind velocity in local east direction, feet/second</param>
+        /// <param name="wD">Initial wind velocity in local down direction, feet/second</param>
+        public void SetWindNEDFpsIC(double wN, double wE, double wD)
+        {
+            Vector3D _vt_NED = vUVW_NED + new Vector3D(wN, wE, wD);
+            vt = _vt_NED.Magnitude();
+
+            calcAeroAngles(_vt_NED);
+        }
+
+        /// <summary>
+        /// Sets the initial total wind speed.
+        /// Modifies the wind velocity (in knots) while keeping its direction unchanged.
+        /// The vertical component (in local NED frame) is unmodified. The aircraft
+        /// velocity with respect to the ground is not changed but the true airspeed is.
+        /// </summary>
+        /// <param name="mag">Initial wind velocity magnitude in knots</param>
+        public void SetWindMagKtsIC(double mag)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vWIND_NED = _vt_NED - vUVW_NED;
+            Vector3D _vHEAD = new Vector3D(_vWIND_NED.U, _vWIND_NED.V, 0.0);
+            double windMag = _vHEAD.Magnitude();
+
+            if (windMag > 0.001)
+                _vHEAD *= (mag * Constants.ktstofps) / windMag;
+            else
+                _vHEAD = new Vector3D(mag * Constants.ktstofps, 0.0, 0.0);
+
+            _vWIND_NED.U = _vHEAD.U;
+            _vWIND_NED.V = _vHEAD.V;
+            _vt_NED = vUVW_NED + _vWIND_NED;
+            vt = _vt_NED.Magnitude();
+
+            calcAeroAngles(_vt_NED);
+        }
+
+        /// <summary>
+        /// Sets the initial wind direction.
+        /// Modifies the wind direction while keeping its velocity unchanged. The vertical
+        /// component (in local NED frame) is unmodified. The aircraft velocity with
+        /// respect to the ground is not changed but the true airspeed is.
+        /// </summary>
+        /// <param name="dir">Initial direction wind is coming from in degrees</param>
+        public void SetWindDirDegIC(double dir)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vWIND_NED = _vt_NED - vUVW_NED;
+            double mag = _vWIND_NED.GetMagnitude((int)VelocityType.eU - 1, (int)VelocityType.eV - 1);
+            Vector3D _vHEAD = new Vector3D(mag * Math.Cos(dir * Constants.degtorad), mag * Math.Sin(dir * Constants.degtorad), 0.0);
+
+            _vWIND_NED.U = _vHEAD.U;
+            _vWIND_NED.V = _vHEAD.V;
+            _vt_NED = vUVW_NED + _vWIND_NED;
+            vt = _vt_NED.Magnitude();
+
+            calcAeroAngles(_vt_NED);
+        }
+
+        /// <summary>
+        /// Sets the initial headwind velocity.
+        /// </summary>
+        /// <param name="head">Initial headwind speed in knots</param>
+        public void SetHeadWindKtsIC(double head)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vWIND_NED = _vt_NED - vUVW_NED;
+            // This is a head wind, so the direction vector for the wind
+            // needs to be set opposite to the heading the aircraft
+            // is taking. So, the cos and sin of the heading (psi)
+            // are negated in the line below.
+            Vector3D _vHEAD = new Vector3D(-orientation.GetCosEuler().Psi, -orientation.GetSinEuler().Psi, 0.0);
+
+            // Gram-Schmidt process is used to remove the existing head wind component
+            _vWIND_NED -= Vector3D.Dot(_vWIND_NED, _vHEAD) * _vHEAD;
+            // Which is now replaced by the new value. The input head wind is expected
+            // in knots, so first convert to fps, which is the internal unit used.
+            _vWIND_NED += (head * Constants.ktstofps) * _vHEAD;
+            _vt_NED = vUVW_NED + _vWIND_NED;
+
+            vt = _vt_NED.Magnitude();
+
+            calcAeroAngles(_vt_NED);
+        }
+
+        /// <summary>
+        /// Sets the initial crosswind speed.
+        /// Set the cross wind velocity (in knots). Here, 'cross wind' means perpendicular
+        /// to the aircraft heading and parallel to the ground. The aircraft velocity
+        /// with respect to the ground is not changed but the true airspeed is.
+        /// </summary>
+        /// <param name="cross">Initial crosswind speed, positive from left to right</param>
+        public void SetCrossWindKtsIC(double cross)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vWIND_NED = _vt_NED - vUVW_NED;
+            Vector3D _vCROSS = new Vector3D(-orientation.GetSinEuler(Quaternion.EulerAngles.ePsi),
+                                                orientation.GetCosEuler(Quaternion.EulerAngles.ePsi),
+                                                0.0);
+
+            // Gram-Schmidt process is used to remove the existing cross wind component
+            _vWIND_NED -= Vector3D.Dot(_vWIND_NED, _vCROSS) * _vCROSS;
+            // Which is now replaced by the new value. The input cross wind is expected
+            // in knots, so first convert to fps, which is the internal unit used.
+            _vWIND_NED += (cross * Constants.ktstofps) * _vCROSS;
+            _vt_NED = vUVW_NED + _vWIND_NED;
+            vt = _vt_NED.Magnitude();
+
+            calcAeroAngles(_vt_NED);
+        }
+
+        /// <summary>
+        /// Sets the initial wind downward speed.
+        /// Set the vertical wind velocity (in knots). The 'vertical' is taken in the
+        /// local NED frame. The aircraft velocity with respect to the ground is not
+        /// changed but the true airspeed is.
+        /// </summary>
+        /// <param name="wD">Initial downward wind speed in knots</param>
+        public void SetWindDownKtsIC(double wD)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+
+            _vt_NED.W = vUVW_NED.W + wD;
+            vt = _vt_NED.Magnitude();
+
+            calcAeroAngles(_vt_NED);
+        }
+
+        /// <summary>
+        /// Sets the initial climb rate.
+        /// When the climb rate is modified, we need to update the angles theta and beta
+        /// to keep the true airspeed amplitude, the AoA and the heading unchanged.
+        /// Beta will be modified if the aircraft roll angle is not null.
+        /// </summary>
+        /// <param name="hdot">Initial Rate of climb in feet/second</param>
+        public void SetClimbRateFpsIC(double hdot)
+        {
+            if (Math.Abs(hdot) > vt)
+            {
+                log.Error("The climb rate cannot be higher than the true speed.");
+                return;
+            }
+
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _WIND_NED = _vt_NED - vUVW_NED;
+            double hdot0 = -_vt_NED.W;
+
+            if (Math.Abs(hdot0) < vt)
+            { // Is this check really needed ?
+                double scale = Math.Sqrt((vt * vt - hdot * hdot) / (vt * vt - hdot0 * hdot0));
+                _vt_NED.U *= scale;
+                _vt_NED.V *= scale;
+            }
+            _vt_NED.W = -hdot;
+            vUVW_NED = _vt_NED - _WIND_NED;
+
+            // Updating the angles theta and beta to keep the true airspeed amplitude
+            calcThetaBeta(alpha, _vt_NED);
+        }
+
+        /// <summary>
+        /// Gets the initial ground velocity.
+        /// </summary>
+        /// <returns>Initial ground velocity in feet/second</returns>
+        public double GetVgroundFpsIC() { return vUVW_NED.GetMagnitude((int)VelocityType.eU - 1, (int)VelocityType.eV - 1); }
+
+        /// <summary>
+        /// Gets the initial true velocity.
+        /// </summary>
+        /// <returns>Initial true velocity in feet/second</returns>
+        public double GetVtrueFpsIC() { return vt; }
+
+        /// <summary>
+        /// Gets the initial body axis X wind velocity.
+        /// </summary>
+        /// <returns>Initial body axis X wind velocity in feet/second</returns>
+        public double GetWindUFpsIC() { return GetBodyWindFpsIC(VelocityType.eU); }
+
+        /// <summary>
+        /// Gets the initial body axis Y wind velocity.
+        /// </summary>
+        /// <returns>Initial body axis Y wind velocity in feet/second</returns>
+        public double GetWindVFpsIC() { return GetBodyWindFpsIC(VelocityType.eV); }
+
+        /// <summary>
+        /// Gets the initial body axis Z wind velocity.
+        /// </summary>
+        /// <returns>Initial body axis Z wind velocity in feet/second</returns>
+        public double GetWindWFpsIC() { return GetBodyWindFpsIC(VelocityType.eW); }
+
+        /// <summary>
+        /// Gets the initial wind velocity in the NED local frame
+        /// </summary>
+        /// <returns>Initial wind velocity in NED frame in feet/second</returns>
+        public Vector3D GetWindNEDFpsIC()
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            return _vt_NED - vUVW_NED;
+        }
+
+        /// <summary>
+        /// Gets the initial wind velocity in local frame.
+        /// </summary>
+        /// <returns>Initial wind velocity toward north in feet/second</returns>
+        public double GetWindNFpsIC() { return GetNEDWindFpsIC(VelocityType.eU); }
+
+        /// <summary>
+        /// Gets the initial wind velocity in local frame.
+        /// </summary>
+        /// <returns>Initial wind velocity eastwards in feet/second</returns>
+        public double GetWindEFpsIC() { return GetNEDWindFpsIC(VelocityType.eV); }
+
+        /// <summary>
+        /// Gets the initial wind velocity in local frame.
+        /// </summary>
+        /// <returns>Initial wind velocity downwards in feet/second</returns>
+        public double GetWindDFpsIC() { return GetNEDWindFpsIC(VelocityType.eW); }
+
+        /// <summary>
+        /// Gets the initial total wind velocity in feet/sec.
+        /// </summary>
+        /// <returns>Initial wind velocity in feet/second</returns>
+        public double GetWindFpsIC()
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vWIND_NED = _vt_NED - vUVW_NED;
+
+            return _vWIND_NED.GetMagnitude((int)VelocityType.eU - 1, (int)VelocityType.eV - 1);
+        }
+
+        /// <summary>
+        /// Gets the initial wind direction.
+        /// </summary>
+        /// <returns>Initial wind direction in feet/second</returns>
+        public double GetWindDirDegIC()
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vWIND_NED = _vt_NED - vUVW_NED;
+
+            return _vWIND_NED.V == 0.0 ? 0.0
+                                         : Math.Atan2(_vWIND_NED.V, _vWIND_NED.U) * Constants.radtodeg;
+        }
+
+        /// <summary>
+        /// Gets the initial climb rate.
+        /// </summary>
+        /// <returns>Initial rate of climb in feet/second</returns>
+        public double GetClimbRateFpsIC()
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            return _vt_NED.W;
+        }
+
+        /// <summary>
+        /// Gets the initial body velocity
+        /// </summary>
+        /// <returns>Initial body velocity in feet/second.</returns>
+        public Vector3D GetUVWFpsIC()
+        {
+            Matrix3D Tl2b = orientation.GetT();
+            return Tl2b * vUVW_NED;
+        }
+
+        /// <summary>
+        /// Gets the initial body axis X velocity.
+        /// </summary>
+        /// <returns>Initial body axis X velocity in feet/second.</returns>
+        public double GetUBodyFpsIC() { return GetBodyVelFpsIC(VelocityType.eU); }
+
+        /// <summary>
+        /// Gets the initial body axis Y velocity.
+        /// </summary>
+        /// <returns>Initial body axis Y velocity in feet/second.</returns>
+        public double GetVBodyFpsIC() { return GetBodyVelFpsIC(VelocityType.eV); }
+
+        /// <summary>
+        /// Gets the initial body axis Z velocity.
+        /// </summary>
+        /// <returns>Initial body axis Z velocity in feet/second.</returns>
+        public double GetWBodyFpsIC() { return GetBodyVelFpsIC(VelocityType.eW); }
+
+        /// <summary>
+        /// Gets the initial local frame X (North) velocity.
+        /// </summary>
+        /// <returns>Initial local frame X (North) axis velocity in feet/second.</returns>
+        public double GetVNorthFpsIC() { return vUVW_NED.U; }
+
+        /// <summary>
+        /// Gets the initial local frame Y (East) velocity.
+        /// </summary>
+        /// <returns>Initial local frame Y (East) axis velocity in feet/second.</returns>
+        public double GetVEastFpsIC() { return vUVW_NED.V; }
+
+        /// <summary>
+        /// Gets the initial local frame Z (Down) velocity.
+        /// </summary>
+        /// <returns>Initial local frame Z (Down) axis velocity in feet/second.</returns>
+        public double GetVDownFpsIC() { return vUVW_NED.W; }
+
+        /// <summary>
+        /// Gets the initial body rotation rate
+        /// </summary>
+        /// <returns>Initial body rotation rate in radians/second</returns>
+        public Vector3D GetPQRRadpsIC() { return vPQR_body; }
+
+        /// <summary>
+        /// Gets the initial body axis roll rate.
+        /// </summary>
+        /// <returns>Initial body axis roll rate in radians/second</returns>
+        public double GetPRadpsIC() { return vPQR_body.P; }
+
+        /// <summary>
+        ///  Gets the initial body axis pitch rate.
+        /// </summary>
+        /// <returns>Initial body axis pitch rate in radians/second</returns>
+        public double GetQRadpsIC() { return vPQR_body.Q; }
+
+        /// <summary>
+        /// Gets the initial body axis yaw rate.
+        /// </summary>
+        /// <returns>Initial body axis yaw rate in radians/second</returns>
+        public double GetRRadpsIC() { return vPQR_body.R; }
+
+        /// <summary>
+        /// Sets the initial flight path angle.
+        /// </summary>
+        /// <param name="gamma">Initial flight path angle in radians</param>
+        public void SetFlightPathAngleRadIC(double gamma)
+        { SetClimbRateFpsIC(vt * Math.Sin(gamma)); }
+
+        /// <summary>
+        /// Sets the initial angle of attack.
+        /// When the AoA is modified, we need to update the angles theta and beta to
+        /// keep the true airspeed amplitude, the climb rate and the heading unchanged.
+        /// Beta will be modified if the aircraft roll angle is not null.
+        /// </summary>
+        /// <param name="alpha">Initial angle of attack in radians</param>
+        public void SetAlphaRadIC(double alpha)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            calcThetaBeta(alpha, _vt_NED);
+        }
+
+        /// <summary>
+        /// Sets the initial sideslip angle.
+        /// When the beta angle is modified, we need to update the angles theta and psi
+        /// to keep the true airspeed (amplitude and direction - including the climb rate)
+        /// and the alpha angle unchanged. This may result in the aircraft heading (psi)
+        /// being altered especially if there is cross wind.
+        /// </summary>
+        /// <param name="beta">Initial angle of sideslip in radians.</param>
+        public void SetBetaRadIC(double bta)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D vOrient = orientation.GetEuler();
+
+            beta = bta;
+            double calpha = Math.Cos(alpha), salpha = Math.Sin(alpha);
+            double cbeta = Math.Cos(beta), sbeta = Math.Sin(beta);
+            double cphi = orientation.GetCosEuler().Phi, sphi = orientation.GetSinEuler().Phi;
+            Matrix3D TphiInv = new Matrix3D(1.0, 0.0, 0.0,
+                     0.0, cphi, -sphi,
+                     0.0, sphi, cphi);
+
+            Tw2b = new Matrix3D(
+                calpha * cbeta, -calpha * sbeta, -salpha,
+                  sbeta, cbeta, 0.0,
+           salpha * cbeta, -salpha * sbeta, calpha);
+            Tb2w = Tw2b.Transposed();
+
+            Vector3D vf = TphiInv * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D v0xy = new Vector3D(_vt_NED.X, _vt_NED.Y, 0.0);
+            Vector3D v1xy = new Vector3D(Math.Sqrt(v0xy.X * v0xy.X + v0xy.Y * v0xy.Y - vf.Y * vf.Y), vf.Y, 0.0);
+            v0xy.Normalize();
+            v1xy.Normalize();
+
+            if (vf.X < 0.0) v0xy.X *= -1.0;
+
+            double sinPsi = (v1xy * v0xy).Z;
+            double cosPsi = Vector3D.Dot(v0xy, v1xy);
+            vOrient.Psi = Math.Atan2(sinPsi, cosPsi);
+            Matrix3D Tpsi = new Matrix3D(cosPsi, sinPsi, 0.0,
+                 -sinPsi, cosPsi, 0.0,
+                     0.0, 0.0, 1.0);
+
+            Vector3D v2xz = Tpsi * _vt_NED;
+            Vector3D vfxz = vf;
+            v2xz.V = vfxz.V = 0.0;
+            v2xz.Normalize();
+            vfxz.Normalize();
+            double sinTheta = (v2xz * vfxz).Y;
+            vOrient.Theta = -Math.Asin(sinTheta);
+
+            orientation = new Quaternion(vOrient);
+        }
+
+        /// <summary>
+        /// Sets the initial roll angle.
+        /// </summary>
+        /// <param name="phi">Initial roll angle in radians</param>
+        public void SetPhiRadIC(double phi) { SetEulerAngleRadIC((int)EulerAngleType.ePhi, phi); }
+
+        /// <summary>
+        /// Sets the initial pitch angle.
+        /// </summary>
+        /// <param name="theta">Initial pitch angle in radians</param>
+        public void SetThetaRadIC(double theta) { SetEulerAngleRadIC((int)EulerAngleType.eTht, theta); }
+
+        /// <summary>
+        /// Sets the initial heading angle.
+        /// </summary>
+        /// <param name="psi">Initial heading angle in radians</param>
+        public void SetPsiRadIC(double psi) { SetEulerAngleRadIC((int)EulerAngleType.ePsi, psi); }
+
+        /// <summary>
+        /// Sets the initial latitude.
+        /// </summary>
+        /// <param name="lat">Initial latitude in radians</param>
+        public void SetLatitudeRadIC(double lat)
+        {
+            double altitude;
+
+            lastLatitudeSet = LatitudeSet.setgeoc;
+
+            switch (lastAltitudeSet)
+            {
+                case AltitudeSet.setagl:
+                    altitude = GetAltitudeAGLFtIC();
+                    position.Latitude = lat;
+                    SetAltitudeAGLFtIC(altitude);
+                    break;
+                default:
+                    position.Latitude = lat;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Sets the initial geodetic latitude.
+        /// This method modifies the geodetic altitude in order to keep the altitude
+        /// above sea level unchanged.
+        /// </summary>
+        /// <param name="glat">Initial geodetic latitude in radians</param>
+        public void SetGeodLatitudeRadIC(double glat)
+        {
+            double h = position.GeodAltitude;
+            double lon = position.Longitude;
+
+            position.SetPositionGeodetic(lon, glat, h);
+            lastLatitudeSet = LatitudeSet.setgeod;
+        }
+
+        /// <summary>
+        /// Sets the initial longitude.
+        /// </summary>
+        /// <param name="lon">Initial longitude in radians</param>
+        public void SetLongitudeRadIC(double lon)
+        {
+            double altitude;
+
+            switch (lastAltitudeSet)
+            {
+                case AltitudeSet.setagl:
+                    altitude = GetAltitudeAGLFtIC();
+                    position.Longitude = lon;
+                    SetAltitudeAGLFtIC(altitude);
+                    break;
+                default:
+                    position.Longitude = lon;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Sets the target normal load factor.
+        /// </summary>
+        /// <param name="nlf">Normal load factor</param>
+        public void SetTargetNlfIC(double nlf) { targetNlfIC = nlf; }
+
+        /// <summary>
+        /// Gets the initial flight path angle.
+        /// If total velocity is zero, this function returns zero.
+        /// </summary>
+        /// <returns>Initial flight path angle in radians</returns>
+        public double GetFlightPathAngleRadIC()
+        { return (vt == 0.0) ? 0.0 : Math.Asin(GetClimbRateFpsIC() / vt); }
+
+        /// <summary>
+        /// Gets the initial angle of attack.
+        /// </summary>
+        /// <returns>Initial alpha in radians</returns>
+        public double GetAlphaRadIC() { return alpha; }
+
+        /// <summary>
+        /// Gets the initial angle of sideslip.
+        /// </summary>
+        /// <returns>Initial sideslip angle in radians</returns>
+        public double GetBetaRadIC() { return beta; }
+
+        /// <summary>
+        /// Gets the initial position
+        /// </summary>
+        /// <returns>Initial location</returns>
+        public Location GetPosition() { return position; }
+
+        /// <summary>
+        /// Gets the initial latitude.
+        /// </summary>
+        /// <returns>Initial latitude in radians</returns>
+        public double GetLatitudeRadIC() { return position.Latitude; }
+
+        /// <summary>
+        /// Gets the initial geodetic latitude.
+        /// </summary>
+        /// <returns>Initial geodetic latitude in radians</returns>
+        public double GetGeodLatitudeRadIC() { return position.GeodLatitudeRad; }
+
+        /// <summary>
+        /// Gets the initial longitude.
+        /// </summary>
+        /// <returns>Initial longitude in radians</returns>
+        public double GetLongitudeRadIC() { return position.Longitude; }
+
+        /// <summary>
+        /// Gets the initial orientation
+        /// </summary>
+        /// <returns>Initial orientation</returns>
+        public Quaternion GetOrientation() { return orientation; }
+
+        /// <summary>
+        /// Gets the initial roll angle.
+        /// </summary>
+        /// <returns>Initial roll angle in radians</returns>
+        public double GetPhiRadIC() { return orientation.GetEuler(Quaternion.EulerAngles.ePhi); }
+
+        /// <summary>
+        /// Gets the initial pitch angle.
+        /// </summary>
+        /// <returns>Initial pitch angle in radians</returns>
+        public double GetThetaRadIC() { return orientation.GetEuler(Quaternion.EulerAngles.eTht); }
+
+        /// <summary>
+        /// Gets the initial heading angle.
+        /// </summary>
+        /// <returns>Initial heading angle in radians</returns>
+        public double GetPsiRadIC() { return orientation.GetEuler(Quaternion.EulerAngles.ePsi); }
+
+        /// <summary>
+        /// Gets the initial speedset.
+        /// </summary>
+        /// <returns>Initial speedset</returns>
+        public SpeedSet GetSpeedSet() { return lastSpeedSet; }
+
+        /// <summary>
+        /// Gets the target normal load factor set from IC.
+        /// </summary>
+        /// <returns>target normal load factor set from IC</returns>
+        public double GetTargetNlfIC() { return targetNlfIC; }
+
+        /// <summary>
+        /// Loads the initial conditions.
+        /// </summary>
+        /// <param name="rstfile">The name of an initial conditions file</param>
+        /// <param name="useStoredPath">true if the stored path to the IC file should be used</param>
+        /// <returns>true if successful</returns>
+        public bool Load(string rstfile, bool useStoredPath = true)
+        {
+            string init_file_name;
+
+            if (useStoredPath && !Path.IsPathRooted(rstfile))
+            {
+                init_file_name = Path.Combine(fdmex.GetFullAircraftPath(), rstfile);
+            }
+            else
+            {
+                init_file_name = rstfile;
+            }
+
+            try
+            {
+                XmlTextReader reader = new XmlTextReader(init_file_name);
+                XmlDocument document = new XmlDocument();
+                // load the data into the dom
+                document.Load(reader);
+                XmlElement xParentEle = document.ParentNode as XmlElement;
+                return Load(xParentEle, useStoredPath);
+            }
+            catch (Exception e)
+            {
+                if (log.IsErrorEnabled)
+                {
+                    log.Error("Exception reading IC reset file: " + e);
+                }
+                return false;
+            }
+        }
+        public bool Load(XmlElement element, bool useStoredPath = true)
+        {
+            double version = double.MaxValue;
+            bool result = false;
+
+            if (element.HasAttribute("version"))
+                double.TryParse(element.Attributes["version"].Value, out version);
+
+            if (version == double.MaxValue)
+            {
+                result = Load_v1(element); // Default to the old version
+            }
+            else if (version >= 3.0)
+            {
+                string msg = "Only initialization file formats 1 and 2 are currently supported";
+                log.Error(msg);
+                throw new Exception(msg);
+            }
+            else if (version >= 2.0)
+            {
+                result = Load_v2(element);
+            }
+            else if (version >= 1.0)
+            {
+                result = Load_v1(element);
+            }
+            // Check to see if any engines are specified to be initialized in a running state
+            XmlNodeList childNodes = element.GetElementsByTagName("running");
+            foreach (var child_elem in childNodes)
+            {
+                XmlElement running_elem = child_elem as XmlElement;
+                if (running_elem == null) continue;
+                int engineNumber = int.Parse(running_elem.InnerText);
+                enginesRunning |= engineNumber == -1 ? engineNumber : 1 << engineNumber;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Is an engine running ?
+        /// </summary>
+        /// <param name="n">index of the engine to be checked</param>
+        /// <returns>true if the engine is running</returns>
+        public bool IsEngineRunning(int n) { return (enginesRunning & (1 << n)) != 0; }
+
+        /// <summary>
+        /// Does initialization file call for trim ?
+        /// </summary>
+        /// <returns>Trim type, if any requested (version 1).</returns>
+        public TrimMode TrimRequested() { return trimRequested; }
+
+
+        // -------------------------------------------------------------------------------- //
+#if TODO
 
         /// <summary>
         /// sets/gets calibrated airspeed initial condition in knots.
@@ -416,6 +1536,7 @@ namespace JSBSim
             get { return altitude; }
             set
             {
+#if TODO
                 altitude = value;
                 fdmex.Propagate.Altitude = altitude;
                 fdmex.Atmosphere.Run(false);
@@ -441,6 +1562,8 @@ namespace JSBSim
                         VgroundFpsIC = vg;
                         break;
                 }
+#endif
+                throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
             }
         }
 
@@ -453,9 +1576,12 @@ namespace JSBSim
             get { return altitude - terrain_altitude; }
             set
             {
+#if TODO
                 fdmex.Propagate.DistanceAGL = value;
                 altitude = fdmex.Propagate.Altitude;
                 AltitudeFtIC = altitude;
+#endif
+                throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
             }
 
         }
@@ -636,7 +1762,6 @@ namespace JSBSim
             SetClimbRateFpsIC(-1 * vdown);
             lastSpeedSet = SpeedSet.setned;
         }
-
         /// <summary>
         /// Gets the initial body axis X wind velocity in feet/second.
         /// </summary>
@@ -709,114 +1834,6 @@ namespace JSBSim
             set { r = value; }
         }
 
-        public void SetClimbRateFpsIC(double tt)
-        {
-
-            if (vt > 0.1)
-            {
-                hdot = tt;
-                gamma = Math.Asin(hdot / vt);
-                sgamma = Math.Sin(gamma); cgamma = Math.Cos(gamma);
-            }
-        }
-        public double GetWindDirDegIC()
-        {
-            if (weast != 0.0)
-                return Math.Atan2(weast, wnorth) * Constants.radtodeg;
-            else if (wnorth > 0)
-                return 0.0;
-            else
-                return 180.0;
-        }
-
-        public double GetClimbRateFpsIC() { return hdot; }
-
-
-        public void SetWindDirDegIC(double dir)
-        {
-            wdir = dir * Constants.degtorad;
-            lastWindSet = WindSet.setwmd;
-            calcWindUVW();
-            if (lastSpeedSet == SpeedSet.setvg)
-                VgroundFpsIC = vg;
-        }
-
-
-
-
-        public void SetWindNEDFpsIC(double wN, double wE, double wD)
-        {
-            wnorth = wN; weast = wE; wdown = wD;
-            lastWindSet = WindSet.setwned;
-            calcWindUVW();
-            if (lastSpeedSet == SpeedSet.setvg)
-                VgroundFpsIC = vg;
-        }
-
-        public void SetWindMagKtsIC(double mag)
-        {
-            wmag = mag * Constants.ktstofps;
-            lastWindSet = WindSet.setwmd;
-            calcWindUVW();
-            if (lastSpeedSet == SpeedSet.setvg)
-                VgroundFpsIC = vg;
-        }
-
-        public void SetHeadWindKtsIC(double head)
-        {
-            whead = head * Constants.ktstofps;
-            lastWindSet = WindSet.setwhc;
-            calcWindUVW();
-            if (lastSpeedSet == SpeedSet.setvg)
-                VgroundFpsIC = vg;
-
-        }
-
-        public void SetCrossWindKtsIC(double cross) // positive from left
-        {
-            wcross = cross * Constants.ktstofps;
-            lastWindSet = WindSet.setwhc;
-            calcWindUVW();
-            if (lastSpeedSet == SpeedSet.setvg)
-                VgroundFpsIC = vg;
-
-        }
-
-        public void SetWindDownKtsIC(double wD)
-        {
-            wdown = wD;
-            calcWindUVW();
-            if (lastSpeedSet == SpeedSet.setvg)
-                VgroundFpsIC = vg;
-        }
-
-
-        public void SetFlightPathAngleRadIC(double tt)
-        {
-            gamma = tt;
-            sgamma = Math.Sin(gamma); cgamma = Math.Cos(gamma);
-            getTheta();
-            hdot = vt * sgamma;
-        }
-
-
-
-        public void SetRollAngleRadIC(double tt)
-        {
-            phi = tt;
-            sphi = Math.Sin(phi); cphi = Math.Cos(phi);
-            getTheta();
-        }
-
-        public void SetTrueHeadingRadIC(double tt)
-        {
-            psi = tt;
-            spsi = Math.Sin(psi); cpsi = Math.Cos(psi);
-            calcWindUVW();
-        }
-
-        public double GetFlightPathAngleRadIC() { return gamma; }
-
         [ScriptAttribute("ic/alpha-rad", "The initial alpha in radians.")]
         public double AlphaRadIC
         {
@@ -853,39 +1870,6 @@ namespace JSBSim
             }
         }
 
-        //public double GetAlphaRadIC() { return alpha; }
-        //public double GetPitchAngleRadIC() { return theta; }
-        //public double GetBetaRadIC() { return beta; }
-        /*public void SetAlphaRadIC(double tt)
-        {
-            alpha = tt;
-            salpha = Math.Sin(alpha); calpha = Math.Cos(alpha);
-            getTheta();
-        }
-        public void SetBetaRadIC(double tt)
-        {
-            beta = tt;
-            sbeta = Math.Sin(beta); cbeta = Math.Cos(beta);
-            getTheta();
-        }
-         
-
-        public void SetPitchAngleRadIC(double tt)
-        {
-            theta = tt;
-            stheta = Math.Sin(theta); ctheta = Math.Cos(theta);
-            getAlpha();
-        }
-*/
-
-        public double GetRollAngleRadIC() { return phi; }
-        public double GetHeadingRadIC() { return psi; }
-
-        //public double GetLatitudeRadIC() { return latitude; }
-        //public double GetLongitudeRadIC() { return longitude; }
-        //public void SetLatitudeRadIC(double tt) { latitude = tt; }
-        //public void SetLongitudeRadIC(double tt) { longitude = tt; }
-
         [ScriptAttribute("ic/lat-gc-rad", "The initial latitude in radians.")]
         public double LatitudeRadIC
         {
@@ -899,48 +1883,8 @@ namespace JSBSim
             get { return longitude; }
             set { longitude = value; }
         }
-
-        public double GetThetaRadIC() { return theta; }
-        public double GetPhiRadIC() { return phi; }
-        public double GetPsiRadIC() { return psi; }
-
-        public SpeedSet GetSpeedSet() { return lastSpeedSet; }
-        public WindSet GetWindSet() { return lastWindSet; }
-
-
-        public void Load(string rstfile, bool useStoredPath)
-        {
-            string resetDef, acpath;
-            string sep = "/";
-
-            if (useStoredPath)
-            {
-                acpath = fdmex.AircraftPath + sep + fdmex.ModelName;
-                resetDef = acpath + sep + rstfile + ".xml";
-            }
-            else
-            {
-                resetDef = rstfile;
-            }
-
-
-            try
-            {
-                XmlTextReader reader = new XmlTextReader(resetDef);
-                XmlDocument doc = new XmlDocument();
-                // load the data into the dom
-                doc.Load(reader);
-                XmlNodeList childNodes = doc.GetElementsByTagName("initialize");
-                Load(childNodes[0] as XmlElement);
-            }
-            catch (Exception e)
-            {
-                if (log.IsErrorEnabled)
-                {
-                    log.Error("Exception reading IC reset file: " + e);
-                }
-            }
-        }
+#endif
+#if DELETEME
         public void Load(XmlElement root)
         {
             Load(root, true);
@@ -1074,8 +2018,8 @@ namespace JSBSim
 
             if (mustRun) fdmex.RunIC();
         }
-
-        public virtual void Bind()
+#endif
+        public virtual void Bind(PropertyManager PropertyManager)
         {
             fdmex.PropertyManager.Bind("", this);
         }
@@ -1103,303 +2047,416 @@ namespace JSBSim
         private int enginesRunning;
         private TrimMode trimRequested;
 
+        private FDMExecutive fdmex;
         private Atmosphere Atmosphere;
         private Aircraft Aircraft;
 
-        private double vc, ve, vg;
-        private double mach;
-        private double altitude, hdot;
-        private double latitude, longitude;
-        private double u, v, w;
-        private double p, q, r;
-        private double uw, vw, ww;
-        private double vnorth, veast, vdown;
-        private double wnorth, weast, wdown;
-        private double whead, wcross, wdir, wmag;
-        private double sea_level_radius;
-        private double terrain_altitude;
-        private double radius_to_vehicle;
-
-        private double theta, phi, psi, gamma;
-        private double salpha, sbeta, stheta, sphi, spsi, sgamma;
-        private double calpha, cbeta, ctheta, cphi, cpsi, cgamma;
-
-        private double xlo, xhi, xmin, xmax;
-
-        private delegate double fp(double x);
-        private fp sfunc;
-
-        private WindSet lastWindSet;
-
-        private FDMExecutive fdmex;
-        private PropertyManager PropertyManager;
-
-        private bool getAlpha()
+        private bool Load_v1(XmlElement document)
         {
-            bool result = false;
-            double guess = theta - gamma;
+            bool result = true;
 
-            if (vt < 0.01) return false;
+            XmlElement elem = document.FindElement("longitude");
+            if (elem != null)
+                SetLongitudeRadIC(FormatHelper.ValueAsNumberConvertTo(elem, "RAD"));
 
-            xlo = xhi = 0;
-            xmin = fdmex.Aerodynamics.AlphaCLMin;
-            xmax = fdmex.Aerodynamics.AlphaCLMax;
-            sfunc = new fp(GammaEqOfAlpha);
-            if (findInterval(0, guess))
-            {
-                if (solve(ref alpha, 0))
-                {
-                    result = true;
-                    salpha = Math.Sin(alpha);
-                    calpha = Math.Cos(alpha);
-                }
-            }
-            calcWindUVW();
+            if (document.FindElement("elevation", out elem))
+                SetTerrainElevationFtIC(FormatHelper.ValueAsNumberConvertTo(elem, "FT"));
+
+            if (document.FindElement("altitude", out elem))// This is feet above ground level
+                SetAltitudeAGLFtIC(FormatHelper.ValueAsNumberConvertTo(elem, "FT"));
+            if (document.FindElement("altitudeAGL", out elem)) // This is feet above ground level
+                SetAltitudeAGLFtIC(FormatHelper.ValueAsNumberConvertTo(elem, "FT"));
+            if (document.FindElement("altitudeMSL", out elem)) // This is feet above sea level
+                SetAltitudeASLFtIC(FormatHelper.ValueAsNumberConvertTo(elem, "FT"));
+
+            result = LoadLatitude(document);
+
+            Vector3D vOrient = orientation.GetEuler();
+
+            if (document.FindElement("phi", out elem))
+                vOrient.Phi = FormatHelper.ValueAsNumberConvertTo(elem, "RAD");
+            if (document.FindElement("theta", out elem))
+                vOrient.Theta = FormatHelper.ValueAsNumberConvertTo(elem, "RAD");
+            if (document.FindElement("psi", out elem))
+                vOrient.Psi = FormatHelper.ValueAsNumberConvertTo(elem, "RAD");
+
+            orientation = new Quaternion(vOrient);
+
+            if (document.FindElement("ubody", out elem))
+                SetUBodyFpsIC(FormatHelper.ValueAsNumberConvertTo(elem, "FT/SEC"));
+            if (document.FindElement("vbody", out elem))
+                SetVBodyFpsIC(FormatHelper.ValueAsNumberConvertTo(elem, "FT/SEC"));
+            if (document.FindElement("wbody", out elem))
+                SetWBodyFpsIC(FormatHelper.ValueAsNumberConvertTo(elem, "FT/SEC"));
+            if (document.FindElement("vnorth", out elem))
+                SetVNorthFpsIC(FormatHelper.ValueAsNumberConvertTo(elem, "FT/SEC"));
+            if (document.FindElement("veast", out elem))
+                SetVEastFpsIC(FormatHelper.ValueAsNumberConvertTo(elem, "FT/SEC"));
+            if (document.FindElement("vdown", out elem))
+                SetVDownFpsIC(FormatHelper.ValueAsNumberConvertTo(elem, "FT/SEC"));
+            if (document.FindElement("vc", out elem))
+                SetVcalibratedKtsIC(FormatHelper.ValueAsNumberConvertTo(elem, "KTS"));
+            if (document.FindElement("vt", out elem))
+                SetVtrueKtsIC(FormatHelper.ValueAsNumberConvertTo(elem, "KTS"));
+            if (document.FindElement("mach", out elem))
+                SetMachIC(FormatHelper.ValueAsNumber(elem));
+            if (document.FindElement("gamma", out elem))
+                SetFlightPathAngleDegIC(FormatHelper.ValueAsNumberConvertTo(elem, "DEG"));
+            if (document.FindElement("roc", out elem))
+                SetClimbRateFpsIC(FormatHelper.ValueAsNumberConvertTo(elem, "FT/SEC"));
+            if (document.FindElement("vground", out elem))
+                SetVgroundKtsIC(FormatHelper.ValueAsNumberConvertTo(elem, "KTS"));
+            if (document.FindElement("alpha", out elem))
+                SetAlphaDegIC(FormatHelper.ValueAsNumberConvertTo(elem, "DEG"));
+            if (document.FindElement("beta", out elem))
+                SetBetaDegIC(FormatHelper.ValueAsNumberConvertTo(elem, "DEG"));
+            if (document.FindElement("vwind", out elem))
+                SetWindMagKtsIC(FormatHelper.ValueAsNumberConvertTo(elem, "KTS"));
+            if (document.FindElement("winddir", out elem))
+                SetWindDirDegIC(FormatHelper.ValueAsNumberConvertTo(elem, "DEG"));
+            if (document.FindElement("hwind", out elem))
+                SetHeadWindKtsIC(FormatHelper.ValueAsNumberConvertTo(elem, "KTS"));
+            if (document.FindElement("xwind", out elem))
+                SetCrossWindKtsIC(FormatHelper.ValueAsNumberConvertTo(elem, "KTS"));
+            if (document.FindElement("targetNlf", out elem))
+                SetTargetNlfIC(FormatHelper.ValueAsNumber(elem));
+            if (document.FindElement("trim", out elem))
+                SetTrimRequest(elem.InnerText);
+
+            // Refer to Stevens and Lewis, 1.5-14a, pg. 49.
+            // This is the rotation rate of the "Local" frame, expressed in the local frame.
+            Matrix3D Tl2b = orientation.GetT();
+            double radInv = 1.0 / position.Radius;
+            Vector3D vOmegaLocal = new Vector3D(radInv * vUVW_NED.East,
+                                                -radInv * vUVW_NED.North,
+                                                -radInv * vUVW_NED.East * position.TanLatitude);
+
+            vPQR_body = Tl2b * vOmegaLocal;
+
             return result;
         }
-
-        private bool getTheta()
+        private bool Load_v2(XmlElement document)
         {
-            bool result = false;
-            double guess = alpha + gamma;
+            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
+        }
 
-            if (vt < 0.01) return false;
+        private void InitializeIC()
+        {
+            alpha = beta = 0.0;
+            epa = 0.0;
+            // FIXME: Since FGDefaultGroundCallback assumes the Earth is spherical, so
+            // must FGLocation. However this should be updated according to the assumption
+            // made by the actual callback.
 
-            xlo = xhi = 0;
-            xmin = -89; xmax = 89;
-            sfunc = new fp(GammaEqOfTheta);
-            if (findInterval(0, guess))
+            // double a = fdmex.GetInertial().GetSemimajor();
+            // double b = fdmex.GetInertial().GetSemiminor();
+            double a = fdmex.GetInertial().GetRefRadius();
+            double b = fdmex.GetInertial().GetRefRadius();
+
+            position.SetEllipse(a, b);
+
+            position.SetPositionGeodetic(0.0, 0.0, 0.0);
+
+            orientation = new Quaternion(0.0, 0.0, 0.0);
+            vUVW_NED = Vector3D.Zero;
+            vPQR_body = Vector3D.Zero;
+            vt = 0;
+
+            targetNlfIC = 1.0;
+
+            Tw2b = new Matrix3D(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+            Tb2w = new Matrix3D(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+
+            lastSpeedSet = SpeedSet.setvt;
+            lastAltitudeSet = AltitudeSet.setasl;
+            lastLatitudeSet = LatitudeSet.setgeoc;
+            enginesRunning = 0;
+            trimRequested = TrimMode.None;
+        }
+
+        /// <summary>
+        /// Modifies the body frame orientation.
+        /// </summary>
+        /// <param name="idx"></param>
+        /// <param name="angle"></param>
+        private void SetEulerAngleRadIC(int idx, double angle)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Matrix3D Tl2b = orientation.GetT();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vWIND_NED = _vt_NED - vUVW_NED;
+            Vector3D _vUVW_BODY = Tl2b * vUVW_NED;
+            Vector3D vOrient = orientation.GetEuler();
+
+            vOrient[idx - 1] = angle;
+            orientation = new Quaternion(vOrient);
+
+            if ((lastSpeedSet != SpeedSet.setned) && (lastSpeedSet != SpeedSet.setvg))
             {
-                if (solve(ref theta, 0))
+                Matrix3D newTb2l = orientation.GetTInv();
+                vUVW_NED = newTb2l * _vUVW_BODY;
+                _vt_NED = vUVW_NED + _vWIND_NED;
+                vt = _vt_NED.Magnitude();
+            }
+
+            calcAeroAngles(_vt_NED);
+        }
+
+        /// <summary>
+        /// Modifies an aircraft velocity component (eU, eV or eW) in the body frame. The
+        /// true airspeed is modified accordingly. If there is some wind, the airspeed
+        /// direction modification may differ from the body velocity modification.
+        /// </summary>
+        /// <param name="idx"></param>
+        /// <param name="vel"></param>
+        private void SetBodyVelFpsIC(VelocityType idx, double vel)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Matrix3D Tl2b = orientation.GetT();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vUVW_BODY = Tl2b * vUVW_NED;
+            Vector3D _vWIND_NED = _vt_NED - vUVW_NED;
+
+            _vUVW_BODY[(int)idx - 1] = vel;
+            vUVW_NED = Tb2l * _vUVW_BODY;
+            _vt_NED = vUVW_NED + _vWIND_NED;
+            vt = _vt_NED.Magnitude();
+
+            calcAeroAngles(_vt_NED);
+
+            lastSpeedSet = SpeedSet.setuvw;
+        }
+
+        /// <summary>
+        /// Modifies an aircraft velocity component (eX, eY or eZ) in the local NED frame.
+        /// The true airspeed is modified accordingly. If there is some wind, the airspeed
+        /// direction modification may differ from the local velocity modification.
+        /// </summary>
+        /// <param name="idx"></param>
+        /// <param name="vel"></param>
+        private void SetNEDVelFpsIC(VelocityType idx, double vel)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vWIND_NED = _vt_NED - vUVW_NED;
+
+            vUVW_NED[(int)idx - 1] = vel;
+            _vt_NED = vUVW_NED + _vWIND_NED;
+            vt = _vt_NED.Magnitude();
+
+            calcAeroAngles(_vt_NED);
+
+            lastSpeedSet = SpeedSet.setned;
+        }
+
+        private double GetBodyWindFpsIC(VelocityType idx)
+        {
+            Matrix3D Tl2b = orientation.GetT();
+            Vector3D _vt_BODY = Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vUVW_BODY = Tl2b * vUVW_NED;
+            Vector3D _vWIND_BODY = _vt_BODY - _vUVW_BODY;
+
+            return _vWIND_BODY[(int)idx - 1];
+        }
+
+        private double GetNEDWindFpsIC(VelocityType idx)
+        {
+            Matrix3D Tb2l = orientation.GetTInv();
+            Vector3D _vt_NED = Tb2l * Tw2b * new Vector3D(vt, 0.0, 0.0);
+            Vector3D _vWIND_NED = _vt_NED - vUVW_NED;
+
+            return _vWIND_NED[(int)idx - 1];
+        }
+
+        private double GetBodyVelFpsIC(VelocityType idx)
+        {
+            Matrix3D Tl2b = orientation.GetT();
+            Vector3D _vUVW_BODY = Tl2b * vUVW_NED;
+
+            return _vUVW_BODY[(int)idx - 1];
+        }
+
+        /// <summary>
+        /// Updates alpha and beta according to the aircraft true airspeed in the local
+        /// NED frame.
+        /// </summary>
+        /// <param name="_vt_NED"></param>
+        private void calcAeroAngles(Vector3D _vt_NED)
+        {
+            Matrix3D Tl2b = orientation.GetT();
+            Vector3D _vt_BODY = Tl2b * _vt_NED;
+            double ua = _vt_BODY.X;
+            double va = _vt_BODY.Y;
+            double wa = _vt_BODY.Z;
+            double uwa = Math.Sqrt(ua * ua + wa * wa);
+            double calpha, cbeta;
+            double salpha, sbeta;
+
+            alpha = beta = 0.0;
+            calpha = cbeta = 1.0;
+            salpha = sbeta = 0.0;
+
+            if (wa != 0)
+                alpha = Math.Atan2(wa, ua);
+
+            // alpha cannot be constrained without updating other informations like the
+            // true speed or the Euler angles. Otherwise we might end up with an
+            // inconsistent state of the aircraft.
+            /* alpha = Constrain(fdmex.GetAerodynamics().GetAlphaCLMin(), alpha,
+                              fdmex.GetAerodynamics().GetAlphaCLMax());
+             */
+
+            if (va != 0)
+                beta = Math.Atan2(va, uwa);
+
+            if (uwa != 0)
+            {
+                calpha = ua / uwa;
+                salpha = wa / uwa;
+            }
+
+            if (vt != 0)
+            {
+                cbeta = uwa / vt;
+                sbeta = va / vt;
+            }
+
+            Tw2b = new Matrix3D(
+                calpha * cbeta, -calpha * sbeta, -salpha,
+                  sbeta, cbeta, 0.0,
+           salpha * cbeta, -salpha * sbeta, calpha);
+            Tb2w = Tw2b.Transposed();
+        }
+
+        /// <summary>
+        /// When the AoA is modified, we need to update the angles theta and beta to
+        /// keep the true airspeed amplitude, the climb rate and the heading unchanged.
+        /// Beta will be modified if the aircraft roll angle is not null.
+        /// </summary>
+        /// <param name="alfa"></param>
+        /// <param name="_vt_NED"></param>
+        private void calcThetaBeta(double alfa, Vector3D _vt_NED)
+        {
+            Vector3D vOrient = orientation.GetEuler();
+            double calpha = Math.Cos(alfa), salpha = Math.Sin(alfa);
+            double cpsi = orientation.GetCosEuler(Quaternion.EulerAngles.ePsi), spsi = orientation.GetSinEuler(Quaternion.EulerAngles.ePsi);
+            double cphi = orientation.GetCosEuler(Quaternion.EulerAngles.ePhi), sphi = orientation.GetSinEuler(Quaternion.EulerAngles.ePhi);
+            Matrix3D Tpsi = new Matrix3D(cpsi, spsi, 0.0,
+                  -spsi, cpsi, 0.0,
+                     0.0, 0.0, 1.0);
+            Matrix3D Tphi = new Matrix3D(1.0, 0.0, 0.0,
+                  0.0, cphi, sphi,
+                  0.0, -sphi, cphi);
+            Matrix3D Talpha = new Matrix3D(calpha, 0.0, salpha,
+                         0.0, 1.0, 0.0,
+                    -salpha, 0.0, calpha);
+
+            Vector3D v0 = Tpsi * _vt_NED;
+            Vector3D n = (Talpha * Tphi).Transposed() * new Vector3D(0.0, 0.0, 1.0);
+            Vector3D y = new Vector3D(0.0, 1.0, 0.0);
+            Vector3D u = y - Vector3D.Dot(y, n) * n;
+            Vector3D p = y * n;
+
+            if (Vector3D.Dot(p, v0) < 0) p *= -1.0;
+            p.Normalize();
+
+            u *= Vector3D.Dot(v0, y) / Vector3D.Dot(u, y);
+
+            // There are situations where the desired alpha angle cannot be obtained. This
+            // is not a limitation of the algorithm but is due to the mathematical problem
+            // not having a solution. This can only be cured by limiting the alpha angle
+            // or by modifying an additional angle (psi ?). Since this is anticipated to
+            // be a pathological case (mainly when a high roll angle is required) this
+            // situation is not addressed below. However if there are complaints about the
+            // following error being raised too often, we might need to reconsider this
+            // position.
+            if (Vector3D.Dot(v0, v0) < Vector3D.Dot(u, u))
+            {
+                log.Error("Cannot modify angle 'alpha' from " + alpha + " to " + alfa);
+                return;
+            }
+
+            Vector3D v1 = u + Math.Sqrt(Vector3D.Dot(v0, v0) - Vector3D.Dot(u, u)) * p;
+
+            Vector3D v0xz = new Vector3D(v0.U, 0.0, v0.W);
+            Vector3D v1xz = new Vector3D(v1.U, 0.0, v1.W);
+            v0xz.Normalize();
+            v1xz.Normalize();
+            double sinTheta = (v1xz * v0xz).Y;
+            vOrient.Theta = Math.Asin(sinTheta);
+
+            orientation = new Quaternion(vOrient);
+
+            Matrix3D Tl2b = orientation.GetT();
+            Vector3D v2 = Talpha * Tl2b * _vt_NED;
+
+            alpha = alfa;
+            beta = Math.Atan2(v2.V, v2.U);
+            double cbeta = 1.0, sbeta = 0.0;
+            if (vt != 0.0)
+            {
+                cbeta = v2.U / vt;
+                sbeta = v2.V / vt;
+            }
+            Tw2b = new Matrix3D(
+                calpha * cbeta, -calpha * sbeta, -salpha,
+                  sbeta, cbeta, 0.0,
+           salpha * cbeta, -salpha * sbeta, calpha);
+            Tb2w = Tw2b.Transposed();
+        }
+
+        private bool LoadLatitude(XmlElement position_el)
+        {
+            XmlElement latitude_el = position_el.FindElement("latitude");
+            if (latitude_el != null)
+            {
+                double latitude = FormatHelper.ValueAsNumberConvertTo(latitude_el, "RAD");
+
+                if (Math.Abs(latitude) > 0.5 * Math.PI)
                 {
-                    result = true;
-                    stheta = Math.Sin(theta);
-                    ctheta = Math.Cos(theta);
+                    string unit_type = latitude_el.GetAttribute("unit");
+                    if (string.IsNullOrEmpty(unit_type)) unit_type = "RAD";
+
+                    string msg = "The latitude value " + FormatHelper.ValueAsNumber(latitude_el) + " " + unit_type +
+                            " is outside the range [";
+                    if (unit_type == "DEG")
+                        msg += "-90 DEG ; +90 DEG]";
+                    else
+                        msg += "-PI/2 RAD; +PI/2 RAD]";
+                    log.Error(msg);
+                    return false;
                 }
-            }
-            calcWindUVW();
-            return result;
-        }
 
-        private bool getMachFromVcas(ref double Mach, double vcas)
-        {
+                string lat_type = latitude_el.GetAttribute("type");
 
-            bool result = false;
-            double guess = 1.5;
-            xlo = xhi = 0;
-            xmin = 0; xmax = 50;
-            sfunc = new fp(calcVcas);
-            if (findInterval(vcas, guess))
-            {
-                if (solve(ref mach, vcas))
-                    result = true;
-            }
-            return result;
-        }
-
-        private double GammaEqOfTheta(double Theta)
-        {
-            double a, b, c;
-            double sTheta, cTheta;
-
-            //theta=Theta; stheta=Math.Math.Sin(theta); ctheta=Math.Cos(theta);
-            sTheta = Math.Sin(Theta); cTheta = Math.Cos(Theta);
-            calcWindUVW();
-            a = wdown + vt * calpha * cbeta + uw;
-            b = vt * sphi * sbeta + vw * sphi;
-            c = vt * cphi * salpha * cbeta + ww * cphi;
-            return vt * sgamma - (a * sTheta - (b + c) * cTheta);
-        }
-
-        private double GammaEqOfAlpha(double Alpha)
-        {
-            double a, b, c;
-            double sAlpha, cAlpha;
-            sAlpha = Math.Sin(Alpha); cAlpha = Math.Cos(Alpha);
-            a = wdown + vt * cAlpha * cbeta + uw;
-            b = vt * sphi * sbeta + vw * sphi;
-            c = vt * cphi * sAlpha * cbeta + ww * cphi;
-
-            return vt * sgamma - (a * stheta - (b + c) * ctheta);
-        }
-
-        private double calcVcas(double Mach)
-        {
-
-            double p = fdmex.Atmosphere.Pressure;
-            double psl = fdmex.Atmosphere.PressureSeaLevel;
-            double rhosl = fdmex.Atmosphere.DensitySeaLevel;
-            double pt, A, B, D, vcas;
-            if (Mach < 0) Mach = 0;
-            if (Mach < 1)    //calculate total pressure assuming isentropic flow
-                pt = p * Math.Pow((1 + 0.2 * Mach * Mach), 3.5);
-            else
-            {
-                // shock in front of pitot tube, we'll assume its normal and use
-                // the Rayleigh Pitot Tube Formula, i.e. the ratio of total
-                // pressure behind the shock to the static pressure in front
-
-
-                //the normal shock assumption should not be a bad one -- most supersonic
-                //aircraft place the pitot probe out front so that it is the forward
-                //most point on the aircraft.  The real shock would, of course, take
-                //on something like the shape of a rounded-off cone but, here again,
-                //the assumption should be good since the opening of the pitot probe
-                //is very small and, therefore, the effects of the shock curvature
-                //should be small as well. AFAIK, this approach is fairly well accepted
-                //within the aerospace community
-
-                B = 5.76 * Mach * Mach / (5.6 * Mach * Mach - 0.8);
-
-                // The denominator above is zero for Mach ~ 0.38, for which
-                // we'll never be here, so we're safe
-
-                D = (2.8 * Mach * Mach - 0.4) * 0.4167;
-                pt = p * Math.Pow(B, 3.5) * D;
-            }
-
-            A = Math.Pow(((pt - p) / psl + 1), 0.28571);
-            vcas = Math.Sqrt(7 * psl / rhosl * (A - 1));
-            //cout << "calcVcas: vcas= " << vcas*fpstokts << " mach= " << Mach << " pressure: " << pt << endl;
-            return vcas;
-        }
-
-        private void calcUVWfromNED()
-        {
-            u = vnorth * ctheta * cpsi +
-                veast * ctheta * spsi -
-                vdown * stheta;
-            v = vnorth * (sphi * stheta * cpsi - cphi * spsi) +
-                veast * (sphi * stheta * spsi + cphi * cpsi) +
-                vdown * sphi * ctheta;
-            w = vnorth * (cphi * stheta * cpsi + sphi * spsi) +
-                veast * (cphi * stheta * spsi - sphi * cpsi) +
-                vdown * cphi * ctheta;
-        }
-
-        private void calcWindUVW()
-        {
-
-            switch (lastWindSet)
-            {
-                case WindSet.setwmd:
-                    wnorth = wmag * Math.Cos(wdir);
-                    weast = wmag * Math.Sin(wdir);
-                    break;
-                case WindSet.setwhc:
-                    wnorth = whead * Math.Cos(psi) + wcross * Math.Cos(psi + Math.PI / 2.0);
-                    weast = whead * Math.Sin(psi) + wcross * Math.Sin(psi + Math.PI / 2.0);
-                    break;
-                case WindSet.setwned:
-                    break;
-            }
-            uw = wnorth * ctheta * cpsi +
-                weast * ctheta * spsi -
-                wdown * stheta;
-            vw = wnorth * (sphi * stheta * cpsi - cphi * spsi) +
-                weast * (sphi * stheta * spsi + cphi * cpsi) +
-                wdown * sphi * ctheta;
-            ww = wnorth * (cphi * stheta * cpsi + sphi * spsi) +
-                weast * (cphi * stheta * spsi - sphi * cpsi) +
-                wdown * cphi * ctheta;
-        }
-
-        private bool findInterval(double x, double guess)
-        {
-            //void find_interval(inter_params &ip,eqfunc f,double y,double constant, int &flag){
-
-            int i = 0;
-            bool found = false;
-            double flo, fhi, fguess;
-            double lo, hi, step;
-            step = 0.1;
-            fguess = sfunc(guess) - x;
-            lo = hi = guess;
-            do
-            {
-                step = 2 * step;
-                lo -= step;
-                hi += step;
-                if (lo < xmin) lo = xmin;
-                if (hi > xmax) hi = xmax;
-                i++;
-                flo = sfunc(lo) - x;
-                fhi = sfunc(hi) - x;
-                if (flo * fhi <= 0)
-                {  //found interval with root
-                    found = true;
-                    if (flo * fguess <= 0)
-                    {  //narrow interval down a bit
-                        hi = lo + step;    //to pass solver interval that is as
-                                           //small as possible
-                    }
-                    else if (fhi * fguess <= 0)
-                    {
-                        lo = hi - step;
-                    }
-                }
-                //cout << "FindInterval: i=" << i << " Lo= " << lo << " Hi= " << hi << endl;
-            }
-            while ((!found) && (i <= 100));
-            xlo = lo;
-            xhi = hi;
-            return found;
-        }
-
-        private const double relax = 0.9;
-        private bool solve(ref double y, double x)
-        {
-            double x1, x2, x3, f1, f2, f3, d, d0;
-            double eps = 1E-5;
-            int i;
-            bool success = false;
-
-            //initializations
-            d = 1;
-            x2 = 0;
-            x1 = xlo; x3 = xhi;
-            f1 = sfunc(x1) - x;
-            f3 = sfunc(x3) - x;
-            d0 = Math.Abs(x3 - x1);
-
-            //iterations
-            i = 0;
-            while ((Math.Abs(d) > eps) && (i < 100))
-            {
-                d = (x3 - x1) / d0;
-                x2 = x1 - d * d0 * f1 / (f3 - f1);
-
-                f2 = sfunc(x2) - x;
-                //cout << "Solve x1,x2,x3: " << x1 << "," << x2 << "," << x3 << endl;
-                //cout << "                " << f1 << "," << f2 << "," << f3 << endl;
-
-                if (Math.Abs(f2) <= 0.001)
+                if (lat_type == "geod" || lat_type == "geodetic")
+                    SetGeodLatitudeRadIC(latitude);
+                else
                 {
-                    x1 = x3 = x2;
+                    position.Latitude = latitude;
+                    lastLatitudeSet = LatitudeSet.setgeoc;
                 }
-                else if (f1 * f2 <= 0.0)
-                {
-                    x3 = x2;
-                    f3 = f2;
-                    f1 = relax * f1;
-                }
-                else if (f2 * f3 <= 0)
-                {
-                    x1 = x2;
-                    f1 = f2;
-                    f3 = relax * f3;
-                }
-                //cout << i << endl;
-                i++;
-            }//end while
-            if (i < 100)
-            {
-                success = true;
-                y = x2;
             }
-
-            //cout << "Success= " << success << " Vcas: " << vcas*fpstokts << " Mach: " << x2 << endl;
-            return success;
+             return true;
         }
+        private void SetTrimRequest(string trim)
+        {
+            string trimOption = trim.ToLowerInvariant();
+            if (trimOption == "1")
+                trimRequested = TrimMode.Ground;  // For backwards compatabiity
+            else if (trimOption == "longitudinal")
+                trimRequested = TrimMode.Longitudinal;
+            else if (trimOption == "full")
+                trimRequested = TrimMode.Full;
+            else if (trimOption == "ground")
+                trimRequested = TrimMode.Ground;
+            else if (trimOption == "pullup")
+                trimRequested = TrimMode.Pullup;
+            else if (trimOption == "custom")
+                trimRequested = TrimMode.Custom;
+            else if (trimOption == "turn")
+                trimRequested = TrimMode.Turn;
+        }
+        protected void Debug(int from) { throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM"); }
     }
 }

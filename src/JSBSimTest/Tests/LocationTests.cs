@@ -38,7 +38,7 @@ namespace JSBSim.Tests
         {
             Quaternion qloc = new Quaternion(Quaternion.EulerAngles.eTht, -0.5 * Math.PI);
             Quaternion q = new Quaternion();
-            double r = vec.GetMagnitude();
+            double r = vec.Magnitude();
 
             Assert.AreEqual(vec.X, loc[1], r * tolerance);
             Assert.AreEqual(vec.Y, loc[2], r * tolerance);
@@ -201,7 +201,7 @@ namespace JSBSim.Tests
             Assert.AreEqual(Math.Sqrt(2.0), lv2.Radius, tolerance);
 
             Quaternion qloc = new Quaternion(Quaternion.EulerAngles.eTht, -0.5 * Math.PI);
-            Quaternion qlon = new Quaternion(Quaternion.EulerAngles.ePsi, -lv2.Longitude);
+            Quaternion qlon = new Quaternion(Quaternion.EulerAngles.ePsi,  lv2.Longitude);
             Matrix3D m = (qlon * qloc).GetTransformationMatrix();
             AssertMatrixEqual(m, lv2.GetTec2l(), tolerance);
             AssertMatrixEqual(m.GetTranspose(), lv2.GetTl2ec(), tolerance);

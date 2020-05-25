@@ -80,9 +80,9 @@ namespace JSBSim.Models
         /// <param name="fdmex"></param>
         public StandardAtmosphere(FDMExecutive fdmex) : base(fdmex)
         {
-            StdSLpressure = StdDaySLpressure; TemperatureBias = 0.0;
-            TemperatureDeltaGradient = 0.0; VaporMassFraction = 0.0;
-            SaturatedVaporPressure = 0.0;
+            StdSLpressure = StdDaySLpressure; temperatureBias = 0.0;
+            temperatureDeltaGradient = 0.0; VaporMassFraction = 0.0;
+            saturatedVaporPressure = 0.0;
 
             Name = "StandardAtmosphere";
 
@@ -133,10 +133,10 @@ namespace JSBSim.Models
             // Assume the altitude to fade out the gradient at is at the highest
             // altitude in the table. Above that, other functions are used to
             // calculate temperature.
-            GradientFadeoutAltitude = StdAtmosTemperatureTable.GetElement(numRows, 0);
+            gradientFadeoutAltitude = StdAtmosTemperatureTable.GetElement(numRows, 0);
 
             // Initialize the standard atmosphere pressure break points.
-            PressureBreakpoints.Capacity = numRows;
+            PressureBreakpoints = new List<double>(new double[numRows]);
             CalculatePressureBreakpoints(StdSLpressure);
             StdPressureBreakpoints = PressureBreakpoints;
 
@@ -159,10 +159,10 @@ namespace JSBSim.Models
             // Assume the altitude to fade out the gradient at is at the highest
             // altitude in the table. Above that, other functions are used to
             // calculate temperature.
-            GradientFadeoutAltitude = StdAtmosTemperatureTable.GetElement(StdAtmosTemperatureTable.GetNumRows(), 0);
+            gradientFadeoutAltitude = StdAtmosTemperatureTable.GetElement(StdAtmosTemperatureTable.GetNumRows(), 0);
 
-            TemperatureDeltaGradient = 0.0;
-            TemperatureBias = 0.0;
+            temperatureDeltaGradient = 0.0;
+            temperatureBias = 0.0;
             LapseRates = StdLapseRates;
 
             PressureBreakpoints = StdPressureBreakpoints;
@@ -204,8 +204,8 @@ namespace JSBSim.Models
             {
                 T = StdAtmosTemperatureTable.GetValue(GeoPotAlt);
 
-                if (GeoPotAlt <= GradientFadeoutAltitude)
-                    T -= TemperatureDeltaGradient * GeoPotAlt;
+                if (GeoPotAlt <= gradientFadeoutAltitude)
+                    T -= temperatureDeltaGradient * GeoPotAlt;
             }
             else
             {
@@ -214,10 +214,10 @@ namespace JSBSim.Models
                 T = StdAtmosTemperatureTable.GetValue(0.0) + GeoPotAlt * LapseRates[0];
             }
 
-            T += TemperatureBias;
+            T += temperatureBias;
 
-            if (GeoPotAlt <= GradientFadeoutAltitude)
-                T += TemperatureDeltaGradient * GradientFadeoutAltitude;
+            if (GeoPotAlt <= gradientFadeoutAltitude)
+                T += temperatureDeltaGradient * gradientFadeoutAltitude;
 
             return T;
         }
@@ -251,8 +251,8 @@ namespace JSBSim.Models
         public virtual double GetTemperatureBias(eTemperature to)
         {
             if (to == eTemperature.eCelsius || to == eTemperature.eKelvin)
-                return TemperatureBias / 1.80;
-            else return TemperatureBias;
+                return temperatureBias / 1.80;
+            else return temperatureBias;
         }
 
         /// Returns the temperature gradient to be applied on top of the standard
@@ -260,8 +260,8 @@ namespace JSBSim.Models
         public virtual double GetTemperatureDeltaGradient(eTemperature to)
         {
             if (to == eTemperature.eCelsius || to == eTemperature.eKelvin)
-                return TemperatureDeltaGradient / 1.80;
-            else return TemperatureDeltaGradient;
+                return temperatureDeltaGradient / 1.80;
+            else return temperatureDeltaGradient;
         }
 
         /// Sets the Sea Level temperature, if it is to be different than the
@@ -294,10 +294,10 @@ namespace JSBSim.Models
             double targetTemp = ConvertToRankine(t, unit);
             double GeoPotAlt = GeopotentialAltitude(h);
 
-            TemperatureBias = targetTemp - GetStdTemperature(h);
+            temperatureBias = targetTemp - GetStdTemperature(h);
 
-            if (GeoPotAlt <= GradientFadeoutAltitude)
-                TemperatureBias -= TemperatureDeltaGradient * (GradientFadeoutAltitude - GeoPotAlt);
+            if (GeoPotAlt <= gradientFadeoutAltitude)
+                temperatureBias -= temperatureDeltaGradient * (gradientFadeoutAltitude - GeoPotAlt);
 
             CalculatePressureBreakpoints(SLpressure);
 
@@ -319,7 +319,7 @@ namespace JSBSim.Models
             if (unit == eTemperature.eCelsius || unit == eTemperature.eKelvin)
                 t *= 1.80; // If temp delta "t" is given in metric, scale up to English
 
-            TemperatureBias = t;
+            temperatureBias = t;
             CalculatePressureBreakpoints(SLpressure);
 
             SLtemperature = GetTemperature(0.0);
@@ -357,7 +357,7 @@ namespace JSBSim.Models
             if (unit == eTemperature.eCelsius || unit == eTemperature.eKelvin)
                 deltemp *= 1.80; // If temp delta "t" is given in metric, scale up to English
 
-            TemperatureDeltaGradient = deltemp / (GradientFadeoutAltitude - GeopotentialAltitude(h));
+            temperatureDeltaGradient = deltemp / (gradientFadeoutAltitude - GeopotentialAltitude(h));
             CalculateLapseRates();
             CalculatePressureBreakpoints(SLpressure);
 
@@ -371,7 +371,7 @@ namespace JSBSim.Models
         /// temperature is used for the entire temperature profile at all altitudes.
         public virtual void ResetSLTemperature()
         {
-            TemperatureBias = TemperatureDeltaGradient = 0.0;
+            temperatureBias = temperatureDeltaGradient = 0.0;
             CalculateLapseRates();
             CalculatePressureBreakpoints(SLpressure);
 
@@ -469,8 +469,10 @@ namespace JSBSim.Models
             CalculatePressureBreakpoints(SLpressure);
         }
 
-        /** Resets the sea level to the Standard sea level pressure, and recalculates
-            dependent parameters so that the pressure calculations are standard. */
+        /// <summary>
+        /// Resets the sea level to the Standard sea level pressure, and recalculates
+        /// dependent parameters so that the pressure calculations are standard.
+        /// </summary>
         public virtual void ResetSLPressure()
         {
             SLpressure = StdSLpressure;
@@ -549,7 +551,7 @@ namespace JSBSim.Models
 */
         public double GetSaturatedVaporPressure(ePressure to)
         {
-            return ConvertFromPSF(SaturatedVaporPressure, to);
+            return ConvertFromPSF(saturatedVaporPressure, to);
         }
 
         /** Sets the relative humidity.
@@ -557,7 +559,7 @@ namespace JSBSim.Models
         public void SetRelativeHumidity(double RH)
         {
             double altitude = CalculatePressureAltitude(Pressure, 0.0);
-            double VaporPressure = 0.01 * RH * SaturatedVaporPressure;
+            double VaporPressure = 0.01 * RH * saturatedVaporPressure;
             VaporMassFraction = Rdry * VaporPressure / (Rwater * (Pressure - VaporPressure));
             ValidateVaporMassFraction(altitude);
         }
@@ -566,7 +568,7 @@ namespace JSBSim.Models
         public double GetRelativeHumidity()
         {
             double VaporPressure = Pressure * VaporMassFraction / (VaporMassFraction + Rdry / Rwater);
-            return 100.0 * VaporPressure / SaturatedVaporPressure;
+            return 100.0 * VaporPressure / saturatedVaporPressure;
         }
 
         /** Sets the vapor mass per million of dry air mass units.
@@ -584,20 +586,18 @@ namespace JSBSim.Models
             return VaporMassFraction * 1E6;
         }
 
-        //@}
-
         /// Prints the U.S. Standard Atmosphere table.
-        public virtual void PrintStandardAtmosphereTable() { throw new NotImplementedException(); }
+        public virtual void PrintStandardAtmosphereTable() { throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM"); }
 
 
         /// Standard sea level conditions
         protected double StdSLtemperature, StdSLdensity, StdSLpressure, StdSLsoundspeed;
 
-        protected double TemperatureBias;
-        protected double TemperatureDeltaGradient;
-        protected double GradientFadeoutAltitude;
+        protected double temperatureBias;
+        protected double temperatureDeltaGradient;
+        protected double gradientFadeoutAltitude;
         protected double VaporMassFraction;
-        protected double SaturatedVaporPressure;
+        protected double saturatedVaporPressure;
 
         protected Table StdAtmosTemperatureTable;
         protected Table MaxVaporMassFraction;
@@ -610,7 +610,7 @@ namespace JSBSim.Models
         protected override void Calculate(double altitude)
         {
             base.Calculate(altitude);
-            SaturatedVaporPressure = CalculateVaporPressure(Temperature);
+            saturatedVaporPressure = CalculateVaporPressure(Temperature);
             ValidateVaporMassFraction(altitude);
         }
 
@@ -629,7 +629,7 @@ namespace JSBSim.Models
                 double t1 = StdAtmosTemperatureTable.GetElement(bh + 2, 1);
                 double h0 = StdAtmosTemperatureTable.GetElement(bh + 1, 0);
                 double h1 = StdAtmosTemperatureTable.GetElement(bh + 2, 0);
-                LapseRates.Add((t1 - t0) / (h1 - h0) - TemperatureDeltaGradient);
+                LapseRates.Add((t1 - t0) / (h1 - h0) - temperatureDeltaGradient);
             }
         }
 
@@ -646,8 +646,8 @@ namespace JSBSim.Models
                 double UpperAlt = StdAtmosTemperatureTable.GetElement(b + 2, 0);
                 double deltaH = UpperAlt - BaseAlt;
                 double Tmb = BaseTemp
-                             + TemperatureBias
-                             + (GradientFadeoutAltitude - BaseAlt) * TemperatureDeltaGradient;
+                             + temperatureBias
+                             + (gradientFadeoutAltitude - BaseAlt) * temperatureDeltaGradient;
                 if (LapseRates[b] != 0.00)
                 {
                     double Lmb = LapseRates[b];
@@ -677,15 +677,17 @@ namespace JSBSim.Models
         /// Convert a geopotential altitude to a geometric altitude
         protected double GeometricAltitude(double geopotalt) { return (geopotalt * EarthRadius) / (EarthRadius - geopotalt); }
 
-        /** Calculates the density altitude given any temperature or pressure bias.
-        Calculated density for the specified geometric altitude given any temperature
-        or pressure biases is passed in.
-        @param density
-        @param geometricAlt
-        @see
-        https://en.wikipedia.org/wiki/Density_altitude
-        https://wahiduddin.net/calc/density_altitude.htm
-        */
+        /// <summary>
+        /// Calculates the density altitude given any temperature or pressure bias.
+        /// Calculated density for the specified geometric altitude given any temperature
+        /// or pressure biases is passed in.
+        /// see
+        /// https://en.wikipedia.org/wiki/Density_altitude
+        ///  https://wahiduddin.net/calc/density_altitude.htm
+        /// </summary>
+        /// <param name="density"></param>
+        /// <param name="geometricAlt"></param>
+        /// <returns></returns>
         protected override double CalculateDensityAltitude(double density, double geometricAlt)
         {
             // Work out which layer we're dealing with
@@ -771,11 +773,11 @@ namespace JSBSim.Models
         /// Validate the value of the vapor mass fraction
         protected void ValidateVaporMassFraction(double geometricAlt)
         {
-            if (SaturatedVaporPressure < Pressure)
+            if (saturatedVaporPressure < Pressure)
             {
                 double VaporPressure = Pressure * VaporMassFraction / (VaporMassFraction + Rdry / Rwater);
-                if (VaporPressure > SaturatedVaporPressure)
-                    VaporMassFraction = Rdry * SaturatedVaporPressure / (Rwater * (Pressure - SaturatedVaporPressure));
+                if (VaporPressure > saturatedVaporPressure)
+                    VaporMassFraction = Rdry * saturatedVaporPressure / (Rwater * (Pressure - saturatedVaporPressure));
             }
 
             double GeoPotAlt = GeopotentialAltitude(geometricAlt);
@@ -798,7 +800,90 @@ namespace JSBSim.Models
             CalculateSLDensity();
         }
 
-        public override void Bind() { throw new NotImplementedException(); }
+        ///<summary>
+        /// Sets/Gets the current delta-T in degrees Fahrenheit
+        ///</summary>
+        [ScriptAttribute("atmosphere/delta-T", "Delta-T in degrees Fahrenheit")]
+        public double TemperatureBias
+        {
+            set { SetTemperatureBias(eTemperature.eRankine, value); }
+            get { return GetTemperatureBias(eTemperature.eRankine); }
+        }
+
+        ///<summary>
+        /// Gets/sets the temperature gradient to be applied on top of the standard
+        /// temperature gradient
+        ///</summary>
+        [ScriptAttribute("atmosphere/SL-graded-delta-T", "The temperature gradient to be applied on top of the standard temperature gradient")]
+        public double TemperatureDeltaGradient
+        {
+            set { SetSLTemperatureGradedDelta(eTemperature.eRankine, value); }
+            get { return GetTemperatureDeltaGradient(eTemperature.eRankine); }
+        }
+
+        ///<summary>
+        /// Gets/sets the sea level pressure in target units, default in psf.
+        ///</summary>
+        [ScriptAttribute("atmosphere/P-sl-psf", "The sea level pressure in target units, default in psf.")]
+        public double PressureSL
+        {
+            set { SetPressureSL(ePressure.ePSF, value); }
+            get { return GetPressureSL(ePressure.ePSF); }
+        }
+
+        ///<summary>
+        /// Gets/sets the dew point.
+        ///</summary>
+        [ScriptAttribute("atmosphere/dew-point-R", "The dew point.")]
+        public double DewPoint
+        {
+            set { SetDewPoint(eTemperature.eRankine, value); }
+            get { return GetDewPoint(eTemperature.eRankine); }
+        }
+
+        ///<summary>
+        /// Gets/sets the partial pressure of water vapor.
+        ///</summary>
+        [ScriptAttribute("atmosphere/vapor-pressure-psf", "The partial pressure of water vapor.")]
+        public double VaporPressure
+        {
+            set { SetVaporPressure(ePressure.ePSF, value); }
+            get { return GetVaporPressure(ePressure.ePSF); }
+        }
+
+        ///<summary>
+        /// Gets/sets the partial pressure of water vapor.
+        ///</summary>
+        [ScriptAttribute("atmosphere/saturated-vapor-pressure-psf", "The partial pressure of water vapor.")]
+        public double SaturatedVaporPressure
+        {
+            get { return GetSaturatedVaporPressure(ePressure.ePSF); }
+        }
+
+        ///<summary>
+        /// Gets/sets the relative humidity.
+        ///</summary>
+        [ScriptAttribute("atmosphere/RH", "The relative humidity.")]
+        public double RelativeHumidity
+        {
+            set { SetRelativeHumidity(value); }
+            get { return GetRelativeHumidity(); }
+        }
+
+        ///<summary>
+        /// Gets/sets the vapor mass per million of dry air mass units (ppm).
+        ///</summary>
+        [ScriptAttribute("atmosphere/RH", "The vapor mass per million of dry air mass units (ppm).")]
+        public double VaporMassFractionPPM
+        {
+            set { SetVaporMassFractionPPM(value); }
+            get { return GetVaporMassFractionPPM(); }
+        }
+
+        public override void Bind()
+        {
+            FDMExec.PropertyManager.Bind("atmosphere", this);
+        }
 
         //protected override void Debug(int from) { throw new NotImplementedException(); }
 

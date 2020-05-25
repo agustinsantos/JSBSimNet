@@ -109,6 +109,8 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Collections\CollectionHelpers.cs" />
+    <Compile Include="Collections\Deque.cs" />
     <Compile Include="IO\ReaderText.cs">
       <SubType>Code</SubType>
     </Compile>

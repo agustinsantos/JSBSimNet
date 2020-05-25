@@ -29,47 +29,47 @@ namespace CommonUtils.MathLib
     /// <summary>
     /// Moments L, M, N
     /// </summary>
-    public enum MomentType { eL, eM, eN };
+    public enum MomentType { eL = 1, eM, eN };
 
     /// <summary>
     /// Rates P, Q, R
     /// </summary>
-    public enum RateType { eP, eQ, eR };
+    public enum RateType { eP = 1, eQ, eR };
 
     /// <summary>
     /// Velocities U, V, W
     /// </summary>
-    public enum VelocityType { eU, eV, eW };
+    public enum VelocityType { eU = 1, eV, eW };
 
     /// <summary>
     /// Positions X, Y, Z
     /// </summary>
-    public enum PositionType : int { eX, eY, eZ };
+    public enum PositionType : int { eX = 1, eY, eZ };
 
     /// <summary>
     /// Euler angles Phi, Theta, Psi
     /// </summary>
-    public enum EulerAngleType { ePhi, eTht, ePsi };
+    public enum EulerAngleType { ePhi = 1, eTht, ePsi };
 
     /// <summary>
     /// Stability axis forces, Drag, Side force, Lift
     /// </summary>
-    public enum StabilityAxisForces { eDrag, eSide, eLift };
+    public enum StabilityAxisForces { eDrag = 1, eSide, eLift };
 
     /// <summary>
     /// Local frame orientation Roll, Pitch, Yaw
     /// </summary>
-    public enum LocalOrientation { eRoll, ePitch, eYaw };
+    public enum LocalOrientation { eRoll = 1, ePitch, eYaw };
 
     /// <summary>
     /// Local frame position North, East, Down
     /// </summary>
-    public enum LocalPosition { eNorth, eEast, eDown };
+    public enum LocalPosition { eNorth = 1, eEast, eDown };
 
     /// <summary>
     /// Locations Radius, Latitude, Longitude
     /// </summary>
-    public enum LocationsType { eLat, eLong, eRad };
+    public enum LocationsType { eLat = 1, eLong, eRad };
 
     /// <summary>
     /// Conversion specifiers
@@ -355,6 +355,19 @@ namespace CommonUtils.MathLib
         }
 
         public static double Sign(double num) { return num >= 0.0 ? 1.0 : -1.0; }
+
+        public static double GaussianRandomNumber()
+        {
+            return normalRandom.Next();
+        }
+        public static double Rand()
+        {
+            return unifRandom.Next();
+        }
+
+        private static readonly Random rand = new Random();
+        private static readonly NormalRandom normalRandom = new NormalRandom(0, 1, rand);
+        private static readonly UniformRandom unifRandom = new UniformRandom(0, 1, rand);
     }
 
     /// <summary>

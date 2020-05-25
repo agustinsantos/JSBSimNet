@@ -1,4 +1,5 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 using System.Xml.Linq;
 using log4net;
 
@@ -50,5 +51,23 @@ namespace CommonUtils.IO
 #endif
             throw new System.NotImplementedException();
         }
+        public static XmlElement FindElement(this XmlElement doc, string name)
+        {
+            XmlNodeList list = doc.GetElementsByTagName(name);
+            if (list != null && list.Count > 0)
+                return list[0] as XmlElement;
+            else
+                return null;
+        }
+        public static bool FindElement(this XmlElement doc, string name, out XmlElement rst)
+        {
+            XmlNodeList list = doc.GetElementsByTagName(name);
+            if (list != null && list.Count > 0)
+                rst = list[0] as XmlElement;
+            else
+                rst = null;
+            return (rst != null);
+        }
+
     }
 }

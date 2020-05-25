@@ -27,12 +27,46 @@ namespace JSBSim.Format
     using System.Text.RegularExpressions;
     using System.Xml;
     using CommonUtils.MathLib;
+    using log4net;
 
     /// <summary>
     /// Summary description for RegExprFormat.
     /// </summary>
     public class FormatHelper
     {
+        /// <summary>
+        /// Define a static logger variable so that it references the
+        ///	Logger instance.
+        /// 
+        /// NOTE that using System.Reflection.MethodBase.GetCurrentMethod().DeclaringType
+        /// is equivalent to typeof(LoggingExample) but is more portable
+        /// i.e. you can copy the code directly into another class without
+        /// needing to edit the code.
+        /// </summary>
+        private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+        public static double GetAttributeValueAsNumber(XmlElement element, string attr)
+        {
+            string attribute = element.GetAttribute(attr);
+
+            if (string.IsNullOrEmpty(attribute))
+            {
+                log.Error("Expecting numeric attribute value, but got no data");
+                throw new Exception("Expecting numeric attribute value, but got no data");
+            }
+            else
+            {
+                double number = 0;
+                if (!double.TryParse(attribute.Trim(), out number))
+                {
+                    log.Error("Expecting numeric attribute value, but got: " + attribute);
+                    throw new Exception("Expecting numeric attribute value, but got: " + attribute);
+                }
+
+                return number;
+            }
+        }
+
         public static double ValueAsNumberConvertTo(XmlElement element, string target_units, string supplied_units)
         {
             double returnValue = double.PositiveInfinity;
@@ -50,18 +84,70 @@ namespace JSBSim.Format
         public static double ValueAsNumberConvertTo(XmlElement element, string target_units)
         {
             double returnValue = double.PositiveInfinity;
-            string supplied_units = "";
+            //string supplied_units = "";
 
-            if (element != null)
+            //if (element != null)
+            //{
+            //    returnValue = double.Parse(element.InnerText, FormatHelper.numberFormatInfo);
+            //    supplied_units = element.GetAttribute("unit");
+            //    if (supplied_units != null && supplied_units.Length != 0)
+            //    {
+            //        returnValue *= convert[supplied_units, target_units];
+            //    }
+            //}
+            //if (element == null)
+            //{
+            //    log.Error("Attempting to get non-existent element " + el);
+            //    throw new Exception("Attempting to get non-existent element " + el);
+            //}
+
+
+            string supplied_units = element.GetAttribute("unit");
+
+            if (!string.IsNullOrEmpty(supplied_units))
             {
-                returnValue = double.Parse(element.InnerText, FormatHelper.numberFormatInfo);
-                supplied_units = element.GetAttribute("unit");
-                if (supplied_units != null && supplied_units.Length != 0)
+                if (!convert.Contains(supplied_units))
                 {
-                    returnValue *= convert[supplied_units, target_units];
+                    log.Error("Supplied unit: \"" + supplied_units + "\" does not exist (typo?).");
+                    throw new Exception("Supplied unit: \"" + supplied_units + "\" does not exist (typo?).");
+                }
+                if (!convert.Contains(supplied_units, target_units))
+                {
+                    log.Error("Supplied unit: \"" + supplied_units + "\" cannot be converted to " + target_units);
+                    throw new Exception("Supplied unit: \"" + supplied_units + "\" cannot be converted to " + target_units);
                 }
             }
-            return returnValue;
+
+            double value = double.Parse(element.InnerText, FormatHelper.numberFormatInfo);
+
+            // Sanity check for angular values
+            if ((supplied_units == "RAD") && (Math.Abs(value) > 2 * Math.PI))
+            {
+                log.Error(element.Name + " value " + value + " RAD is outside the range [ -2*PI RAD ; +2*PI RAD ]");
+            }
+            if ((supplied_units == "DEG") && (Math.Abs(value) > 360.0))
+            {
+                log.Error(element.Name + " value " + value + " DEG is outside the range [ -360 DEG ; +360 DEG ]");
+            }
+
+
+            if (!string.IsNullOrEmpty(supplied_units))
+            {
+                value *= convert[supplied_units, target_units];
+            }
+
+            if ((target_units == "RAD") && (Math.Abs(value) > 2 * Math.PI))
+            {
+                log.Error(element.Name + " value " + value + " RAD is outside the range [ -2*M_PI RAD ; +2*M_PI RAD ]");
+            }
+            if ((target_units == "DEG") && (Math.Abs(value) > 360.0))
+            {
+                log.Error(element.Name + " value " + value + " DEG is outside the range [ -360 DEG ; +360 DEG ]");
+            }
+
+            value = DisperseValue(element, value, supplied_units, target_units);
+
+            return value;
         }
 
         public static double ValueAsNumber(XmlElement element)
@@ -114,6 +200,61 @@ namespace JSBSim.Format
                 }
             }
             return triplet;
+        }
+        public static double DisperseValue(XmlElement e, double val, string supplied_units,
+                                string target_units)
+        {
+            double value = val;
+
+            bool disperse = false;
+            string num = Environment.GetEnvironmentVariable("JSBSIM_DISPERSE");
+            if (!string.IsNullOrEmpty(num))
+            {
+                disperse = num.Trim() == "1";  // set dispersions
+            }
+            else
+            {                   // if error set to false
+                disperse = false;
+                log.Error("Could not process JSBSIM_DISPERSE environment variable: Assumed NO dispersions.");
+            }
+
+            if (e.HasAttribute("dispersion") && disperse)
+            {
+                double disp = GetAttributeValueAsNumber(e, "dispersion");
+                if (!String.IsNullOrEmpty(supplied_units)) disp *= convert[supplied_units, target_units];
+                string attType = e.GetAttribute("type");
+                if (attType == "gaussian" || attType == "gaussiansigned")
+                {
+                    double grn = MathExt.GaussianRandomNumber();
+                    if (attType == "gaussian")
+                    {
+                        value = val + disp * grn;
+                    }
+                    else
+                    { // Assume gaussiansigned
+                        value = (val + disp * grn) * (Math.Abs(grn) / grn);
+                    }
+                }
+                else if (attType == "uniform" || attType == "uniformsigned")
+                {
+                    double urn = MathExt.Rand();
+                    if (attType == "uniform")
+                    {
+                        value = val + disp * urn;
+                    }
+                    else
+                    { // Assume uniformsigned
+                        value = (val + disp * urn) * (Math.Abs(urn) / urn);
+                    }
+                }
+                else
+                {
+                    log.Error("Unknown dispersion type" + attType);
+                    throw new Exception("Unknown dispersion type" + attType);
+                }
+
+            }
+            return value;
         }
 
         private static readonly MapConverter convert = new MapConverter();
@@ -228,6 +369,10 @@ namespace JSBSim.Format
 
 
             convert = new double[map.Count, map.Count];
+            for (int i = 0; i < map.Count; i++)
+                for (int j = 0; j < map.Count; j++)
+                    convert[i, j] = double.NaN;
+
             // this ["from"]["to"] = factor, so: from * factor = to
             // Length
             this["M", "FT"] = Constants.METER_TO_FEET;
@@ -340,6 +485,20 @@ namespace JSBSim.Format
             {
                 convert[i, i] = 1.0;
             }
+        }
+
+        public bool Contains(string unit)
+        {
+            return map.Contains(unit);
+        }
+
+        public bool Contains(string from, string to)
+        {
+            string f = from.Trim().ToUpper();
+            string t = to.Trim().ToUpper();
+
+            return map.Contains(f) && map.Contains(t) &&
+                convert[(int)map[f], (int)map[t]] != double.NaN;
         }
 
         public double this[string from, string to]   // Indexer declaration
