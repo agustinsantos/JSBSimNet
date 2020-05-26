@@ -131,6 +131,9 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\GroundCallbackTests.cs" />
+    <Compile Include="Tests\ConversionTests.cs" />
+    <Compile Include="Tests\TestParentClass.cs" />
     <Compile Include="Tests\LocationTests.cs" />
     <Compile Include="Tests\ConditionTests.cs">
       <SubType>Code</SubType>

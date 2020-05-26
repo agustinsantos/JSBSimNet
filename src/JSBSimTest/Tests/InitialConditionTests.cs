@@ -26,18 +26,13 @@
 namespace JSBSim.Tests
 {
     using System;
-    using System.Xml;
     using System.IO;
     using System.Text;
-
-    using NUnit.Framework;
+    using System.Xml;
+    using JSBSim;
     // Import log4net classes.
     using log4net;
-
-    using JSBSim;
-    using JSBSim.MathValues;
-    using JSBSim.InputOutput;
-    using JSBSim.Script;
+    using NUnit.Framework;
 
     /// <summary>
     /// Some Initial Conditial Tests: load and access.
@@ -79,7 +74,7 @@ namespace JSBSim.Tests
             // Log an info level message
             if (log.IsDebugEnabled)
             {
-                log.Debug("Starting JSBSim IC tests");
+                log.Debug("Starting JSBSim tests");
             }
 
         }

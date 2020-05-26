@@ -243,6 +243,25 @@ namespace CommonUtils.MathLib
         }
 
         /// <summary>
+        /// Initializer by matrix.
+        /// Initialize the quaternion with the matrix representing a transform from one frame
+        /// to another using the standard aerospace sequence, Yaw-Pitch-Roll(3-2-1).
+        /// </summary>
+        /// <param name="q">the rotation matrix</param>
+        public Quaternion(Matrix3D m)
+        {
+            //mCacheValid = false;
+
+            this.W = 0.50 * Math.Sqrt(1.0 + m.M11 + m.M22 + m.M33);
+            double t = 0.25 / this.W;
+            this.X = t * (m.M23 - m.M32);
+            this.Y = t * (m.M31 - m.M13);
+            this.Z = t * (m.M12 - m.M21);
+
+            Normalize();
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Quaternion"/> class with serialized data.
         /// </summary>
         /// <param name="info">The object that holds the serialized object data.</param>

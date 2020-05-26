@@ -635,9 +635,21 @@
             Summary description for Constants.
             </summary>
         </member>
+        <member name="F:CommonUtils.MathLib.Constants.Rstar">
+            <summary>
+            Universal gas constant - ft*lbf/R/mol
+            </summary>
+        </member>
+        <member name="F:CommonUtils.MathLib.Constants.Mair">
+            <summary>
+            Mean molecular weight for air - slug/mol
+            </summary>
+        </member>
         <member name="F:CommonUtils.MathLib.Constants.Reng">
             <summary>
             Specific Gas Constant,ft^2/(sec^2*R)
+            Atmosphere constants in British units converted from the SI values specified in the 
+            ISA document - https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19770009539.pdf
             </summary>
         </member>
         <member name="F:CommonUtils.MathLib.Constants.ONE_SECOND">
@@ -724,11 +736,6 @@
         </member>
         <member name="F:CommonUtils.MathLib.Constants.INHG_TO_PA">
             Inch Mercury to Pascal 
-        </member>
-        <member name="F:CommonUtils.MathLib.Constants.Mair">
-            <summary>
-            Mean molecular weight for air - slug/mol
-            </summary>
         </member>
         <member name="F:CommonUtils.MathLib.Constants.g0">
             <summary>
@@ -1123,6 +1130,14 @@
             Initializes a new instance of the <see cref="T:CommonUtils.MathLib.Quaternion"/> class using values from a given quaternion.
             </summary>
             <param name="q">Quaternion to copy parameters from.</param>
+        </member>
+        <member name="M:CommonUtils.MathLib.Quaternion.#ctor(CommonUtils.MathLib.Matrix3D)">
+            <summary>
+            Initializer by matrix.
+            Initialize the quaternion with the matrix representing a transform from one frame
+            to another using the standard aerospace sequence, Yaw-Pitch-Roll(3-2-1).
+            </summary>
+            <param name="q">the rotation matrix</param>
         </member>
         <member name="M:CommonUtils.MathLib.Quaternion.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
             <summary>

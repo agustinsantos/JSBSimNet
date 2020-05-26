@@ -62,9 +62,22 @@ namespace CommonUtils.MathLib
         public const double kgtoslug = 0.06852168;
 
         /// <summary>
-        /// Specific Gas Constant,ft^2/(sec^2*R)
+        /// Universal gas constant - ft*lbf/R/mol
         /// </summary>
-        public const double Reng = 1716.0;
+        public const double Rstar = 8.31432 * kgtoslug / ((fttom * fttom) * 1.8);
+
+        /// <summary>
+        /// Mean molecular weight for air - slug/mol
+        /// </summary>
+        public const double Mair = 28.9645 * kgtoslug / 1000.0;
+
+
+        /// <summary>
+        /// Specific Gas Constant,ft^2/(sec^2*R)
+        /// Atmosphere constants in British units converted from the SI values specified in the 
+        /// ISA document - https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19770009539.pdf
+        /// </summary>
+        public const double Reng = Rstar / Mair;
         public const double SHRatio = 1.40;
         public const double GM = 14.06252720E15;
 
@@ -87,7 +100,7 @@ namespace CommonUtils.MathLib
 
         // Earth parameters for WGS 84, taken from LaRCsim/ls_constants.h
 
-         /// <summary>
+        /// <summary>
         /// Value of earth radius from LaRCsim (ft) 
         /// </summary>
         public const double EQUATORIAL_RADIUS_FT = 20925646.32546;
@@ -169,11 +182,6 @@ namespace CommonUtils.MathLib
         public const double StdDaySLtemperature = 518.67;
         public const double StdDaySLpressure = 2116.228;
         public static readonly double StdDaySLsoundspeed = Math.Sqrt(SHRatio * Reng * StdDaySLtemperature);
-
-        /// <summary>
-        /// Mean molecular weight for air - slug/mol
-        /// </summary>
-        public static double Mair = 28.9645 * kgtoslug / 1000.0;
 
         /// <summary>
         /// Sea-level acceleration of gravity - ft/s^2.

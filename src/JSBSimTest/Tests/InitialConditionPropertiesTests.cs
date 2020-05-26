@@ -76,7 +76,7 @@ namespace JSBSim.Tests
             // Log an info level message
             if (log.IsDebugEnabled)
             {
-                log.Debug("Starting JSBSim IC tests");
+                log.Debug("Starting JSBSim tests");
             }
 
         }

@@ -38,6 +38,7 @@ namespace JSBSim.Tests
     {
         private const double tolerance = 10E-16;
 
+#if TODO // Not clear how to test PropertyValues
         [Test]
         public void CheckValidValue()
         {
@@ -49,6 +50,6 @@ namespace JSBSim.Tests
             Assert.AreEqual("constant value 0", propValue.GetName());
             Assert.AreEqual(true, propValue.IsConstant());
         }
-
+#endif
     }
 }

@@ -135,11 +135,6 @@ namespace JSBSim
         {
         }
 
-        internal Inertial GetInertial()
-        {
-            return models[(int)eModels.eInertial] as Inertial;
-        }
-
         /// Default constructor
         public FDMExecutive(PropertyManager root)
         {
@@ -540,6 +535,7 @@ namespace JSBSim
 
         /// Top-level executive State and Model retrieval mechanism
 
+
         /// <summary>
         /// Returns the State
         /// </summary>
@@ -592,6 +588,10 @@ namespace JSBSim
         /// Returns the Inertial reference.
         /// </summary>
         public Inertial Inertial { get { return (Inertial)models[(int)eModels.eInertial]; } }
+        public Inertial GetInertial()
+        {
+            return (Inertial)models[(int)eModels.eInertial]; ;
+        }
 
         /// <summary>
         /// Returns the Output reference.
@@ -612,6 +612,10 @@ namespace JSBSim
         /// Returns the Propagate reference.
         /// </summary>
         public Propagate Propagate { get { return (Propagate)models[(int)eModels.ePropagate]; } }
+        public Propagate GetPropagate()
+        {
+            return (Propagate)models[(int)eModels.ePropagate]; ;
+        }
 
         public void DisableOutput()
         {

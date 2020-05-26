@@ -2137,7 +2137,314 @@ namespace JSBSim
         }
         private bool Load_v2(XmlElement document)
         {
-            throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
+            Vector3D vOrient;
+            bool result = true;
+
+            // support both earth_position_angle and planet_position_angle, for now.  
+            XmlElement elem = document.FindElement("earth_position_angle");
+            if (elem != null)
+                epa = FormatHelper.ValueAsNumberConvertTo(elem, "RAD");
+            elem = document.FindElement("planet_position_angle");
+            if (elem != null)
+                epa = FormatHelper.ValueAsNumberConvertTo(elem, "RAD");
+
+            // Calculate the inertial to ECEF matrices
+            Matrix3D Ti2ec = new Matrix3D(Math.Cos(epa), Math.Sin(epa), 0.0,
+                                           -Math.Sin(epa), Math.Cos(epa), 0.0,
+                                           0.0, 0.0, 1.0);
+            Matrix3D Tec2i = Ti2ec.Transposed();
+
+            elem = document.FindElement("planet_rotation_rate");
+            if (elem != null)
+            {
+                fdmex.GetInertial().SetOmegaPlanet(FormatHelper.ValueAsNumberConvertTo(elem, "RAD"));
+                fdmex.GetPropagate().inputs.vOmegaPlanet = fdmex.GetInertial().GetOmegaPlanet();
+               //TODO fdmex.GetAccelerations().inputs.vOmegaPlanet = fdmex.GetInertial().GetOmegaPlanet();
+            }
+            Vector3D vOmegaEarth = fdmex.GetInertial().GetOmegaPlanet();
+
+            elem = document.FindElement("elevation");
+            if (elem != null)
+            {
+                fdmex.GetInertial().SetTerrainElevation(FormatHelper.ValueAsNumberConvertTo(elem, "FT"));
+            }
+
+            // Initialize vehicle position
+            //
+            // Allowable frames:
+            // - ECI (Earth Centered Inertial)
+            // - ECEF (Earth Centered, Earth Fixed)
+
+            XmlElement position_el = document.FindElement("position");
+            if (position_el != null)
+            {
+                string frame = position_el.GetAttribute("frame");
+                frame = frame.ToLower();
+                if (frame == "eci")
+                { // Need to transform vLoc to ECEF for storage and use in FGLocation.
+                    position = (Location)(Ti2ec * FormatHelper.TripletConvertTo(position_el, "FT"));
+                }
+                else if (frame == "ecef")
+                {
+                    if (position_el.FindElement("x") == null && position_el.FindElement("y") == null && position_el.FindElement("z") == null)
+                    {
+                        double longitude = 0.0;
+                        if (position_el.FindElement("longitude") != null)
+                        {
+                            elem = position_el.FindElement("longitude");
+                            longitude = FormatHelper.ValueAsNumberConvertTo(elem, "RAD");
+                            position.Longitude = longitude;
+                        }
+                        if (position_el.FindElement("radius") != null)
+                        {
+                            elem = position_el.FindElement("radius");
+                            position.Radius = FormatHelper.ValueAsNumberConvertTo(elem, "FT");
+                        }
+                        else if (position_el.FindElement("altitudeAGL") != null)
+                        {
+                            elem = position_el.FindElement("altitudeAGL");
+                            fdmex.GetInertial().SetAltitudeAGL(position, FormatHelper.ValueAsNumberConvertTo(elem, "FT"));
+                        }
+                        else if (position_el.FindElement("altitudeMSL") != null)
+                        {
+                            elem = position_el.FindElement("altitudeMSL");
+                            position.SetPositionGeodetic(longitude, 0.0, FormatHelper.ValueAsNumberConvertTo(elem, "FT"));
+                        }
+                        else
+                        {
+                            log.Error("  No altitude or radius initial condition is given.");
+                            result = false;
+                        }
+
+                        if (result)
+                            result = LoadLatitude(position_el);
+
+                    }
+                    else
+                    {
+                        position = (Location)FormatHelper.TripletConvertTo(position_el, "FT");
+                    }
+                }
+                else
+                {
+                    log.Error("  Neither ECI nor ECEF frame is specified for initial position.");
+                    result = false;
+                }
+            }
+            else
+            {
+                log.Error("  Initial position not specified in this initialization file.");
+                result = false;
+            }
+
+            // End of position initialization
+
+            // Initialize vehicle orientation
+            // Allowable frames
+            // - ECI (Earth Centered Inertial)
+            // - ECEF (Earth Centered, Earth Fixed)
+            // - Local
+            //
+            // Need to convert the provided orientation to a local orientation, using
+            // the given orientation and knowledge of the Earth position angle.
+            // This could be done using matrices (where in the subscript "b/a",
+            // it is meant "b with respect to a", and where b=body frame,
+            // i=inertial frame, l=local NED frame and e=ecef frame) as:
+            //
+            // C_b/l =  C_b/e * C_e/l
+            //
+            // Using quaternions (note reverse ordering compared to matrix representation):
+            //
+            // Q_b/l = Q_e/l * Q_b/e
+            //
+            // Use the specific matrices as needed. The above example of course is for the whole
+            // body to local orientation.
+            // The new orientation angles can be extracted from the matrix or the quaternion.
+            // ToDo: Do we need to deal with normalization of the quaternions here?
+
+            XmlElement orientation_el = document.FindElement("orientation");
+            if (orientation_el != null)
+            {
+                string frame = orientation_el.GetAttribute("frame");
+                frame = frame.ToLower();
+                vOrient = FormatHelper.TripletConvertTo(orientation_el, "RAD");
+                if (frame == "eci")
+                {
+
+                    // In this case, we are supplying the Euler angles for the vehicle with
+                    // respect to the inertial system, represented by the C_b/i Matrix.
+                    // We want the body orientation with respect to the local (NED frame):
+                    //
+                    // C_b/l = C_b/i * C_i/l
+                    //
+                    // Or, using quaternions (note reverse ordering compared to matrix representation):
+                    //
+                    // Q_b/l = Q_i/l * Q_b/i
+
+                    Quaternion QuatI2Body = new Quaternion(vOrient);
+                    QuatI2Body.Normalize();
+                    Quaternion QuatLocal2I = new Quaternion(Tec2i * position.GetTl2ec());
+                    QuatLocal2I.Normalize();
+                    orientation = QuatLocal2I * QuatI2Body;
+
+                }
+                else if (frame == "ecef")
+                {
+
+                    // In this case we are given the Euler angles representing the orientation of
+                    // the body with respect to the ECEF system, represented by the C_b/e Matrix.
+                    // We want the body orientation with respect to the local (NED frame):
+                    //
+                    // C_b/l =  C_b/e * C_e/l
+                    //
+                    // Using quaternions (note reverse ordering compared to matrix representation):
+                    //
+                    // Q_b/l = Q_e/l * Q_b/e
+
+                    Quaternion QuatEC2Body = new Quaternion(vOrient); // Store relationship of Body frame wrt ECEF frame, Q_b/e
+                    QuatEC2Body.Normalize();
+                    Quaternion QuatLocal2EC = new Quaternion(position.GetTl2ec()); // Get Q_e/l from matrix
+                    QuatLocal2EC.Normalize();
+                    orientation = QuatLocal2EC * QuatEC2Body; // Q_b/l = Q_e/l * Q_b/e
+
+                }
+                else if (frame == "local")
+                {
+
+                    orientation = new Quaternion(vOrient);
+
+                }
+                else
+                {
+
+                    log.Error("  Orientation frame type: \"" + frame
+                         + "\" is not supported!");
+                    result = false;
+
+                }
+            }
+
+            // Initialize vehicle velocity
+            // Allowable frames
+            // - ECI (Earth Centered Inertial)
+            // - ECEF (Earth Centered, Earth Fixed)
+            // - Local
+            // - Body
+            // The vehicle will be defaulted to (0,0,0) in the Body frame if nothing is provided.
+
+            XmlElement velocity_el = document.FindElement("velocity");
+            Matrix3D mTec2l = position.GetTec2l();
+            Matrix3D Tb2l = orientation.GetTInv();
+
+            if (velocity_el != null)
+            {
+
+                string frame = velocity_el.GetAttribute("frame");
+                frame = frame.ToLower();
+                Vector3D vInitVelocity = FormatHelper.TripletConvertTo(velocity_el, "FT/SEC");
+
+                if (frame == "eci")
+                {
+                    Vector3D omega_cross_r = vOmegaEarth * (Tec2i * (Vector3D)position);
+                    vUVW_NED = mTec2l * (vInitVelocity - omega_cross_r);
+                    lastSpeedSet = SpeedSet.setned;
+                }
+                else if (frame == "ecef")
+                {
+                    vUVW_NED = mTec2l * vInitVelocity;
+                    lastSpeedSet = SpeedSet.setned;
+                }
+                else if (frame == "local")
+                {
+                    vUVW_NED = vInitVelocity;
+                    lastSpeedSet = SpeedSet.setned;
+                }
+                else if (frame == "body")
+                {
+                    vUVW_NED = Tb2l * vInitVelocity;
+                    lastSpeedSet = SpeedSet.setuvw;
+                }
+                else
+                {
+
+                    log.Error("  Velocity frame type: \"" + frame
+                         + "\" is not supported!");
+                    result = false;
+
+                }
+
+            }
+            else
+            {
+
+                vUVW_NED = Vector3D.Zero;
+
+            }
+
+            vt = vUVW_NED.Magnitude();
+
+            calcAeroAngles(vUVW_NED);
+
+            // Initialize vehicle body rates
+            // Allowable frames
+            // - ECI (Earth Centered Inertial)
+            // - ECEF (Earth Centered, Earth Fixed)
+            // - Body
+
+            XmlElement attrate_el = document.FindElement("attitude_rate");
+            Matrix3D Tl2b = orientation.GetT();
+
+            // Refer to Stevens and Lewis, 1.5-14a, pg. 49.
+            // This is the rotation rate of the "Local" frame, expressed in the local frame.
+            double radInv = 1.0 / position.Radius;
+            Vector3D vOmegaLocal = new Vector3D(radInv * vUVW_NED.East,
+                                  -radInv * vUVW_NED.North,
+                                  -radInv * vUVW_NED.East * position.TanLatitude);
+
+            if (attrate_el != null)
+            {
+
+                string frame = attrate_el.GetAttribute("frame");
+                frame = frame.ToLower();
+                Vector3D vAttRate = FormatHelper.TripletConvertTo(attrate_el, "RAD/SEC");
+
+                if (frame == "eci")
+                {
+                    Matrix3D Ti2l = position.GetTec2l() * Ti2ec;
+                    vPQR_body = Tl2b * Ti2l * (vAttRate - vOmegaEarth);
+                }
+                else if (frame == "ecef")
+                {
+                    vPQR_body = Tl2b * position.GetTec2l() * vAttRate;
+                }
+                else if (frame == "local")
+                {
+                    vPQR_body = Tl2b * (vAttRate + vOmegaLocal);
+                }
+                else if (frame == "body")
+                {
+                    vPQR_body = vAttRate;
+                }
+                else if (!string.IsNullOrEmpty(frame))
+                { // misspelling of frame
+
+                    log.Error("  Attitude rate frame type: \"" + frame
+                         + "\" is not supported!");
+                    result = false;
+
+                }
+                else if (string.IsNullOrEmpty(frame))
+                {
+                    vPQR_body = Tl2b * vOmegaLocal;
+                }
+
+            }
+            else
+            { // Body frame attitude rate assumed 0 relative to local.
+                vPQR_body = Tl2b * vOmegaLocal;
+            }
+
+            return result;
         }
 
         private void InitializeIC()
@@ -2437,7 +2744,7 @@ namespace JSBSim
                     lastLatitudeSet = LatitudeSet.setgeoc;
                 }
             }
-             return true;
+            return true;
         }
         private void SetTrimRequest(string trim)
         {
