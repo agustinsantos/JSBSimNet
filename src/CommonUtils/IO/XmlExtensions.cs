@@ -69,5 +69,47 @@ namespace CommonUtils.IO
             return (rst != null);
         }
 
+        public static double FindElementValueAsNumber(this XmlElement doc, string name)
+        {
+            XmlElement elem = doc.FindElement(name);
+            if (elem != null)
+            {
+                double value = elem.GetDataAsNumber();
+                //TODO value = DisperseValue(elem, value);
+                return value;
+            }
+            log.Error("Attempting to get non-existent element " + name);
+            throw new Exception();
+        }
+
+        public static double GetDataAsNumber(this XmlElement elem)
+        {
+            string strval = elem.InnerText;
+            double val;
+            if (string.IsNullOrEmpty(strval))
+            {
+                log.Error("Expected numeric value, but got no data");
+                throw new Exception();
+            }
+            if (!double.TryParse(strval, out val))
+            {
+                log.Error("Expected numeric value, but got:" + strval);
+                throw new Exception();
+            }
+            return val;
+        }
+
+        public static string FindElementValue(this XmlElement elem, string el)
+        {
+            XmlElement element = elem.FindElement(el);
+            if (element != null)
+            {
+                return element.InnerText;
+            }
+            else
+            {
+                return "";
+            }
+        }
     }
 }

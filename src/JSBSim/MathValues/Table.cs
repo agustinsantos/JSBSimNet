@@ -568,31 +568,37 @@ namespace JSBSim.MathValues
             lastRowIndex = lastColumnIndex = 2;
         }
 
+        /// <summary>
+        /// Data in the config file should be in matrix format with the row
+        /// independents as the first column and the column independents in
+        /// the first row.The implication of this layout is that there should
+        /// be no value in the upper left corner of the matrix e.g:
+        /// <pre>
+        ///      0  10  20 30 ...
+        /// -5   1  2   3  4  ...
+        ///  ...
+        ///  </pre>
+        /// </summary>
+        /// <param name="useData"></param>
         public Table(double[,] useData)
         {
-            data = useData;
-            nRows = data.GetLength(0) - 1;
-            nCols = data.GetLength(1) - 1;
+            if (useData == null)
+            {
+                log.Error("No table data");
+                throw new ArgumentException("No table data");
+            }
+            
+            nRows = useData.GetLength(0) - 1;
+            nCols = useData.GetLength(1) - 1;
             if (nCols == 1)
             {
                 tableType = TableType.Table1D;
             }
-            else if (nCols == 2)
-            {
+            else 
                 tableType = TableType.Table2D;
-            }
-            //else if (nCols == 3)
-            //{
-            //    tableType = TableType.Table3D;
-            //}
-            else
-            {
-                if (log.IsErrorEnabled)
+             lastRowIndex = lastColumnIndex = 2;
 
-                    log.Error("Table must have 1, or 2 Dimensions");
-                throw new ArgumentException("Table must have 1, or 2 Dimensions");
-            }
-            lastRowIndex = lastColumnIndex = 2;
+            data = (double[,])useData.Clone();
         }
 
         public Table(int rows, int cols)

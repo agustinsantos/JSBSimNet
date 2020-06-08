@@ -27,18 +27,15 @@ namespace JSBSim.Models.FlightControl
 {
     using System;
     using System.Collections.Generic;
-    using System.Text;
-    using System.Xml;
     using System.IO;
     using System.Text.RegularExpressions;
-
+    using System.Xml;
+    using CommonUtils.IO;
+    using JSBSim.Format;
+    using JSBSim.InputOutput;
+    using JSBSim.MathValues;
     // Import log4net classes.
     using log4net;
-
-    using CommonUtils.IO;
-    using JSBSim.InputOutput;
-    using JSBSim.Format;
-    using JSBSim.MathValues;
 
     /// <summary>
     /// Encapsulates a condition, which is used in parts of JSBSim including switches

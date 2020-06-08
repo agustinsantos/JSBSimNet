@@ -205,6 +205,11 @@ namespace JSBSim.Models
             return 0.0;
         }
 
+        internal bool GetTrimStatus()
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Gets the mixture command
         /// </summary>
@@ -1748,6 +1753,11 @@ namespace JSBSim.Models
             DspPos[(int)OutputForm.Mag] = Math.Abs(DspPos[(int)OutputForm.Rad]);
             DfPos[(int)OutputForm.Mag] = Math.Abs(DfPos[(int)OutputForm.Rad]);
 
+        }
+
+        internal double GetChannelDeltaT()
+        {
+            throw new NotImplementedException();
         }
 
         private const int NForms = (int)OutputForm.NForms;

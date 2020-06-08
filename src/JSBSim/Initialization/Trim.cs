@@ -119,7 +119,7 @@ namespace JSBSim
 
             Debug = 0; DebugLevel = 0;
             fdmex = exec;
-            fgic = fdmex.GetIC;
+            fgic = fdmex.GetIC();
             total_its = 0;
             trimudot = true;
             gamma_fallback = true;

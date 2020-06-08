@@ -111,6 +111,7 @@
   <ItemGroup>
     <Compile Include="Collections\CollectionHelpers.cs" />
     <Compile Include="Collections\Deque.cs" />
+    <Compile Include="Collections\ListExtensions.cs" />
     <Compile Include="IO\ReaderText.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -121,6 +122,7 @@
     <Compile Include="Math\Constants.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Math\LagrangeMultiplier.cs" />
     <Compile Include="Math\Matrix3D.cs">
       <SubType>Code</SubType>
     </Compile>

@@ -91,7 +91,7 @@ namespace JSBSim.Tests
 
             fdm.LoadModel(modelFileName, true);
 
-            InitialCondition IC = fdm.GetIC;
+            InitialCondition IC = fdm.GetIC();
             IC.Load(IcFileName, true);
 
             Trim fgt = new Trim(fdm, TrimMode.Full);

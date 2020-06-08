@@ -1,5 +1,5 @@
 ﻿#region Copyright(C)  Licensed under GNU GPL.
-/// Copyright (C) 2005-2006 Agustin Santos Mendez
+/// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
 /// David Megginson. 
@@ -18,64 +18,87 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+/// 
+/// Further information about the GNU Lesser General Public License can also be found on
+/// the world wide web at http://www.gnu.org.
 #endregion
 
 namespace JSBSim.Models.FlightControl
 {
     using System;
-    using System.Collections.Generic;
-    using System.Text;
     using System.Xml;
-
+    using CommonUtils.IO;
+    using CommonUtils.MathLib;
+    using JSBSim.Format;
+    using JSBSim.InputOutput;
     // Import log4net classes.
     using log4net;
-
-    using JSBSim.Script;
-    using JSBSim.InputOutput;
-    using JSBSim.Format;
 
     /// <summary>
     /// Encapsulates a Sensor component for the flight control system.
     /// 
     /// Syntax:
-    /// <code>
-    /// <sensor name=”name” rate_group=”name”>
+    /// 
+    /// @code
+    /// <sensor name="name">
     ///   <input> property </input>
     ///   <lag> number </lag>
-    ///   <noise variation=”PERCENT|ABSOLUTE”> number </noise>
-    ///   <quantization name="name">
-    ///     <bits> number </bits>
-    ///     <min> number </min>
-    ///    <max> number </max>
-    ///   </quantization>
-    ///   <drift_rate> number </drift_rate>
-    ///   <bias> number </bias>
-    /// </sensor>
-    /// </code>
+    ///   <noise [variation="PERCENT|ABSOLUTE"] [distribution="UNIFORM|GAUSSIAN"]> number </noise>
+    ///   <quantization name = "name" >
+    ///     < bits > number </ bits >
+    ///     < min > number </ min >
+    ///     < max > number </ max >
+    ///   </ quantization >
+    ///   < drift_rate > number </ drift_rate >
+    ///   < gain > number </ gain >
+    ///   < bias > number </ bias >
+    ///   < delay[type = "time|frames"] > number < / delay >
+    /// </ sensor >
+    /// @endcode
     /// 
     /// Example:
-    /// <code>
-    /// <sensor name=”aero/sensor/qbar” rate_group=”HFCS”>
-    ///   <input> aero/qbar </input>
+    /// 
+    /// @code
+    /// <sensor name="aero/sensor/qbar">
+    ///   <input> aero/qbar</input>
     ///   <lag> 0.5 </lag>
-    ///   <noise variation=”PERCENT”> 2 </noise>
-    ///   <quantization name="aero/sensor/quantized/qbar">
+    ///   <noise variation = "PERCENT" > 2 </ noise >
+    ///   < quantization name="aero/sensor/quantized/qbar">
     ///     <bits> 12 </bits>
     ///     <min> 0 </min>
     ///     <max> 400 </max>
     ///   </quantization>
     ///   <bias> 0.5 </bias>
     /// </sensor>
-    /// </code>
+    /// @endcode
     /// 
-    /// The only required element in the sensor definition is the input element. In that
+    /// The only required element in the sensor definition is the input element.In that
     /// case, no degradation would be modeled, and the output would simply be the input.
-    /// For noise, if the type is PERCENT, then the value supplied is understood to be a
-    /// percentage variance. That is, if the number given is 0.05, the the variance is
-    /// understood to be +/-0.05 percent maximum variance. So, the actual value for the sensor
-    /// will be *anywhere* from 0.95 to 1.05 of the actual "perfect" value at any time -
-    /// even varying all the way from 0.95 to 1.05 in adjacent frames - whatever the delta
-    /// time.
+    /// 
+    /// Noise can be Gaussian or uniform, and the noise can be applied as a factor
+    /// (PERCENT) or additively (ABSOLUTE). The noise that can be applied at each frame
+    /// of the simulation execution is calculated as a random factor times a noise value
+    /// that is specified in the config file.When the noise distribution type is
+    /// Gaussian, the random number can be between roughly -3 and +3 for a span of six
+    /// sigma.When the distribution type is UNIFORM, the random value can be between
+    /// -1.0 and +1.0. This random value is multiplied against the specified noise to
+    /// arrive at a random noise value for the frame. If the noise type is PERCENT, then
+    /// random noise value is added to one, and that sum is then multiplied against the
+    /// input signal for the sensor. In this case, the specified noise value in the
+    /// config file would be expected to actually be a percent value, such as 0.05 (for
+    /// a 5% variance). If the noise type is ABSOLUTE, then the random noise value
+    /// specified in the config file is understood to be an absolute value of noise to
+    /// be added to the input signal instead of being added to 1.0 and having that sum
+    /// be multiplied against the input signal as in the PERCENT type.For the ABSOLUTE
+    /// noise case, the noise number specified in the config file could be any number.
+    /// 
+    /// If the type is ABSOLUTE, then the noise number times the random number is added
+    /// to the input signal instead of being multiplied against it as with the PERCENT
+    /// type of noise.
+    /// 
+    /// The delay element can specify a frame delay.The integer number provided is the
+    /// number of frames to delay the output signal.
+    /// 
     /// </summary>
     public class Sensor : FCSComponent
     {
@@ -93,81 +116,94 @@ namespace JSBSim.Models.FlightControl
         public Sensor(FlightControlSystem fcs, XmlElement element)
             : base(fcs, element)
         {
-            double denom;
-            dt = fcs.GetState().DeltaTime;
-            XmlElement tmpElem;
-
             // inputs are read from the base class constructor
-            XmlElement quantization_element = element.GetElementsByTagName("quantization")[0] as XmlElement; 
+
+            bits = quantized = divisions = 0;
+            PreviousInput = PreviousOutput = 0.0;
+            min = max = bias = gain = noise_variance = lag = drift_rate = drift = span = 0.0;
+            granularity = 0.0;
+            noise_type = 0;
+            fail_low = fail_high = fail_stuck = false;
+
+            XmlElement quantization_element = element.FindElement("quantization");
             if (quantization_element != null)
             {
-                tmpElem = quantization_element.GetElementsByTagName("bits")[0] as XmlElement;
-                if (tmpElem != null)
+                if (quantization_element.FindElement("bits") != null)
                 {
-                    bits = (int)FormatHelper.ValueAsNumber(tmpElem);
+                    bits = (int)quantization_element.FindElementValueAsNumber("bits");
                 }
                 divisions = (1 << bits);
-                tmpElem = quantization_element.GetElementsByTagName("min")[0] as XmlElement;
-                if (tmpElem != null)
+                if (quantization_element.FindElement("min") != null)
                 {
-                    min = FormatHelper.ValueAsNumber(tmpElem);
+                    min = quantization_element.FindElementValueAsNumber("min");
                 }
-                tmpElem = quantization_element.GetElementsByTagName("max")[0] as XmlElement;
-                if (tmpElem != null)
+                if (quantization_element.FindElement("max") != null)
                 {
-                    max = FormatHelper.ValueAsNumber(tmpElem);
+                    max = quantization_element.FindElementValueAsNumber("max");
                 }
+                quant_property = quantization_element.GetAttribute("name");
                 span = max - min;
                 granularity = span / divisions;
             }
-
-            tmpElem = quantization_element.GetElementsByTagName("bias")[0] as XmlElement;
-            if (tmpElem != null)
+            if (element.FindElement("bias") != null)
             {
-                bias = FormatHelper.ValueAsNumber(tmpElem);
+                bias = element.FindElementValueAsNumber("bias");
             }
-
-            tmpElem = quantization_element.GetElementsByTagName("drift_rate")[0] as XmlElement;
-            if (tmpElem != null)
+            if (element.FindElement("gain") != null)
             {
-                drift_rate = FormatHelper.ValueAsNumber(tmpElem);
+                gain = element.FindElementValueAsNumber("gain");
             }
-
-            tmpElem = quantization_element.GetElementsByTagName("lag")[0] as XmlElement;
-            if (tmpElem != null)
+            if (element.FindElement("drift_rate") != null)
             {
-                lag = FormatHelper.ValueAsNumber(tmpElem);
-                denom = 2.00 + dt * lag;
+                drift_rate = element.FindElementValueAsNumber("drift_rate");
+            }
+            if (element.FindElement("lag") != null)
+            {
+                lag = element.FindElementValueAsNumber("lag");
+                double denom = 2.00 + dt * lag;
                 ca = dt * lag / denom;
                 cb = (2.00 - dt * lag) / denom;
             }
-
-            tmpElem = quantization_element.GetElementsByTagName("noise")[0] as XmlElement;
-            if (tmpElem != null)
+            if (element.FindElement("noise") != null)
             {
-                noise_variance = FormatHelper.ValueAsNumber(tmpElem);
-                string variation = tmpElem.GetAttribute("variation");
-                if (variation.Equals("PERCENT"))
+                noise_variance = element.FindElementValueAsNumber("noise");
+                string variation = element.FindElement("noise").GetAttribute("variation");
+                if (variation == "PERCENT")
                 {
-                    noiseType = NoiseType.ePercent;
+                    NoiseType = eNoiseType.ePercent;
                 }
-                else if (variation.Equals("ABSOLUTE"))
+                else if (variation == "ABSOLUTE")
                 {
-                    noiseType = NoiseType.eAbsolute;
+                    NoiseType = eNoiseType.eAbsolute;
                 }
                 else
                 {
-                    noiseType = NoiseType.ePercent;
-                    if (log.IsErrorEnabled)
-                    log.Error("Unknown noise type in sensor: " + name + ". Defaulting to PERCENT.");
+                    NoiseType = eNoiseType.ePercent;
+                    log.Error("Unknown noise type in sensor: " + name);
+                    log.Error("  defaulting to PERCENT.");
+                }
+                string distribution = element.FindElement("noise").GetAttribute("distribution");
+                if (distribution == "UNIFORM")
+                {
+                    DistributionType = eDistributionType.eUniform;
+                }
+                else if (distribution == "GAUSSIAN")
+                {
+                    DistributionType = eDistributionType.eGaussian;
+                }
+                else
+                {
+                    DistributionType = eDistributionType.eUniform;
+                    log.Error("Unknown random distribution type in sensor: " + name);
+                    log.Error("  defaulting to UNIFORM.");
                 }
             }
 
-            base.Bind();
-            Bind();
+            Bind(element);
+
+            Debug(0);
         }
 
-        /* TODO remove Obsolete */
         public void SetFailLow(double val) { FailLow = val; }
         public void SetFailHigh(double val) { FailHigh = val; }
         public void SetFailStuck(double val) { FailStuck = val; }
@@ -196,83 +232,20 @@ namespace JSBSim.Models.FlightControl
 
         public override bool Run()
         {
-            input = inputNodes[0].GetDouble() * inputSigns[0];
+            input = inputNodes[0].GetDoubleValue();
 
-            output = input; // perfect sensor
+            ProcessSensorSignal();
 
-            // Degrade signal as specified
-
-            if (fail_stuck)
-            {
-                output = PreviousOutput;
-                return true;
-            }
-
-            if (lag != 0.0) 
-                Lag();       // models sensor lag
-            if (noise_variance != 0.0)
-                Noise();     // models noise
-            if (drift_rate != 0.0) 
-                Drift();     // models drift over time
-            if (bias != 0.0) 
-                Bias();      // models a finite bias
-
-            if (fail_low)
-                output = double.NegativeInfinity;
-            if (fail_high) 
-                output = double.PositiveInfinity;
-
-            if (bits != 0) 
-                Quantize();  // models quantization degradation
-            //  if (delay != 0.0)          Delay();     // models system signal transport latencies
+            SetOutput();
 
             return true;
         }
 
-        private Random randGenerator = new Random();
-        private void Noise()
+        public override void ResetPastStates()
         {
-            double random_value = randGenerator.NextDouble() - 0.5; //TODO. Tests it
+            base.ResetPastStates();
 
-            switch (noiseType)
-            {
-                case NoiseType.ePercent:
-                    output *= (1.0 + noise_variance * random_value);
-                    break;
-
-                case NoiseType.eAbsolute:
-                    output += noise_variance * random_value;
-                    break;
-            }
-        }
-
-        private void Bias()
-        {
-            output += bias;
-        }
-
-        private void Drift()
-        {
-            drift += drift_rate * dt;
-            output += drift;
-        }
-
-        private void Quantize()
-        {
-            if (output < min) output = min;
-            if (output > max) output = max;
-            double portion = output - min;
-            quantized = (int)(portion / granularity);
-            output = quantized * granularity + min;
-        }
-
-        private void Lag()
-        {
-            // "Output" on the right side of the "=" is the current frame input
-            output = ca * (output + PreviousInput) + PreviousOutput * cb;
-
-            PreviousOutput = output;
-            PreviousInput = input;
+            PreviousOutput = PreviousInput = output = 0.0;
         }
 
         public override void Bind()
@@ -288,30 +261,118 @@ namespace JSBSim.Models.FlightControl
 
         }
 
-        private enum NoiseType { ePercent = 0, eAbsolute };
+        protected enum eNoiseType { ePercent = 0, eAbsolute }
+        protected eNoiseType NoiseType;
+        protected enum eDistributionType { eUniform = 0, eGaussian }
+        protected eDistributionType DistributionType;
+        protected double min, max;
+        protected double span;
+        protected double bias;
+        protected double gain;
+        protected double drift_rate;
+        protected double drift;
+        protected double noise_variance;
+        protected double lag;
+        protected double granularity;
+        protected double ca; /// lag filter coefficient "a"
+        protected double cb; /// lag filter coefficient "b"
+        protected double PreviousOutput;
+        protected double PreviousInput;
+        protected int noise_type;
+        protected int bits;
+        protected int quantized;
+        protected int divisions;
+        protected bool fail_low;
+        protected bool fail_high;
+        protected bool fail_stuck;
+        protected string quant_property;
 
-        private NoiseType noiseType = NoiseType.ePercent;
-        private double dt;
-        private double min = 0.0, max = 0.0;
-        private double span = 0.0;
-        private double bias = 0.0;
-        private double drift_rate = 0.0;
-        private double drift = 0.0;
-        private double noise_variance = 0.0;
-        private double lag = 0.0;
-        private double granularity = 0.0;
-        private double ca; /// lag filter coefficient "a"
-        private double cb; /// lag filter coefficient "b"
-        private double PreviousOutput = 0.0;
-        private double PreviousInput = 0.0;
-        private int noise_type;
-        private int bits = 0;
-        private int quantized = 0;
-        private int divisions = 0;
-        private bool fail_low = false;
-        private bool fail_high = false;
-        private bool fail_stuck = false;
+        protected void ProcessSensorSignal()
+        {
+            // Degrade signal as specified
 
+            if (!fail_stuck)
+            {
+                output = input; // perfect sensor
 
+                if (lag != 0.0) Lag();       // models sensor lag and filter
+                if (noise_variance != 0.0) Noise();     // models noise
+                if (drift_rate != 0.0) Drift();     // models drift over time
+                if (gain != 0.0) Gain();      // models a finite gain
+                if (bias != 0.0) Bias();      // models a finite bias
+
+                if (delay != 0) Delay();     // models system signal transport latencies
+
+                if (fail_low) output = double.MinValue;
+                if (fail_high) output = double.MaxValue;
+
+                if (bits != 0) Quantize();  // models quantization degradation
+
+                Clip();
+            }
+        }
+        protected void Noise()
+        {
+            double random_value = 0.0;
+
+            if (DistributionType == eDistributionType.eUniform)
+            {
+                random_value = MathExt.Rand();
+            }
+            else
+            {
+                random_value = MathExt.GaussianRandomNumber();
+            }
+
+            switch (NoiseType)
+            {
+                case eNoiseType.ePercent:
+                    output *= (1.0 + noise_variance * random_value);
+                    break;
+
+                case eNoiseType.eAbsolute:
+                    output += noise_variance * random_value;
+                    break;
+            }
+        }
+
+        protected void Bias()
+        {
+            output += bias;
+        }
+
+        protected void Drift()
+        {
+            drift += drift_rate * dt;
+            output += drift;
+        }
+
+        protected void Quantize()
+        {
+            if (output < min) output = min;
+            if (output > max) output = max;
+            double portion = output - min;
+            quantized = (int)(portion / granularity);
+            output = quantized * granularity + min;
+        }
+
+        protected void Lag()
+        {
+            // "Output" on the right side of the "=" is the current input
+            output = ca * (output + PreviousInput) + PreviousOutput * cb;
+
+            PreviousOutput = output;
+            PreviousInput = input;
+        }
+
+        protected void Gain()
+        {
+            output *= gain;
+        }
+
+        protected override void Bind(XmlElement el)
+        {
+            // TODO
+        }
     }
 }

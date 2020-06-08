@@ -26,19 +26,16 @@
 namespace JSBSim
 {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
-    using System.Xml;
-    using System.Reflection;
     using System.IO;
-
-    // Import log4net classes.
-    using log4net;
-
+    using System.Reflection;
+    using System.Xml;
     using JSBSim.InputOutput;
+    using JSBSim.MathValues;
     using JSBSim.Models;
     using JSBSim.Models.Propulsion;
-    using JSBSim.MathValues;
+    // Import log4net classes.
+    using log4net;
 
 
     /// <summary>
@@ -549,6 +546,16 @@ namespace JSBSim
         public Atmosphere Atmosphere { get { return (Atmosphere)models[(int)eModels.eAtmosphere]; } }
 
         /// <summary>
+        /// Returns the Accelerations reference.
+        /// </summary>
+        public Accelerations Accelerations { get { return (Accelerations)models[(int)eModels.eAccelerations]; } }
+
+        /// <summary>
+        /// Returns the Winds reference.
+        /// </summary>
+        public Winds Winds { get { return (Winds ) models[(int)eModels.eWinds]; } }
+
+        /// <summary>
         /// Returns the Aircraft reference.
         /// </summary>
         public MassBalance MassBalance { get { return (MassBalance)models[(int)eModels.eMassBalance]; } }
@@ -601,7 +608,10 @@ namespace JSBSim
         /// <summary>
         /// Returns a reference to the InitialCondition object
         /// </summary>
-        public InitialCondition GetIC { get { return ic; } }
+        public InitialCondition GetIC()
+        {
+            return ic;
+        }
 
         /// <summary>
         /// Returns the Auxiliary reference.
@@ -635,6 +645,11 @@ namespace JSBSim
             }
         }
 
+        internal double GetSimTime()
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Returns a reference to the Trim object
         /// </summary>
@@ -662,6 +677,11 @@ namespace JSBSim
                 log.Error("Trim Failed");
             trim.Report();
             State.SimTime = saved_time;
+        }
+
+        internal bool GetTrimStatus()
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -783,7 +803,7 @@ namespace JSBSim
             models[(int)eModels.ePropagate] = new Propagate(this);
             models[(int)eModels.eInput] = new Input(this);
             models[(int)eModels.eAtmosphere] = new StandardAtmosphere(this);
-            //PENDING new JSBSIM models[(int)eModels.eWinds] = new Winds(this);
+            models[(int)eModels.eWinds] = new Winds(this);
             models[(int)eModels.eSystems] = new FlightControlSystem(this);
             models[(int)eModels.eMassBalance] = new MassBalance(this);
             models[(int)eModels.eAuxiliary] = new Auxiliary(this);
@@ -793,14 +813,14 @@ namespace JSBSim
             //PENDING new JSBSIM models[(int)eModels.eExternalReactions] = new ExternalReactions(this);
             //PENDING new JSBSIM models[(int)eModels.eBuoyantForces] = new BuoyantForces(this);
             models[(int)eModels.eAircraft] = new Aircraft(this);
-            //PENDING new JSBSIM models[(int)eModels.eAccelerations] = new Accelerations(this);
+            models[(int)eModels.eAccelerations] = new Accelerations(this);
             models[(int)eModels.eOutput] = new Output(this);
 
             // Assign the Model shortcuts for internal executive use only.
             propagate = (Propagate)models[(int)eModels.ePropagate];
             inertial = (Inertial)models[(int)eModels.eInertial];
             atmosphere = (Atmosphere)models[(int)eModels.eAtmosphere];
-            //PENDING new JSBSIM winds = (Winds)models[(int)eModels.eWinds];
+            winds = (Winds)models[(int)eModels.eWinds];
             FCS = (FlightControlSystem)models[(int)eModels.eSystems];
             massBalance = (MassBalance)models[(int)eModels.eMassBalance];
             auxiliary = (Auxiliary)models[(int)eModels.eAuxiliary];
@@ -810,7 +830,7 @@ namespace JSBSim
             //PENDING new JSBSIM  externalReactions = (ExternalReactions)models[(int)eModels.eExternalReactions];
             //PENDING new JSBSIM buoyantForces = (BuoyantForces)models[(int)eModels.eBuoyantForces];
             aircraft = (Aircraft)models[(int)eModels.eAircraft];
-            //PENDING new JSBSIM accelerations = (Accelerations)models[(int)eModels.eAccelerations];
+            accelerations = (Accelerations)models[(int)eModels.eAccelerations];
             //PENDING new JSBSIM output = (Output)models[(int)eModels.eOutput];
 
             // Initialize planet (environment) constants
@@ -972,7 +992,7 @@ namespace JSBSim
         private void LoadPlanetConstants()
         {
             propagate.inputs.vOmegaPlanet = Inertial.GetOmegaPlanet();
-            //accelerations.inputs.vOmegaPlanet = Inertial.GetOmegaPlanet();
+            accelerations.inputs.vOmegaPlanet = Inertial.GetOmegaPlanet();
             propagate.inputs.SemiMajor = Inertial.GetSemimajor();
             propagate.inputs.SemiMinor = Inertial.GetSemiminor();
             //auxiliary.inputs.StandardGravity = Inertial.GetStandardGravity();
@@ -1027,6 +1047,8 @@ namespace JSBSim
         private FlightControlSystem FCS = null;
         private GroundReactions groundReactions = null;
         private Trim Trim = null;
+        private Accelerations accelerations = null;
+        private Winds winds = null;
         //private Output output = null;
         private List<Output> outputs = new List<Output>();
         private Input input = null;
@@ -1186,6 +1208,11 @@ namespace JSBSim
         internal Random GetRandomEngine()
         {
             throw new NotImplementedException("Pending upgrade to lastest version of JSBSIM");
+        }
+
+        internal bool GetHoldDown()
+        {
+            throw new NotImplementedException();
         }
     }
 }

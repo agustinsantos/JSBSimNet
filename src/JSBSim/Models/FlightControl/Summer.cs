@@ -1,5 +1,5 @@
 #region Copyright(C)  Licensed under GNU GPL.
-/// Copyright (C) 2005-2006 Agustin Santos Mendez
+/// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
 /// David Megginson. 
@@ -18,53 +18,64 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+/// 
+/// Further information about the GNU Lesser General Public License can also be found on
+/// the world wide web at http://www.gnu.org.
 #endregion
 
 namespace JSBSim.Models.FlightControl
 {
-	using System;
-	using System.Xml;
-	using System.IO;
-
-	// Import log4net classes.
-	using log4net;
-
-	using JSBSim.InputOutput;
-	using JSBSim.Models;
-	using CommonUtils.IO;
+    using System.Xml;
+    using CommonUtils.IO;
     using JSBSim.Format;
+    using JSBSim.Models;
+    // Import log4net classes.
+    using log4net;
 
-	/// <summary>
-	/// Models a flight control system summing component.
-	/// The Summer component sums two or more inputs. These can be pilot control
-	/// inputs or state variables, and a bias can also be added in using the BIAS
-	/// keyword.  The form of the summer component specification is:
-	/// <pre>
-	/// \<COMPONENT NAME="name" TYPE="SUMMER">
-	/// INPUT \<property>
-	/// INPUT \<property>
-	/// [BIAS \<value>]
-	/// [?]
-	/// [CLIPTO \<min> \<max> 1]
-	/// [OUTPUT \<property>]
-	/// \</COMPONENT>
-	/// </pre>
-	/// Note that in the case of an input property the property name may be
-	/// immediately preceded by a minus sign. Here's an example of a summer
-	/// component specification:
-	/// <pre>
-	/// \<COMPONENT NAME="Roll A/P Error summer" TYPE="SUMMER">
-	/// INPUT  velocities/p-rad_sec
-	/// INPUT -fcs/roll-ap-wing-leveler
-	/// INPUT  fcs/roll-ap-error-integrator
-	/// CLIPTO -1 1
-	/// \</COMPONENT>
-	/// </pre>
-	/// Note that there can be only one BIAS statement per component.
+    /// <summary>
+    /// Models a flight control system summing component.
+    /// The Summer component sums two or more inputs.These can be pilot control
+    /// inputs or state variables, and a bias can also be added in using the BIAS
+    /// keyword.The form of the summer component specification is:
+    /// @code
+    ///     <summer name="{string}">
+    ///       <input> { string} </input>
+    ///       <input> {string} </input>
+    ///       <bias> {number} </bias>
+    ///       <clipto>
+    ///          <min> {number} </min>
+    ///          <max> {number} </max>
+    ///       </clipto>
+    ///       <output> {string} </output>
+    ///     </summer>
+    /// @endcode
     /// 
-	/// </summary>
-	public class Summer : FCSComponent
-	{
+    ///     Note that in the case of an input property the property name may be
+    ///     immediately preceded by a minus sign.Here's an example of a summer
+    ///     component specification:
+    /// 
+    /// @code
+    ///     <summer name="Roll A/P Error summer">
+    ///       <input> velocities/p-rad_sec</input>
+    ///       <input> -fcs/roll-ap-wing-leveler</input>
+    ///       <input> fcs/roll-ap-error-integrator</input>
+    ///       <clipto>
+    ///          <min> -1 </min>
+    ///          <max>  1 </max> 
+    ///       </clipto>
+    ///     </summer>
+    /// @endcode
+    /// 
+    /// <pre>
+    ///     Notes:
+    /// 
+    ///     There can be only one BIAS statement per component.
+    /// 
+    ///     There may be any number of inputs.
+    /// </pre>
+    /// </summary>
+    public class Summer : FCSComponent
+    {
         /// <summary>
         /// Define a static logger variable so that it references the
         ///	Logger instance.
@@ -76,41 +87,44 @@ namespace JSBSim.Models.FlightControl
         /// </summary>
         private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="fcs">the parent FGFCS object.</param>
+        /// <param name="element">the configuration file node.the configuration file node.</param>
         public Summer(FlightControlSystem fcs, XmlElement element)
             : base(fcs, element)
         {
-            XmlNodeList childs = element.GetElementsByTagName("bias");
-            if (childs != null && childs.Count > 0)
-                Bias = FormatHelper.ValueAsNumber(childs[0] as XmlElement);
+            XmlElement elem = element.FindElement("bias");
+            if (elem != null)
+                Bias = FormatHelper.ValueAsNumber(elem);
 
             base.Bind();
+            Debug(0);
         }
 
 
 
-		/// The execution method for this FCS component.
-		public override bool Run()
-		{
-			int idx;
+        /// <summary>
+        /// The execution method for this FCS component.
+        /// </summary>
+        /// <returns></returns>
+        public override bool Run()
+        {
+            output = 0.0;
 
-			// The Summer takes several inputs, so do not call the base class Run()
-			// FGFCSComponent::Run();
+            foreach (var node in inputNodes)
+                output += node.GetDoubleValue();
 
-			output = 0.0;
-
-			for (idx=0; idx<inputNodes.Count; idx++) 
-			{
-				output += inputNodes[idx].GetDouble()*inputSigns[idx];
-			}
-
-			output += Bias;
+            output += Bias;
 
             Clip();
-			if (isOutput) SetOutput();
+            SetOutput();
 
-			return true;
-		}
+            return true;
+        }
 
         private double Bias = 0.0;
-	}
+    }
 }

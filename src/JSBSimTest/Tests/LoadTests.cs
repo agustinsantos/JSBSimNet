@@ -256,7 +256,7 @@ namespace JSBSim.Tests
             FDMExecutive fdm = new FDMExecutive();
             fdm.AircraftPath = AircraftPath;
             fdm.EnginePath = EnginePath;
-            InitialCondition IC = fdm.GetIC;
+            InitialCondition IC = fdm.GetIC();
 
             fdm.LoadModel(aircraft_MK82, true);
 

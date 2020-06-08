@@ -321,7 +321,45 @@ namespace CommonUtils.MathLib
         /// </summary>
         /// <returns>Returns a trasposed matrix.</returns>
         public Matrix3D Transposed()
-        { return GetTranspose();  }
+        { return GetTranspose(); }
+
+        /// <summary>
+        /// Compute the inverse of a general matrix using Cramers rule.
+        /// I guess googling for cramers rule gives tons of references
+        /// for this. :)
+        /// </summary>
+        /// <returns> a new Matrix with the inverse of this matrix</returns>
+        public Matrix3D GetInverse()
+        {
+            // Compute the inverse of a general matrix using Cramers rule.
+            // I guess googling for cramers rule gives tons of references
+            // for this. :)
+
+            if (Determinant() != 0.0)
+            {
+                double rdet = 1.0 / Determinant();
+
+                double i11 = rdet * (this.M22 * this.M33 - this.M32 * this.M23);
+                double i21 = rdet * (this.M32 * this.M13 - this.M12 * this.M33);
+                double i31 = rdet * (this.M12 * this.M23 - this.M22 * this.M13);
+                double i12 = rdet * (this.M31 * this.M23 - this.M21 * this.M33);
+                double i22 = rdet * (this.M11 * this.M33 - this.M31 * this.M13);
+                double i32 = rdet * (this.M21 * this.M13 - this.M11 * this.M23);
+                double i13 = rdet * (this.M21 * this.M32 - this.M31 * this.M22);
+                double i23 = rdet * (this.M31 * this.M12 - this.M11 * this.M32);
+                double i33 = rdet * (this.M11 * this.M22 - this.M21 * this.M12);
+
+                return new Matrix3D(i11, i12, i13,
+                                   i21, i22, i23,
+                                   i31, i32, i33);
+            }
+            else
+            {
+                return new Matrix3D(0, 0, 0,
+                                   0, 0, 0,
+                                   0, 0, 0);
+            }
+        }
 
         /// <summary>
         /// Multiplies self by a given matrix.

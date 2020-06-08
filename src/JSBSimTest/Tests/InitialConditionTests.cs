@@ -316,7 +316,7 @@ namespace JSBSim.Tests
 
             FDMExecutive fdm = new FDMExecutive();
             XmlElement elem = BuildXmlConfig(test);
-            InitialCondition IC = fdm.GetIC;
+            InitialCondition IC = fdm.GetIC();
             IC.Load(elem, false);
 
             if (log.IsDebugEnabled)
@@ -347,7 +347,7 @@ namespace JSBSim.Tests
 
             FDMExecutive fdm = new FDMExecutive();
             XmlElement elem = BuildXmlConfig(test);
-            InitialCondition IC = fdm.GetIC;
+            InitialCondition IC = fdm.GetIC();
             IC.Load(elem, false);
 
             if (log.IsDebugEnabled)
@@ -381,7 +381,7 @@ namespace JSBSim.Tests
 
             FDMExecutive fdm = new FDMExecutive();
             XmlElement elem = BuildXmlConfig(test);
-            InitialCondition IC = fdm.GetIC;
+            InitialCondition IC = fdm.GetIC();
             IC.Load(elem, false);
 
             if (log.IsDebugEnabled)
@@ -410,7 +410,7 @@ namespace JSBSim.Tests
 
             FDMExecutive fdm = new FDMExecutive();
             XmlElement elem = BuildXmlConfig(test);
-            InitialCondition IC = fdm.GetIC;
+            InitialCondition IC = fdm.GetIC();
             IC.Load(elem, false);
 
             if (log.IsDebugEnabled)

@@ -186,6 +186,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="MathValues\TemplateFunc.cs" />
+    <Compile Include="Models\Accelerations.cs" />
     <Compile Include="Models\Aerodynamics.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -195,6 +196,7 @@
     <Compile Include="Models\Atmosphere\Atmosphere.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Models\Atmosphere\Winds.cs" />
     <Compile Include="Models\Atmosphere\Mars.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -211,6 +213,10 @@
     <Compile Include="Models\FlightControlSystem.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Models\FlightControl\Angles.cs" />
+    <Compile Include="Models\FlightControl\Actuator.cs" />
+    <Compile Include="Models\FlightControl\SensorOrientation.cs" />
+    <Compile Include="Models\FlightControl\Gyro.cs" />
     <Compile Include="Models\FlightControl\Condition.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -223,6 +229,9 @@
     <Compile Include="Models\FlightControl\FCSFunction.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Models\FlightControl\Accelerometer.cs" />
+    <Compile Include="Models\FlightControl\PID.cs" />
+    <Compile Include="Models\FlightControl\Waypoint.cs" />
     <Compile Include="Models\FlightControl\Filter.cs">
       <SubType>Code</SubType>
     </Compile>

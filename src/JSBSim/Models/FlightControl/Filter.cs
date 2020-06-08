@@ -1,5 +1,5 @@
 #region Copyright(C)  Licensed under GNU GPL.
-/// Copyright (C) 2005-2006 Agustin Santos Mendez
+/// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
 /// David Megginson. 
@@ -18,26 +18,26 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+/// 
+/// Further information about the GNU Lesser General Public License can also be found on
+/// the world wide web at http://www.gnu.org.
 #endregion
 
 namespace JSBSim.Models.FlightControl
 {
-	using System;
-	using System.Xml;
-
-	// Import log4net classes.
-	using log4net;
-
-	using JSBSim.InputOutput;
-	using JSBSim.Models;
-    using JSBSim.Format;
+    using System.Xml;
+    using CommonUtils.IO;
+    using JSBSim.MathValues;
+    using JSBSim.Models;
+    // Import log4net classes.
+    using log4net;
 
 
-	/// <summary>
-	/// Encapsulates a filter for the flight control system.
-    ///The filter component can simulate any first or second order filter. The
-    ///Tustin substitution is used to take filter definitions from LaPlace space to the
-    ///time domain. The general format for a filter specification is:
+    /// <summary>
+    /// Encapsulates a filter for the flight control system.
+    /// The filter component can simulate any first or second order filter. The
+    /// Tustin substitution is used to take filter definitions from LaPlace space to the
+    /// time domain. The general format for a filter specification is:
     ///
     ///<code> 
     ///<typename name="name">
@@ -57,7 +57,6 @@ namespace JSBSim.Models.FlightControl
     ///</code>
     ///
     /// For a lag filter of the form,
-
     ///<code>
     ///  C1
     ///------
@@ -201,10 +200,10 @@ namespace JSBSim.Models.FlightControl
     ///In all the filter specifications above, an \<output> element is also seen.  This
     ///is so that the last component in a "string" can copy its value to the appropriate
     ///output, such as the elevator, or speedbrake, etc.
-	/// </summary>
-	public class Filter  : FCSComponent
-    {        
-        
+    /// </summary>
+    public class Filter : FCSComponent
+    {
+
         /// <summary>
         /// Define a static logger variable so that it references the
         ///	Logger instance.
@@ -216,198 +215,143 @@ namespace JSBSim.Models.FlightControl
         /// </summary>
         private static readonly ILog log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-		
-		public enum FilterType {Lag, LeadLag, Order2, Washout, Integrator, Unknown} ;
-
         public Filter(FlightControlSystem fcs, XmlElement element)
             : base(fcs, element)
         {
-            double denom;
+            DynamicFilter = false; initialize = true;
+            C[1] = C[2] = C[3] = C[4] = C[5] = C[6] = null;
+            for (int i = 1; i < 7; i++)
+                ReadFilterCoefficients(element, i);
 
-            dt = fcs.GetState().DeltaTime;
+            if (compType == "LAG_FILTER") FilterType = FilterTypeEnum.Lag;
+            else if (compType == "LEAD_LAG_FILTER") FilterType = FilterTypeEnum.LeadLag;
+            else if (compType == "SECOND_ORDER_FILTER") FilterType = FilterTypeEnum.Order2;
+            else if (compType == "WASHOUT_FILTER") FilterType = FilterTypeEnum.Washout;
+            else FilterType = FilterTypeEnum.Unknown;
 
-            if (compType == "LAG_FILTER") filterType = FilterType.Lag;
-            else if (compType == "LEAD_LAG_FILTER") filterType = FilterType.LeadLag;
-            else if (compType == "SECOND_ORDER_FILTER") filterType = FilterType.Order2;
-            else if (compType == "WASHOUT_FILTER") filterType = FilterType.Washout;
-            else if (compType == "INTEGRATOR") filterType = FilterType.Integrator;
-            else filterType = FilterType.Unknown;
+            CalculateDynamicFilters();
 
-            foreach (XmlNode currentNode in element.ChildNodes)
-            {
-                if (currentNode.NodeType == XmlNodeType.Element)
-                {
-                    XmlElement currentElement = (XmlElement)currentNode;
+            Bind(element);
 
-                    if (currentElement.LocalName.Equals("c1"))
-                    {
-                        C1 = FormatHelper.ValueAsNumber(currentElement);
-                    }
-                    else if (currentElement.LocalName.Equals("c2"))
-                    {
-                        C1 = FormatHelper.ValueAsNumber(currentElement);
-
-                    }
-                    else if (currentElement.LocalName.Equals("c3"))
-                    {
-                        C1 = FormatHelper.ValueAsNumber(currentElement);
-
-                    }
-                    else if (currentElement.LocalName.Equals("c4"))
-                    {
-                        C1 = FormatHelper.ValueAsNumber(currentElement);
-
-                    }
-                    else if (currentElement.LocalName.Equals("c5"))
-                    {
-                        C1 = FormatHelper.ValueAsNumber(currentElement);
-
-                    }
-                    else if (currentElement.LocalName.Equals("c6"))
-                    {
-                        C1 = FormatHelper.ValueAsNumber(currentElement);
-
-                    }
-                    else if (currentElement.LocalName.Equals("trigger"))
-                    {
-                        trigger = ResolveSymbol(currentElement.InnerText);
-                    }
-                    /*
-                    else
-                    {
-                        if (log.IsErrorEnabled)
-                            log.Error("Error reading Filter. Tag unknown: " + currentElement.LocalName);
-                        throw new Exception("Error reading Filter.");
-                    }
-                    */
-                }
-            }
-
-            initialize = true;
-
-            switch (filterType)
-            {
-                case FilterType.Lag:
-                    denom = 2.00 + dt * C1;
-                    ca = dt * C1 / denom;
-                    cb = (2.00 - dt * C1) / denom;
-                    break;
-                case FilterType.LeadLag:
-                    denom = 2.00 * C3 + dt * C4;
-                    ca = (2.00 * C1 + dt * C2) / denom;
-                    cb = (dt * C2 - 2.00 * C1) / denom;
-                    cc = (2.00 * C3 - dt * C4) / denom;
-                    break;
-                case FilterType.Order2:
-                    denom = 4.0 * C4 + 2.0 * C5 * dt + C6 * dt * dt;
-                    ca = (4.0 * C1 + 2.0 * C2 * dt + C3 * dt * dt) / denom;
-                    cb = (2.0 * C3 * dt * dt - 8.0 * C1) / denom;
-                    cc = (4.0 * C1 - 2.0 * C2 * dt + C3 * dt * dt) / denom;
-                    cd = (2.0 * C6 * dt * dt - 8.0 * C4) / denom;
-                    ce = (4.0 * C4 - 2.0 * C5 * dt + C6 * dt * dt) / denom;
-                    break;
-                case FilterType.Washout:
-                    denom = 2.00 + dt * C1;
-                    ca = 2.00 / denom;
-                    cb = (2.00 - dt * C1) / denom;
-                    break;
-                case FilterType.Integrator:
-                    ca = dt * C1 / 2.00;
-                    break;
-                case FilterType.Unknown:
-                    if (log.IsErrorEnabled)
-                        log.Error("Error reading Filter. Unknown filter type.");
-                    throw new Exception("Unknown filter type.");
-                    //break;
-            }
-
-            base.Bind();
+            Debug(0);
         }
-            
 
+        public override bool Run()
+        {
+            if (initialize)
+            {
 
+                PreviousOutput2 = PreviousInput2 = PreviousOutput1 = PreviousInput1 = output = input;
+                initialize = false;
 
-		public override bool Run ()
-		{
-            double test = 0.0;
+            }
+            else
+            {
 
-            if (initialize) 
-			{
+                input = inputNodes[0].GetDoubleValue();
 
-				previousOutput1 = previousInput1 = output = input;
-				initialize = false;
+                if (DynamicFilter) CalculateDynamicFilters();
 
-			} 
-			else 
-			{
-                input = inputNodes[0].GetDouble() * inputSigns[0];
-				switch (filterType) 
-				{
-					case FilterType.Lag:
-						output = input * ca + previousInput1 * ca + previousOutput1 * cb;
-						break;
-					case FilterType.LeadLag:
-						output = input * ca + previousInput1 * cb + previousOutput1 * cc;
-						break;
-					case FilterType.Order2:
-						output = input * ca + previousInput1 * cb + previousInput2 * cc
-							- previousOutput1 * cd - previousOutput2 * ce;
-						break;
-					case FilterType.Washout:
-						output = input * ca - previousInput1 * ca + previousOutput1 * cb;
-						break;
-					case FilterType.Integrator:
-                        if (trigger != null)
-                        {
-                            test = trigger.GetDouble();
-                            if (Math.Abs(test) > 0.000001)
-                            {
-                                input = previousInput1 = previousInput2 = 0.0;
-                            }
-                        }
-						output = input * ca + previousInput1 * ca + previousOutput1;
-						break;
-					case FilterType.Unknown:
-						break;
-				}
+                switch (FilterType)
+                {
+                    case FilterTypeEnum.Lag:
+                        output = (input + PreviousInput1) * ca + PreviousOutput1 * cb;
+                        break;
+                    case FilterTypeEnum.LeadLag:
+                        output = input * ca + PreviousInput1 * cb + PreviousOutput1 * cc;
+                        break;
+                    case FilterTypeEnum.Order2:
+                        output = input * ca + PreviousInput1 * cb + PreviousInput2 * cc
+                                            - PreviousOutput1 * cd - PreviousOutput2 * ce;
+                        break;
+                    case FilterTypeEnum.Washout:
+                        output = input * ca - PreviousInput1 * ca + PreviousOutput1 * cb;
+                        break;
+                    case FilterTypeEnum.Unknown:
+                        break;
+                }
 
-			}
+            }
 
-			previousOutput2 = previousOutput1;
-			previousOutput1 = output;
-			previousInput2  = previousInput1;
-			previousInput1  = input;
+            PreviousOutput2 = PreviousOutput1;
+            PreviousOutput1 = output;
+            PreviousInput2 = PreviousInput1;
+            PreviousInput1 = input;
 
             Clip();
-            if (isOutput) SetOutput();
+            SetOutput();
 
-			return true;
-		}
+            return true;
+        }
+        public override void ResetPastStates()
+        {
+            base.ResetPastStates();
 
-		/// <summary>
-		/// When true, causes previous values to be set to current values. This
-		/// is particularly useful for first pass.
-		/// </summary>
-		public bool initialize;
+            input = 0.0; initialize = true;
+        }
 
-        protected FilterType filterType;
-		private double dt;
-		private double ca;
-		private double cb;
-		private double cc;
-		private double cd;
-		private double ce;
-        private double C1 = 0;
-        private double C2 = 0;
-        private double C3 = 0;
-        private double C4 = 0;
-        private double C5 = 0;
-        private double C6 = 0;
-		private double previousInput1;
-		private double previousInput2;
-		private double previousOutput1;
-		private double previousOutput2;
-		//private ConfigFile AC_cfg;
-		private PropertyNode trigger;
-	}
+        protected void CalculateDynamicFilters()
+        {
+            double denom;
+
+            switch (FilterType)
+            {
+                case FilterTypeEnum.Lag:
+                    denom = 2.0 + dt * C[1].GetDoubleValue();
+                    ca = dt * C[1].GetDoubleValue() / denom;
+                    cb = (2.0 - dt * C[1].GetDoubleValue()) / denom;
+
+                    break;
+                case FilterTypeEnum.LeadLag:
+                    denom = 2.0 * C[3].GetDoubleValue() + dt * C[4].GetDoubleValue();
+                    ca = (2.0 * C[1].GetDoubleValue() + dt * C[2].GetDoubleValue()) / denom;
+                    cb = (dt * C[2].GetDoubleValue() - 2.0 * C[1].GetDoubleValue()) / denom;
+                    cc = (2.0 * C[3].GetDoubleValue() - dt * C[4].GetDoubleValue()) / denom;
+                    break;
+                case FilterTypeEnum.Order2:
+                    denom = 4.0 * C[4].GetDoubleValue() + 2.0 * C[5].GetDoubleValue() * dt + C[6].GetDoubleValue() * dt * dt;
+                    ca = (4.0 * C[1].GetDoubleValue() + 2.0 * C[2].GetDoubleValue() * dt + C[3].GetDoubleValue() * dt * dt) / denom;
+                    cb = (2.0 * C[3].GetDoubleValue() * dt * dt - 8.0 * C[1].GetDoubleValue()) / denom;
+                    cc = (4.0 * C[1].GetDoubleValue() - 2.0 * C[2].GetDoubleValue() * dt + C[3].GetDoubleValue() * dt * dt) / denom;
+                    cd = (2.0 * C[6].GetDoubleValue() * dt * dt - 8.0 * C[4].GetDoubleValue()) / denom;
+                    ce = (4.0 * C[4].GetDoubleValue() - 2.0 * C[5].GetDoubleValue() * dt + C[6].GetDoubleValue() * dt * dt) / denom;
+                    break;
+                case FilterTypeEnum.Washout:
+                    denom = 2.0 + dt * C[1].GetDoubleValue();
+                    ca = 2.0 / denom;
+                    cb = (2.0 - dt * C[1].GetDoubleValue()) / denom;
+                    break;
+                case FilterTypeEnum.Unknown:
+                    log.Error("Unknown filter type");
+                    break;
+            }
+
+        }
+        protected void ReadFilterCoefficients(XmlElement element, int index)
+        {
+            // index is known to be 1-7. 
+            string coefficient = "c" + index;
+
+            if (element.FindElement(coefficient) != null)
+            {
+                C[index] = new ParameterValue(element.FindElement(coefficient),
+                                                propertyManager);
+                DynamicFilter |= !C[index].IsConstant();
+            }
+        }
+
+        protected override void Debug(int from) { }
+        protected enum FilterTypeEnum { Lag, LeadLag, Order2, Washout, Integrator, Unknown };
+        protected FilterTypeEnum FilterType;
+        private bool DynamicFilter;
+        /// <summary>
+        /// When true, causes previous values to be set to current values. This
+        /// is particularly useful for first pass.
+        /// </summary>
+        private bool initialize;
+        private double ca, cb, cc, cd, ce;
+        private Parameter[] C = new Parameter[7]; // There are 6 coefficients, indexing is "1" based.
+        private double PreviousInput1, PreviousInput2;
+        private double PreviousOutput1, PreviousOutput2;
+    }
 }

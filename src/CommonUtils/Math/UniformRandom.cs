@@ -14,7 +14,7 @@ namespace CommonUtils.MathLib
         /// <param name="lower"></param>
         /// <param name="upper"></param>
         /// <param name="rand"></param>
-        public UniformRandom(double lower, double upper, Random rand)
+        public UniformRandom(double lower = 0, double upper = 1, Random rand = null)
         {
             this.lower = lower;
             this.upper = upper;

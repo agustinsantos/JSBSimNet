@@ -97,7 +97,7 @@ namespace JSBSimMain
                 resetName = rootDir + resetName;
                 fdm.LoadModel(rootDir + "aircraft", rootDir + "engine", aircraftName);
 
-                IC = fdm.GetIC;
+                IC = fdm.GetIC();
                 IC.Load(resetName, true);
 
                 Trim fgt = new Trim(fdm, TrimMode.Full);

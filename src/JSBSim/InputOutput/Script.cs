@@ -217,7 +217,7 @@ namespace JSBSim.Script
 
             try
             {
-                FDMExec.GetIC.Load(initialize, true);
+                FDMExec.GetIC().Load(initialize, true);
             }
             catch (Exception e)
             {

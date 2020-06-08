@@ -1,4 +1,4 @@
-#region Copyright(C)  Licensed under GNU GPL.
+﻿#region Copyright(C)  Licensed under GNU GPL.
 /// Copyright (C) 2005-2020 Agustin Santos Mendez
 /// 
 /// JSBSim was developed by Jon S. Berndt, Tony Peden, and
@@ -22,30 +22,14 @@
 /// Further information about the GNU Lesser General Public License can also be found on
 /// the world wide web at http://www.gnu.org.
 #endregion
-namespace JSBSim.MathValues
+namespace CommonUtils.MathLib
 {
-    using System;
-
-    /// <summary>
-    /// Represents various types of parameters.
-    /// </summary>
-    public interface IParameter
+    public struct LagrangeMultiplier
     {
-        double GetValue();
-        string GetName();
-        bool IsConstant();
-    }
-
-    /// <summary>
-    /// Represents various types of parameters.
-    /// </summary>
-    public abstract class Parameter : IParameter
-    {
-        public abstract double GetValue();
-        public abstract string GetName();
-        public virtual bool IsConstant() { return false; }
-
-        // SGPropertyNode impersonation.
-        public double GetDoubleValue() { return GetValue(); }
+        public Vector3D ForceJacobian;
+        public Vector3D LeverArm;
+        public double Min;
+        public double Max;
+        public double value;
     }
 }

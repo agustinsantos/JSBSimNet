@@ -904,6 +904,14 @@
             </summary>
             <returns>Returns a trasposed matrix.</returns>
         </member>
+        <member name="M:CommonUtils.MathLib.Matrix3D.GetInverse">
+            <summary>
+            Compute the inverse of a general matrix using Cramers rule.
+            I guess googling for cramers rule gives tons of references
+            for this. :)
+            </summary>
+            <returns> a new Matrix with the inverse of this matrix</returns>
+        </member>
         <member name="M:CommonUtils.MathLib.Matrix3D.Multiply(CommonUtils.MathLib.Matrix3D)">
             <summary>
             Multiplies self by a given matrix.
